@@ -1,0 +1,31 @@
+doctype html
+html
+    head
+        meta(charset="UTF-8")
+        meta(name="viewport", content="width=600")
+        title zone
+        link(rel="stylesheet" href="style.css")
+        script(src="script.js")
+    body
+        #scene
+            #insert
+                img#zone-logo(src="zone-logo.png")
+                #noyoutube 
+                    span youtube has not loaded
+                #youtube.player
+                iframe#archive.player(frameborder="0")
+                video#http-video.player(crossorigin)
+            canvas#scene-canvas(width=512, height=512)
+            #avatar-panel(hidden)
+                canvas#avatar-paint(width=8, height=8)
+                .controls
+                    button#avatar-update update
+                    button#avatar-cancel cancel
+        canvas#chat-canvas(width=512, height=512)
+        #chat-inputs
+            input#chat-input(type="text", placeholder="chat message...", maxlength="160")
+        #entry-splash
+            #entry-panel
+                h1 you are about to enter a zone
+                input#join-name(type="text", placeholder="your name...", maxlength="16")
+                button#entry-button(disabled) enter

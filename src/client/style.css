@@ -1,0 +1,188 @@
+[hidden] { display: none !important; }
+* { box-sizing: border-box; }
+
+canvas {
+    image-rendering: -moz-crisp-edges;
+    image-rendering: -webkit-crisp-edges;
+    image-rendering: pixelated;
+    image-rendering: crisp-edges;
+}
+
+html, body {
+    margin: 0;
+    padding: 0;
+}
+
+html {
+    background: black;
+    font-size: 1.2rem;
+}
+
+#chat-inputs > input {
+    font-size: 16px;
+    font-family: monospace;
+    color: white;
+
+    background: black;
+    border: solid black 3px;
+    width: 512px;
+}
+
+#chat-inputs > input:focus {
+    border-bottom: solid red 3px;
+}
+
+html {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+body {
+    margin: auto;
+    display: flex;
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: flex-end;
+
+    max-width: 1024px;
+}
+
+#chat-canvas {
+    flex: 0;
+    width: 512px;
+    height: 512px;
+}
+
+#chat-inputs {
+    width: 512px;
+
+    display: flex;
+    flex-direction: column;
+    justify-content: right;
+}
+
+#chat-inputs > * {
+    width: 512px;
+}
+
+#user-list {
+    overflow-y: auto;
+    flex: 1;
+
+    margin: 2px;
+    padding: 2px;
+    border: 2px solid black;
+}
+
+#commands {
+    overflow-y: auto;
+}
+
+#scene {
+    position: relative;
+    width: 512px;
+    height: 512px;
+}
+
+#avatar-panel {
+    position: absolute;
+    left: 50%; top: 50%;
+    transform: translate(-50%, -50%);
+
+    display: flex;
+    flex-direction: column;
+
+    padding: 8px;
+
+    background: black;
+}
+
+#avatar-panel > *:not(:first-child) {
+    margin-top: 8px;
+}
+
+#avatar-panel > .controls {
+    display: flex;
+    flex: 1;
+}
+
+.controls > button {
+    flex: 1;
+}
+
+.controls > button:not(:first-child) {
+    margin-left: 8px;
+}
+
+#avatar-paint {
+    width: 128px; height: 128px;
+}
+
+#insert {
+    position: absolute;
+    left: 32px; top: 32px;
+    width: 448px; height: 252px;
+    pointer-events: none;
+}
+
+#noyoutube {
+    position: absolute;
+    width: 100%; height: 100%;
+
+    z-index: -2;
+    
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-size: 1.5em;
+}
+
+.player {
+    position: absolute;
+    width: 100%; height: 100%;
+    mix-blend-mode: screen;
+}
+
+#zone-logo {
+    position: absolute;
+    width: 100%; height: 100%;
+    opacity: 35%;
+    mix-blend-mode: screen;
+    image-rendering: pixelated;
+}
+
+#entry-splash {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100vw;
+    height: 100vh;
+
+    background: black;
+    color: white;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+#entry-panel {
+    text-align: center;
+}
+
+#join-name {
+    font-size: 120%;
+    border-radius: 3px;
+    padding: .4em .8em;
+}
+
+#entry-button {
+    font-size: 120%;
+    border-radius: 3px;
+    padding: .4em .8em;
+}

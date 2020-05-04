@@ -1,0 +1,13 @@
+{
+    "extends": ["tslint:recommended", "tslint-config-prettier"],
+    "rules": {
+        "object-literal-sort-keys": false,
+        "interface-over-type-literal": false,
+        "no-console": false,
+        "no-shadowed-variable": false,
+        "no-empty": [true, "allow-empty-functions", "allow-empty-catch"],
+
+        "no-bitwise": false,
+        "max-classes-per-file": false
+    }
+}

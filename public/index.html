@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=600">
+    <title>zone</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="script.js"></script>
+  </head>
+  <body>
+    <div id="scene">
+      <div id="insert"><img id="zone-logo" src="zone-logo.png">
+        <div id="noyoutube"> <span>youtube has not loaded</span></div>
+        <div class="player" id="youtube"></div>
+        <iframe class="player" id="archive" frameborder="0"></iframe>
+        <video class="player" id="http-video" crossorigin></video>
+      </div>
+      <canvas id="scene-canvas" width="512" height="512"></canvas>
+      <div id="avatar-panel" hidden>
+        <canvas id="avatar-paint" width="8" height="8"></canvas>
+        <div class="controls">
+          <button id="avatar-update">update</button>
+          <button id="avatar-cancel">cancel</button>
+        </div>
+      </div>
+    </div>
+    <canvas id="chat-canvas" width="512" height="512"></canvas>
+    <div id="chat-inputs">
+      <input id="chat-input" type="text" placeholder="chat message..." maxlength="160">
+    </div>
+    <div id="entry-splash">
+      <div id="entry-panel">
+        <h1>you are about to enter a zone</h1>
+        <input id="join-name" type="text" placeholder="your name..." maxlength="16">
+        <button id="entry-button" disabled>enter</button>
+      </div>
+    </div>
+  </body>
+</html>

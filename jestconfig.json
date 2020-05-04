@@ -1,0 +1,11 @@
+{
+    "transform": {
+      "^.+\\.(t|j)sx?$": "ts-jest"
+    },
+    "testRegex": "(\\.|/)(test|spec)\\.(jsx?|tsx?)$",
+    "coveragePathIgnorePatterns": ["__tests__"],
+    "testPathIgnorePatterns": ["/node_modules/", "/lib/"],
+    "moduleFileExtensions": ["ts", "tsx", "js", "jsx", "json", "node"],
+    "setupFiles": ["jest-canvas-mock"],
+    "collectCoverage": true
+}
