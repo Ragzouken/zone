@@ -29,4 +29,11 @@ app.get('/update/:password', (req, res) => {
     }
 })
 
+process.on('SIGINT', () => {
+    console.log('exiting due to SIGINT');
+    save();
+    sendAll('status', { text: 'manual shutdown' });
+    process.exit();
+});
+
 server.on('listening', () => console.log('listening...'));
