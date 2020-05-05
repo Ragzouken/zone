@@ -18,9 +18,12 @@ app.set('trust proxy', true);
 app.use('/', express.static('public'));
 app.get('/update/:password', (req, res) => {
     if (process.env.REBOOT_PASSWORD && req.params.password === process.env.REBOOT_PASSWORD) {
+        res.sendStatus(200);
         save();
         sendAll('status', { text: 'rebooting server' });
         exec('git pull && npm run build && refresh');
+    } else {
+        res.sendStatus(401)
     }
 })
 
