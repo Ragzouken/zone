@@ -2,7 +2,7 @@ import * as express from 'express';
 import { host } from './server';
 import { exec } from 'child_process';
 
-import FileSync = require('lowdb/adapters/Memory');
+import FileSync = require('lowdb/adapters/FileSync');
 
 const dataPath = process.env.ZONE_DATA_PATH || '.data/db.json';
 const adapter = new FileSync(dataPath);
