@@ -17,7 +17,7 @@ const { server, app, save, sendAll } = host(adapter, {
 app.set('trust proxy', true);
 app.use('/', express.static('public'));
 app.get('/update/:password', (req, res) => {
-    if ((req.params.password || "") === process.env.REBOOT_PASSWORD) {
+    if ((req.params.password || "") === process.env.UPDATE_PASSWORD) {
         res.sendStatus(200);
         exec('update-zone', () => {
             save();
