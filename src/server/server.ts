@@ -2,7 +2,6 @@ import * as express from 'express';
 import * as expressWs from 'express-ws';
 import * as WebSocket from 'ws';
 import * as low from 'lowdb';
-import { exec } from 'child_process';
 
 import Youtube from './youtube';
 import Playback, { PlayableMedia, QueueItem, PlayableSource } from './playback';
@@ -29,7 +28,6 @@ export type HostOptions = {
 
     joinPassword?: string;
     skipPassword?: string;
-    rebootPassword?: string;
 
     playbackPaddingTime: number;
 };
@@ -305,15 +303,6 @@ export function host(adapter: low.AdapterSync, options: Partial<HostOptions> = {
             });
         });
 
-        messaging.setHandler('reboot', (message: any) => {
-            const { password } = message;
-            if (opts.rebootPassword && password === opts.rebootPassword) {
-                save();
-                sendAll('status', { text: 'rebooting server' });
-                exec('git pull && refresh');
-            }
-        });
-
         messaging.setHandler('error', (message: any) => voteError(message.source, user));
         messaging.setHandler('skip', (message: any) => voteSkip(message.source, user, message.password));
 
@@ -352,5 +341,5 @@ export function host(adapter: low.AdapterSync, options: Partial<HostOptions> = {
         connections.get(userId)!.send(type, message);
     }
 
-    return { server, zone, playback, app };
+    return { server, zone, playback, app, save, sendAll };
 }
