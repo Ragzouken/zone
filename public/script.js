@@ -824,6 +824,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 const blitsy_1 = require("blitsy");
 const text_1 = require("./text");
 const utility_1 = require("./utility");
+const utility_2 = require("../common/utility");
 const font = blitsy_1.decodeFont(blitsy_1.fonts['ascii-small']);
 const layout = { font, lineWidth: 240, lineCount: 9999 };
 class ChatPanel {
@@ -862,7 +863,7 @@ function animatePage(page) {
             glyph.color = utility_1.rgb2num(...rgb);
         }
         if (glyph.styles.has('shk'))
-            glyph.offset = blitsy_1.makeVector2(utility_1.randomInt(-1, 1), utility_1.randomInt(-1, 1));
+            glyph.offset = blitsy_1.makeVector2(utility_2.randomInt(-1, 1), utility_2.randomInt(-1, 1));
         if (glyph.styles.has('wvy'))
             glyph.offset.y = (Math.sin(i + (performance.now() * 5) / 1000) * 3) | 0;
         if (glyph.styles.has('rbw')) {
@@ -874,7 +875,7 @@ function animatePage(page) {
 }
 exports.animatePage = animatePage;
 
-},{"./text":15,"./utility":16,"blitsy":7}],12:[function(require,module,exports){
+},{"../common/utility":18,"./text":15,"./utility":16,"blitsy":7}],12:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 const utility_1 = require("./utility");
@@ -907,6 +908,7 @@ exports.ZoneClient = ZoneClient;
 Object.defineProperty(exports, "__esModule", { value: true });
 const blitsy = require("blitsy");
 const utility_1 = require("./utility");
+const utility_2 = require("../common/utility");
 const text_1 = require("./text");
 const youtube_1 = require("./youtube");
 const chat_1 = require("./chat");
@@ -1053,7 +1055,7 @@ async function load() {
         remember = exports.client.localUser;
         if (code <= 1001)
             return;
-        await utility_1.sleep(100);
+        await utility_2.sleep(100);
         exports.client.messaging.reconnect();
     });
     exports.client.messaging.setHandler('reject', () => {
@@ -1073,10 +1075,11 @@ async function load() {
         exports.client.localToken = message.token;
     });
     exports.client.messaging.setHandler('queue', (message) => {
+        var _a;
         if (message.items.length === 1) {
             const item = message.items[0];
             const { title, duration } = item.media.details;
-            const username = getUsername(item.info.userId);
+            const username = getUsername((_a = item.info.userId) !== null && _a !== void 0 ? _a : "server");
             const time = utility_1.secondsToTime(duration / 1000);
             chat.log(`{clr=#00FFFF}+ ${title} (${time}) added by {clr=#FF0000}${username}`);
         }
@@ -1093,7 +1096,7 @@ async function load() {
         }
         const { source, details } = message.item.media;
         chat.log(`{clr=#00FFFF}> ${details.title} (${utility_1.secondsToTime(details.duration / 1000)})`);
-        queue = queue.filter((item) => !utility_1.objEqual(item.media.source, source));
+        queue = queue.filter((item) => !utility_2.objEqual(item.media.source, source));
         const time = message.time || 0;
         const seconds = time / 1000;
         if (source.type === 'youtube') {
@@ -1188,11 +1191,11 @@ async function load() {
     function move(dx, dy) {
         const user = exports.client.localUser;
         if (user.position) {
-            user.position[0] = utility_1.clamp(0, 15, user.position[0] + dx);
-            user.position[1] = utility_1.clamp(0, 15, user.position[1] + dy);
+            user.position[0] = utility_2.clamp(0, 15, user.position[0] + dx);
+            user.position[1] = utility_2.clamp(0, 15, user.position[1] + dy);
         }
         else {
-            user.position = [utility_1.randomInt(0, 15), 15];
+            user.position = [utility_2.randomInt(0, 15), 15];
         }
         exports.client.messaging.send('move', { position: user.position });
         if (!user.avatar) {
@@ -1371,8 +1374,8 @@ async function load() {
             let dx = 0;
             let dy = 0;
             if (emotes && emotes.includes('shk')) {
-                dx += utility_1.randomInt(-8, 8);
-                dy += utility_1.randomInt(-8, 8);
+                dx += utility_2.randomInt(-8, 8);
+                dy += utility_2.randomInt(-8, 8);
             }
             if (emotes && emotes.includes('wvy')) {
                 dy += Math.sin(performance.now() / 250 - position[0] / 2) * 4;
@@ -1471,10 +1474,9 @@ function enter() {
     exports.client.messaging.connect('ws://' + zoneURL);
 }
 
-},{"./chat":11,"./client":12,"./text":15,"./utility":16,"./youtube":17,"blitsy":7}],14:[function(require,module,exports){
+},{"../common/utility":18,"./chat":11,"./client":12,"./text":15,"./utility":16,"./youtube":17,"blitsy":7}],14:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-const utility_1 = require("./utility");
 const events_1 = require("events");
 class WebSocketMessaging extends events_1.EventEmitter {
     constructor() {
@@ -1499,10 +1501,6 @@ class WebSocketMessaging extends events_1.EventEmitter {
             return;
         this.websocket.close(1000);
         this.websocket = undefined;
-    }
-    async wait() {
-        while (this.websocket && this.websocket.readyState === WebSocket.CONNECTING)
-            await utility_1.sleep(10);
     }
     send(type, message) {
         message.type = type;
@@ -1540,7 +1538,7 @@ class WebSocketMessaging extends events_1.EventEmitter {
 }
 exports.WebSocketMessaging = WebSocketMessaging;
 
-},{"./utility":16,"events":10}],15:[function(require,module,exports){
+},{"events":10}],15:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 const blitsy_1 = require("blitsy");
@@ -1837,10 +1835,6 @@ exports.getPageHeight = getPageHeight;
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 const blitsy_1 = require("blitsy");
-exports.objEqual = (a, b) => JSON.stringify(a) === JSON.stringify(b);
-exports.randomInt = (min, max) => Math.floor(Math.random() * (max - min + 1)) + min;
-exports.sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
-exports.clamp = (min, max, value) => Math.max(min, Math.min(max, value));
 function fakedownToTag(text, fd, tag) {
     const pattern = new RegExp(`${fd}([^${fd}]+)${fd}`, 'g');
     return text.replace(pattern, `{+${tag}}$1{-${tag}}`);
@@ -1960,7 +1954,7 @@ exports.eventToElementPixel = eventToElementPixel;
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 const events_1 = require("events");
-const utility_1 = require("./utility");
+const utility_1 = require("../common/utility");
 class YoutubePlayer extends events_1.EventEmitter {
     constructor(player) {
         super();
@@ -2059,5 +2053,14 @@ function errorEventToYoutubeError(event) {
     return { code: event.data, reason: CODE_REASONS.get(event.data) || 'unknown' };
 }
 
-},{"./utility":16,"events":10}]},{},[13])(13)
+},{"../common/utility":18,"events":10}],18:[function(require,module,exports){
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.objEqual = (a, b) => JSON.stringify(a) === JSON.stringify(b);
+exports.randomInt = (min, max) => Math.floor(Math.random() * (max - min + 1)) + min;
+exports.sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+exports.clamp = (min, max, value) => Math.max(min, Math.min(max, value));
+exports.copy = (object) => JSON.parse(JSON.stringify(object));
+
+},{}]},{},[13])(13)
 });
