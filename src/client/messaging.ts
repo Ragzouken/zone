@@ -1,4 +1,3 @@
-import { sleep } from '../common/utility';
 import { EventEmitter } from 'events';
 
 export declare interface WebSocketMessaging {
@@ -27,10 +26,6 @@ export class WebSocketMessaging extends EventEmitter {
         if (!this.websocket) return;
         this.websocket.close(1000);
         this.websocket = undefined;
-    }
-
-    async wait() {
-        while (this.websocket && this.websocket.readyState === WebSocket.CONNECTING) await sleep(10);
     }
 
     send(type: string, message: any) {

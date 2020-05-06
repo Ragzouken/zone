@@ -5,12 +5,17 @@ import * as WebSocket from 'ws';
 import { AddressInfo } from 'net';
 
 import { host, HostOptions } from '../server';
+
+import ZoneClient from '../../common/client';
+import Messaging from '../../common/messaging';
+
 import WebSocketMessaging, { Message } from '../messaging';
 import Playback, { QueueItem } from '../playback';
 import { copy, sleep } from '../../common/utility';
 import { ARCHIVE_PATH_TO_MEDIA, YOUTUBE_VIDEOS, TINY_MEDIA, DAY_MEDIA } from './media.data';
 
 const IMMEDIATE_REPLY_TIMEOUT = 50;
+const NAME = 'baby yoda';
 
 function socketAddress(server: Server) {
     const address = server.address() as AddressInfo;
@@ -44,6 +49,11 @@ class TestServer {
 
     public async messaging() {
         return new WebSocketMessaging(await this.socket());
+    }
+
+    public async client() {
+        const messaging = new Messaging(await this.socket());
+        return new ZoneClient(messaging);
     }
 
     public dispose() {
@@ -115,26 +125,28 @@ describe('connectivity', () => {
 describe('join open server', () => {
     test('accepts no password', async () => {
         await server({}, async (server) => {
-            const messaging = await server.messaging();
-            await join(messaging);
-        });
+            const client = await server.client();
+            await client.join(NAME);
+        })
     });
 
     test('accepts any password', async () => {
         await server({}, async (server) => {
-            const messaging = await server.messaging();
-            await join(messaging, { password: 'old password' });
+            const client = await server.client();
+            await client.join(NAME, 'old password');
         });
     });
 });
 
 describe('join closed server', () => {
+    const PASSWORD_REJECT = { text: expect.stringContaining('password') };
+
     test('rejects absent password', async () => {
         const password = 'riverdale';
         await server({ joinPassword: password }, async (server) => {
-            const messaging = await server.messaging();
-            const joining = join(messaging);
-            await expect(joining).rejects.toMatchObject({ type: 'reject' });
+            const client = await server.client();
+            const joining = client.join(NAME);
+            await expect(joining).rejects.toMatchObject(PASSWORD_REJECT);
         });
     });
 
@@ -142,8 +154,8 @@ describe('join closed server', () => {
         const password = 'riverdale';
         await server({ joinPassword: password }, async (server) => {
             const messaging = await server.messaging();
-            const joining = join(messaging, { password: 'wrong' });
-            await expect(joining).rejects.toMatchObject({ type: 'reject' });
+            const joining = join(messaging, { password: password + ' wrong' });
+            await expect(joining).rejects.toMatchObject(PASSWORD_REJECT);
         });
     });
 
