@@ -9,7 +9,7 @@ import Messaging from './messaging';
 import { ZoneState, UserId, UserState } from './zone';
 import { nanoid } from 'nanoid';
 import { archiveOrgToPlayable } from './archiveorg';
-import { objEqual, copy } from './utility';
+import { objEqual, copy } from '../common/utility';
 import { MESSAGE_SCHEMAS } from './protocol';
 
 const SECONDS = 1000;
@@ -197,7 +197,7 @@ export function host(adapter: low.AdapterSync, options: Partial<HostOptions> = {
             }
 
             const token = resume ? message.token : nanoid();
-            const user = resume ? tokenToUser.get(token)! : zone.getUser(++lastUserId as UserId);
+            const user = resume ? tokenToUser.get(token)! : zone.getUser((++lastUserId).toString() as UserId);
 
             addUserToken(user, token);
             addConnectionToUser(user, messaging);

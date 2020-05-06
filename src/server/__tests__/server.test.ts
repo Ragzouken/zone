@@ -7,7 +7,7 @@ import { AddressInfo } from 'net';
 import { host, HostOptions } from '../server';
 import WebSocketMessaging, { Message } from '../messaging';
 import Playback, { QueueItem } from '../playback';
-import { copy, sleep } from '../utility';
+import { copy, sleep } from '../../common/utility';
 import { ARCHIVE_PATH_TO_MEDIA, YOUTUBE_VIDEOS, TINY_MEDIA, DAY_MEDIA } from './media.data';
 
 const IMMEDIATE_REPLY_TIMEOUT = 50;

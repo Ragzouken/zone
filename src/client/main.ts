@@ -4,21 +4,18 @@ import {
     rgb2num,
     recolor,
     hslToRgb,
-    clamp,
-    randomInt,
     secondsToTime,
     fakedownToTag,
     eventToElementPixel,
     withPixels,
-    sleep,
-    objEqual,
-    QueueItem,
-    PlayableMedia,
 } from './utility';
+import { sleep, objEqual, randomInt, clamp } from '../common/utility';
 import { scriptToPages, PageRenderer, getPageHeight } from './text';
 import { loadYoutube, YoutubePlayer } from './youtube';
 import { ChatPanel, animatePage } from './chat';
 import { UserId, ZoneClient, UserState } from './client';
+
+import { QueueItem, PlayableMedia } from '../server/playback';
 
 export const client = new ZoneClient();
 
@@ -222,7 +219,7 @@ async function load() {
         if (message.items.length === 1) {
             const item = message.items[0];
             const { title, duration } = item.media.details;
-            const username = getUsername(item.info.userId);
+            const username = getUsername(item.info.userId ?? "server");
             const time = secondsToTime(duration / 1000);
             chat.log(`{clr=#00FFFF}+ ${title} (${time}) added by {clr=#FF0000}${username}`);
         }

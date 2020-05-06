@@ -1,18 +1,6 @@
 import fetch from 'node-fetch';
 import * as HTMLParser from 'node-html-parser';
 
-export function objEqual(a: any, b: any) {
-    return JSON.stringify(a) === JSON.stringify(b);
-}
-
-export function sleep(milliseconds: number) {
-    return new Promise((resolve) => setTimeout(resolve, milliseconds));
-}
-
-export function copy<T>(object: T): T {
-    return JSON.parse(JSON.stringify(object));
-}
-
 export function timeToSeconds(time: string): number {
     const parts = time.split(':');
 
@@ -24,8 +12,7 @@ export function timeToSeconds(time: string): number {
 }
 
 export async function fetchJson(url: string) {
-    const json = await fetch(url).then((r) => r.text());
-    return JSON.parse(json);
+    return await fetch(url).then((r) => r.json());
 }
 
 export async function fetchDom(url: string): Promise<HTMLParser.HTMLElement> {
@@ -42,10 +29,4 @@ export function getDefault<K, V>(map: Map<K, V>, key: K, factory: (key: K) => V)
         map.set(key, value);
     }
     return value!;
-}
-
-export function copyObjectKeys(object: any, keys: string[]) {
-    const copy: any = {};
-    for (const key of keys) if (object[key] !== undefined) copy[key] = object[key];
-    return copy;
 }

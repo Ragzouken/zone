@@ -1,4 +1,4 @@
-import { sleep } from './utility';
+import { sleep } from '../common/utility';
 import { EventEmitter } from 'events';
 
 export declare interface WebSocketMessaging {
