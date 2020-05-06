@@ -62,7 +62,7 @@ describe('connectivity', () => {
         await server({}, async (server) => {
             const client = await server.client();
             await client.join({ name: NAME });
-            
+
             const waiter = client.expect('heartbeat');
             client.messaging.send('heartbeat', {});
             await waiter;
@@ -230,7 +230,7 @@ describe('unclean disconnect', () => {
 });
 
 describe('user presence', () => {
-    const MESSAGES: ({ type: keyof MessageMap, [key: string]: any })[] = [
+    const MESSAGES: { type: keyof MessageMap; [key: string]: any }[] = [
         { type: 'chat', text: 'hello baby yoda' },
         { type: 'name', name: 'baby yoda' },
         { type: 'move', position: [0, 0] },

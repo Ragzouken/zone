@@ -17,7 +17,7 @@ const { server, app, save, sendAll } = host(adapter, {
 app.set('trust proxy', true);
 app.use('/', express.static('public'));
 app.get('/update/:password', (req, res) => {
-    if ((req.params.password || "") === process.env.UPDATE_PASSWORD) {
+    if ((req.params.password || '') === process.env.UPDATE_PASSWORD) {
         res.sendStatus(200);
         exec('update-zone', () => {
             save();
@@ -25,9 +25,9 @@ app.get('/update/:password', (req, res) => {
             exec('restart-zone');
         });
     } else {
-        res.sendStatus(401)
+        res.sendStatus(401);
     }
-})
+});
 
 process.on('SIGINT', () => {
     console.log('exiting due to SIGINT');

@@ -1,6 +1,6 @@
-import { EventEmitter } from "events";
+import { EventEmitter } from 'events';
 
-export type Message = { type: string, [key: string]: any };
+export type Message = { type: string; [key: string]: any };
 export type MessageEvent = { data: any };
 
 export interface Socket {
@@ -9,7 +9,7 @@ export interface Socket {
 
     addEventListener(event: string, listener: (event: any) => void): void;
     removeEventListener(event: string, listener: (event: any) => void): void;
-} 
+}
 
 export default class Messaging extends EventEmitter {
     readonly messages = new EventEmitter();
