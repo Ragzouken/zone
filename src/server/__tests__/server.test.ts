@@ -6,7 +6,7 @@ import { AddressInfo } from 'net';
 
 import { host, HostOptions } from '../server';
 
-import ZoneClient from '../../common/client';
+import ZoneClient, { MessageMap } from '../../common/client';
 import Messaging from '../../common/messaging';
 
 import Playback, { QueueItem } from '../playback';
@@ -230,7 +230,7 @@ describe('unclean disconnect', () => {
 });
 
 describe('user presence', () => {
-    const MESSAGES = [
+    const MESSAGES: ({ type: keyof MessageMap, [key: string]: any })[] = [
         { type: 'chat', text: 'hello baby yoda' },
         { type: 'name', name: 'baby yoda' },
         { type: 'move', position: [0, 0] },

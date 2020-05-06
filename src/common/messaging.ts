@@ -19,6 +19,8 @@ export default class Messaging extends EventEmitter {
         super();
         this.socket = socket;
 
+        this.socket.addEventListener('open', () => this.emit('open'));
+
         this.socket.addEventListener('message', (event: MessageEvent) => {
             const { type, ...message } = JSON.parse(event.data) as Message;
             this.messages.emit(type, message);

@@ -1,4 +1,4 @@
-import Messaging from './messaging';
+import Messaging, { Socket } from './messaging';
 import { QueueItem } from '../server/playback'; 
 
 export type AssignMessage = { userId: string, token: string };
@@ -7,14 +7,24 @@ export type UsersMessage = { users: any[] };
 export type NameMessage = { userId: string, name: string };
 export type LeaveMessage = { userId: string };
 export type PlayMessage = { item: QueueItem; time: number };
+export type QueueMessage = { items: QueueItem[] };
+export type SearchMessage = { query: string };
 
-export interface ZoneClient {
-    expect(type: 'assign', timeout?: number): Promise<AssignMessage>;
-    expect(type: 'reject', timeout?: number): Promise<RejectMessage>;
-    expect(type: 'users', timeout?: number): Promise<UsersMessage>;
-    expect(type: 'name', timeout?: number): Promise<NameMessage>;
-    expect(type: 'leave', timeout?: number): Promise<LeaveMessage>;
-    expect(type: 'play', timeout?: number): Promise<PlayMessage>;
+export interface MessageMap {
+    'heartbeat': {};
+    'assign': AssignMessage;
+    'reject': RejectMessage;
+    'users': UsersMessage;
+    'leave': LeaveMessage;
+    'play': PlayMessage;
+    'queue': QueueMessage;
+    'search': SearchMessage;
+
+    'chat': any;
+    'name': NameMessage;
+    'move': any;
+    'emotes': any;
+    'avatar': any;
 }
 
 export class ZoneClient {
@@ -24,7 +34,7 @@ export class ZoneClient {
         this.messaging = messaging;
     }
 
-    expect(type: string, timeout?: number) {
+    expect<K extends keyof MessageMap>(type: K, timeout?: number): Promise<MessageMap[K]> {
         return new Promise((resolve, reject) => {
             if (timeout) setTimeout(() => reject('timeout'), timeout);
             this.messaging.messages.once(type, (message) => resolve(message));
