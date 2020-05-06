@@ -7,5 +7,5 @@
       "outDir": "../../lib/server",
       "strict": true
     },
-    "include": [".", "../common/client.ts"]
+    "include": [".", "../common/*"]
 }
