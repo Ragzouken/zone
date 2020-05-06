@@ -9,7 +9,6 @@ import { host, HostOptions } from '../server';
 import ZoneClient from '../../common/client';
 import Messaging from '../../common/messaging';
 
-import WebSocketMessaging, { Message } from '../messaging';
 import Playback, { QueueItem } from '../playback';
 import { copy, sleep } from '../../common/utility';
 import { ARCHIVE_PATH_TO_MEDIA, YOUTUBE_VIDEOS, TINY_MEDIA, DAY_MEDIA } from './media.data';
@@ -47,10 +46,6 @@ class TestServer {
         return socket;
     }
 
-    public async messaging() {
-        return new WebSocketMessaging(await this.socket());
-    }
-
     public async client() {
         const messaging = new Messaging(await this.socket());
         return new ZoneClient(messaging);
@@ -62,46 +57,15 @@ class TestServer {
     }
 }
 
-async function response(messaging: WebSocketMessaging, type: string, timeout?: number): Promise<any> {
-    return new Promise((resolve, reject) => {
-        if (timeout) setTimeout(() => reject('timeout'), timeout);
-        messaging.setHandler(type, (message) => {
-            messaging.setHandler(type, () => {});
-            resolve(message);
-        });
-    });
-}
-
-function join(messaging: WebSocketMessaging, message: any = {}, timeout?: number) {
-    return new Promise<Message>((resolve, reject) => {
-        if (timeout) setTimeout(() => reject('timeout'), timeout);
-        messaging.setHandler('assign', resolve);
-        messaging.setHandler('reject', reject);
-        messaging.send('join', Object.assign({ name: 'anonymous' }, message));
-    });
-}
-
-async function exchange(
-    messaging: WebSocketMessaging,
-    sendType: string,
-    sendMessage: any,
-    responseType: string,
-): Promise<Message> {
-    return new Promise((resolve, reject) => {
-        messaging.setHandler(responseType, (message) => {
-            messaging.setHandler(responseType, () => {});
-            resolve(message);
-        });
-        messaging.send(sendType, sendMessage);
-    });
-}
-
 describe('connectivity', () => {
     test('heartbeat response', async () => {
         await server({}, async (server) => {
-            const messaging = await server.messaging();
-            await join(messaging);
-            await exchange(messaging, 'heartbeat', {}, 'heartbeat');
+            const client = await server.client();
+            await client.join({ name: NAME });
+            
+            const waiter = client.expect('heartbeat');
+            client.messaging.send('heartbeat', {});
+            await waiter;
         });
     });
 
@@ -126,14 +90,14 @@ describe('join open server', () => {
     test('accepts no password', async () => {
         await server({}, async (server) => {
             const client = await server.client();
-            await client.join(NAME);
-        })
+            await client.join({ name: 'no pass' });
+        });
     });
 
     test('accepts any password', async () => {
         await server({}, async (server) => {
             const client = await server.client();
-            await client.join(NAME, 'old password');
+            await client.join({ name: 'any pass', password: 'old password' });
         });
     });
 });
@@ -145,7 +109,7 @@ describe('join closed server', () => {
         const password = 'riverdale';
         await server({ joinPassword: password }, async (server) => {
             const client = await server.client();
-            const joining = client.join(NAME);
+            const joining = client.join({ name: NAME });
             await expect(joining).rejects.toMatchObject(PASSWORD_REJECT);
         });
     });
@@ -153,8 +117,8 @@ describe('join closed server', () => {
     test('rejects incorrect password', async () => {
         const password = 'riverdale';
         await server({ joinPassword: password }, async (server) => {
-            const messaging = await server.messaging();
-            const joining = join(messaging, { password: password + ' wrong' });
+            const client = await server.client();
+            const joining = client.join({ name: NAME, password: password + ' wrong' });
             await expect(joining).rejects.toMatchObject(PASSWORD_REJECT);
         });
     });
@@ -162,8 +126,8 @@ describe('join closed server', () => {
     test('accepts correct password', async () => {
         const password = 'riverdale';
         await server({ joinPassword: password }, async (server) => {
-            const messaging = await server.messaging();
-            await join(messaging, { password });
+            const client = await server.client();
+            await client.join({ name: NAME, password });
         });
     });
 });
@@ -171,9 +135,8 @@ describe('join closed server', () => {
 describe('join server', () => {
     test('assigns id and token', async () => {
         await server({}, async (server) => {
-            const messaging = await server.messaging();
-
-            const { userId, token } = await join(messaging);
+            const client = await server.client();
+            const { userId, token } = await client.join({ name: NAME });
 
             expect(userId).not.toBeUndefined();
             expect(token).not.toBeUndefined();
@@ -182,10 +145,9 @@ describe('join server', () => {
 
     test('ignores second join', async () => {
         await server({}, async (server) => {
-            const messaging = await server.messaging();
-
-            await join(messaging);
-            const repeat = join(messaging, {}, 100);
+            const client = await server.client();
+            await client.join({ name: NAME });
+            const repeat = client.join({ name: NAME });
             await expect(repeat).rejects.toEqual('timeout');
         });
     });
@@ -193,12 +155,12 @@ describe('join server', () => {
     it('sends user list', async () => {
         await server({}, async (server) => {
             const name = 'user1';
-            const messaging1 = await server.messaging();
-            const messaging2 = await server.messaging();
-            const { userId } = await join(messaging1, { name });
+            const client1 = await server.client();
+            const client2 = await server.client();
+            const { userId } = await client1.join({ name });
 
-            const waitUsers = response(messaging2, 'users');
-            await join(messaging2);
+            const waitUsers = client2.expect('users');
+            await client2.join({ name: NAME });
             const { users } = await waitUsers;
 
             expect(users[0]).toMatchObject({ userId, name });
@@ -208,12 +170,12 @@ describe('join server', () => {
     test('server sends name on join', async () => {
         await server({}, async (server) => {
             const name = 'baby yoda';
-            const messaging1 = await server.messaging();
-            const messaging2 = await server.messaging();
+            const client1 = await server.client();
+            const client2 = await server.client();
 
-            await join(messaging1);
-            const waiter = response(messaging1, 'name');
-            const { userId } = await join(messaging2, { name });
+            await client1.join({ name: NAME });
+            const waiter = client1.expect('name');
+            const { userId } = await client2.join({ name });
             const message = await waiter;
 
             expect(message.userId).toEqual(userId);
@@ -225,12 +187,12 @@ describe('join server', () => {
 describe('unclean disconnect', () => {
     test('can resume session with token', async () => {
         await server({}, async (server) => {
-            const messaging1 = await server.messaging();
-            const messaging2 = await server.messaging();
+            const client1 = await server.client();
+            const client2 = await server.client();
 
-            const assign1 = await join(messaging1);
-            messaging1.disconnect(3000);
-            const assign2 = await join(messaging2, { token: assign1.token });
+            const assign1 = await client1.join({ name: NAME });
+            client1.messaging.socket.close(3000);
+            const assign2 = await client2.join({ name: NAME, token: assign1.token });
 
             expect(assign2.userId).toEqual(assign1.userId);
             expect(assign2.token).toEqual(assign1.token);
@@ -239,13 +201,13 @@ describe('unclean disconnect', () => {
 
     test('server assigns new user for expired token', async () => {
         await server({ userTimeout: 0 }, async (server) => {
-            const messaging1 = await server.messaging();
-            const messaging2 = await server.messaging();
+            const client1 = await server.client();
+            const client2 = await server.client();
 
-            const assign1 = await join(messaging1);
-            messaging1.disconnect(3000);
+            const assign1 = await client1.join({ name: NAME });
+            client1.messaging.socket.close(3000);
             await sleep(100);
-            const assign2 = await join(messaging2, { token: assign1.token });
+            const assign2 = await client2.join({ name: NAME, token: assign1.token });
 
             expect(assign2.userId).not.toEqual(assign1.userId);
             expect(assign2.token).not.toEqual(assign1.token);
@@ -254,15 +216,15 @@ describe('unclean disconnect', () => {
 
     test('send leave message when token expires', async () => {
         await server({ userTimeout: 50 }, async (server) => {
-            const messaging1 = await server.messaging();
-            const messaging2 = await server.messaging();
+            const client1 = await server.client();
+            const client2 = await server.client();
 
-            await join(messaging1);
-            await join(messaging2);
+            const { userId } = await client1.join({ name: NAME });
+            await client2.join({ name: NAME });
 
-            const leaveWaiter = response(messaging2, 'leave');
-            messaging1.disconnect(3000);
-            await leaveWaiter;
+            const leaveWaiter = client2.expect('leave');
+            client1.messaging.socket.close(3000);
+            expect(await leaveWaiter).toEqual({ userId });
         });
     });
 });
@@ -278,9 +240,12 @@ describe('user presence', () => {
 
     it.each(MESSAGES)('echoes own change', async ({ type, ...message }) => {
         await server({}, async (server) => {
-            const messaging = await server.messaging();
-            const { userId } = await join(messaging);
-            const echo = await exchange(messaging, type, message, type);
+            const client = await server.client();
+            const { userId } = await client.join({ name: NAME });
+
+            const waiter = client.expect(type);
+            client.messaging.send(type, message);
+            const echo = await waiter;
 
             expect(echo).toEqual({ userId, ...message });
         });
@@ -288,17 +253,17 @@ describe('user presence', () => {
 
     it.each(MESSAGES)('forwards own change', async (message) => {
         await server({}, async (server) => {
-            const messaging1 = await server.messaging();
-            const messaging2 = await server.messaging();
+            const client1 = await server.client();
+            const client2 = await server.client();
 
-            const { userId } = await join(messaging1);
-            await join(messaging2);
+            const { userId } = await client1.join({ name: NAME });
+            await client2.join({ name: NAME });
 
-            const waiter = response(messaging2, message.type);
-            messaging1.send(message.type, message);
+            const waiter = client2.expect(message.type);
+            client1.messaging.send(message.type, message);
             const forward = await waiter;
 
-            expect(forward).toEqual({ userId, ...message });
+            expect(forward).toEqual({ userId, ...message, type: undefined });
         });
     });
 });
@@ -308,9 +273,9 @@ describe('playback', () => {
         await server({}, async (server) => {
             server.hosting.playback.queueMedia(DAY_MEDIA);
 
-            const messaging = await server.messaging();
-            const waiter = response(messaging, 'play');
-            await join(messaging);
+            const client = await server.client();
+            const waiter = client.expect('play');
+            await client.join({ name: NAME });
             const play = await waiter;
 
             expect(play.time).toBeGreaterThan(0);
@@ -322,12 +287,14 @@ describe('playback', () => {
         await server({}, async (server) => {
             server.hosting.playback.queueMedia(DAY_MEDIA);
 
-            const messaging = await server.messaging();
-            const waiter = response(messaging, 'play');
-            await join(messaging);
-            await waiter;
+            const client = await server.client();
+            const waiter1 = client.expect('play');
+            await client.join({ name: NAME });
+            await waiter1;
 
-            const play = await exchange(messaging, 'resync', {}, 'play');
+            const waiter2 = client.expect('play');
+            client.messaging.send('resync', {});
+            const play = await waiter2;
 
             expect(play.time).toBeGreaterThan(0);
             expect(play.item).toEqual(server.hosting.playback.currentItem);
@@ -336,42 +303,42 @@ describe('playback', () => {
 
     it('sends empty play when all playback ends', async () => {
         await server({ playbackPaddingTime: 0 }, async (server) => {
-            const messaging = await server.messaging();
-            await join(messaging);
+            const client = await server.client();
+            await client.join({ name: NAME });
 
-            const playWaiter = response(messaging, 'play');
+            const waiter = client.expect('play');
             server.hosting.playback.queueMedia(TINY_MEDIA);
-            await playWaiter;
+            await waiter;
 
-            const stop = await response(messaging, 'play');
-            expect(stop).toEqual({ type: 'play' });
+            const stop = await client.expect('play');
+            expect(stop).toEqual({});
         });
     });
 
     it("doesn't queue duplicate media", async () => {
         await server({}, async (server) => {
-            const messaging = await server.messaging();
+            const client = await server.client();
 
             const media = YOUTUBE_VIDEOS[0];
             // queue twice because currently playing doesn't count
             server.hosting.playback.queueMedia(media);
             server.hosting.playback.queueMedia(media);
 
-            await join(messaging);
-            const waitQueue = response(messaging, 'queue', 200);
-            messaging.send('youtube', { videoId: media.source.videoId });
+            await client.join({ name: NAME });
+            const waiter = client.expect('queue', 200);
+            client.messaging.send('youtube', { videoId: media.source.videoId });
 
-            await expect(waitQueue).rejects.toEqual('timeout');
+            await expect(waiter).rejects.toEqual('timeout');
         });
     });
 
     it("doesn't queue beyond limit", async () => {
         await server({ perUserQueueLimit: 0 }, async (server) => {
-            const messaging = await server.messaging();
+            const client = await server.client();
 
-            await join(messaging);
-            const queue = response(messaging, 'queue', 200);
-            messaging.send('youtube', { videoId: '2GjyNgQ4Dos' });
+            await client.join({ name: NAME });
+            const queue = client.expect('queue', 200);
+            client.messaging.send('youtube', { videoId: '2GjyNgQ4Dos' });
 
             await expect(queue).rejects.toEqual('timeout');
         });
@@ -379,23 +346,23 @@ describe('playback', () => {
 
     it('skips with sufficient votes', async () => {
         await server({ voteSkipThreshold: 1 }, async (server) => {
-            const messaging1 = await server.messaging();
-            const messaging2 = await server.messaging();
+            const client1 = await server.client();
+            const client2 = await server.client();
 
             server.hosting.playback.queueMedia(DAY_MEDIA);
 
-            const waiter1 = response(messaging1, 'play');
-            const waiter2 = response(messaging2, 'play');
+            const waiter1 = client1.expect('play');
+            const waiter2 = client2.expect('play');
 
-            await join(messaging1);
-            await join(messaging2);
+            await client1.join({ name: NAME });
+            await client2.join({ name: NAME });
 
             const { item }: { item: QueueItem } = await waiter1;
             await waiter2;
 
-            const waiter = response(messaging1, 'play');
-            messaging1.send('skip', { source: item.media.source });
-            messaging2.send('skip', { source: item.media.source });
+            const waiter = client1.expect('play');
+            client1.messaging.send('skip', { source: item.media.source });
+            client2.messaging.send('skip', { source: item.media.source });
 
             await waiter;
         });
@@ -403,23 +370,23 @@ describe('playback', () => {
 
     it('skips with sufficient errors', async () => {
         await server({ voteSkipThreshold: 1 }, async (server) => {
-            const messaging1 = await server.messaging();
-            const messaging2 = await server.messaging();
+            const client1 = await server.client();
+            const client2 = await server.client();
 
             server.hosting.playback.queueMedia(DAY_MEDIA);
 
-            const waiter1 = response(messaging1, 'play');
-            const waiter2 = response(messaging2, 'play');
+            const waiter1 = client1.expect('play');
+            const waiter2 = client2.expect('play');
 
-            await join(messaging1);
-            await join(messaging2);
+            await client1.join({ name: NAME });
+            await client2.join({ name: NAME });
 
             const { item }: { item: QueueItem } = await waiter1;
             await waiter2;
 
-            const waiter = response(messaging1, 'play');
-            messaging1.send('error', { source: item.media.source });
-            messaging2.send('error', { source: item.media.source });
+            const waiter = client1.expect('play');
+            client1.messaging.send('error', { source: item.media.source });
+            client2.messaging.send('error', { source: item.media.source });
 
             await waiter;
         });
@@ -428,16 +395,16 @@ describe('playback', () => {
     it('skips with password', async () => {
         const password = 'riverdale';
         await server({ voteSkipThreshold: 2, skipPassword: password }, async (server) => {
-            const messaging = await server.messaging();
+            const client = await server.client();
 
             server.hosting.playback.queueMedia(DAY_MEDIA);
 
-            const playWaiter = response(messaging, 'play');
-            await join(messaging);
+            const playWaiter = client.expect('play');
+            await client.join({ name: NAME });
             const { item } = await playWaiter;
 
-            const stopWaiter = response(messaging, 'play');
-            messaging.send('skip', { source: item.media.source, password });
+            const stopWaiter = client.expect('play');
+            client.messaging.send('skip', { source: item.media.source, password });
 
             await stopWaiter;
         });
@@ -445,16 +412,16 @@ describe('playback', () => {
 
     it("doesn't skip with insufficient votes", async () => {
         await server({ voteSkipThreshold: 2 }, async (server) => {
-            const messaging = await server.messaging();
+            const client = await server.client();
 
             server.hosting.playback.queueMedia(DAY_MEDIA);
 
-            const playWaiter = response(messaging, 'play');
-            await join(messaging);
+            const playWaiter = client.expect('play');
+            await client.join({ name: NAME });
             const { item } = await playWaiter;
 
-            const skip = response(messaging, 'play', IMMEDIATE_REPLY_TIMEOUT);
-            messaging.send('skip', { source: item.media.source });
+            const skip = client.expect('play', IMMEDIATE_REPLY_TIMEOUT);
+            client.messaging.send('skip', { source: item.media.source });
 
             await expect(skip).rejects.toEqual('timeout');
         });
@@ -462,16 +429,16 @@ describe('playback', () => {
 
     it("doesn't skip with insufficient errors", async () => {
         await server({ errorSkipThreshold: 2 }, async (server) => {
-            const messaging = await server.messaging();
+            const client = await server.client();
 
             server.hosting.playback.queueMedia(DAY_MEDIA);
 
-            const playWaiter = response(messaging, 'play');
-            await join(messaging);
+            const playWaiter = client.expect('play');
+            await client.join({ name: NAME });
             const { item } = await playWaiter;
 
-            const skip = response(messaging, 'play', IMMEDIATE_REPLY_TIMEOUT);
-            messaging.send('error', { source: item.media.source });
+            const skip = client.expect('play', IMMEDIATE_REPLY_TIMEOUT);
+            client.messaging.send('error', { source: item.media.source });
 
             await expect(skip).rejects.toEqual('timeout');
         });
@@ -479,19 +446,19 @@ describe('playback', () => {
 
     it("doesn't skip incorrect video", async () => {
         await server({}, async (server) => {
-            const messaging = await server.messaging();
+            const client = await server.client();
 
             server.hosting.playback.queueMedia(DAY_MEDIA);
 
-            const playWaiter = response(messaging, 'play');
-            await join(messaging);
+            const playWaiter = client.expect('play');
+            await client.join({ name: NAME });
             const { item } = await playWaiter;
 
             const source = copy(item.media.source);
             source.type = 'fake';
 
-            const skip = response(messaging, 'play', IMMEDIATE_REPLY_TIMEOUT);
-            messaging.send('skip', { source });
+            const skip = client.expect('play', IMMEDIATE_REPLY_TIMEOUT);
+            client.messaging.send('skip', { source });
 
             await expect(skip).rejects.toEqual('timeout');
         });
@@ -503,9 +470,12 @@ describe('media sources', () => {
         await server({}, async (server) => {
             const { path, media } = ARCHIVE_PATH_TO_MEDIA[0];
 
-            const messaging = await server.messaging();
-            await join(messaging);
-            const message = await exchange(messaging, 'archive', { path }, 'play');
+            const client = await server.client();
+            await client.join({ name: NAME });
+
+            const waiter = client.expect('play');
+            client.messaging.send('archive', { path });
+            const message = await waiter;
 
             expect(message.item.media).toEqual(media);
         });
@@ -515,9 +485,12 @@ describe('media sources', () => {
         await server({}, async (server) => {
             const source = YOUTUBE_VIDEOS[0].source;
 
-            const messaging = await server.messaging();
-            await join(messaging);
-            const message = await exchange(messaging, 'youtube', { videoId: source.videoId }, 'play');
+            const client = await server.client();
+            await client.join({ name: NAME });
+
+            const waiter = client.expect('play');
+            client.messaging.send('youtube', { videoId: source.videoId });
+            const message = await waiter;
 
             expect(message.item.media.source).toEqual(source);
         });
@@ -525,31 +498,37 @@ describe('media sources', () => {
 
     test('can search youtube', async () => {
         await server({}, async (server) => {
-            const messaging = await server.messaging();
-            await join(messaging);
-            await exchange(messaging, 'search', { query: 'hello' }, 'search');
+            const client = await server.client();
+            await client.join({ name: NAME });
+
+            const waiter = client.expect('search');
+            client.messaging.send('search', { query: 'hello' });
+            await waiter;
         });
     });
 
     test('can lucky search youtube', async () => {
         await server({}, async (server) => {
-            const messaging = await server.messaging();
-            await join(messaging);
-            await exchange(messaging, 'search', { query: 'hello', lucky: true }, 'play');
+            const client = await server.client();
+            await client.join({ name: NAME });
+
+            const waiter = client.expect('play');
+            client.messaging.send('search', { query: 'hello', lucky: true });
+            await waiter;
         });
     });
 });
 
 test('server sends leave on clean quit', async () => {
     await server({}, async (server) => {
-        const messaging1 = await server.messaging();
-        const messaging2 = await server.messaging();
+        const client1 = await server.client();
+        const client2 = await server.client();
 
-        const { userId: joinedId } = await join(messaging1);
-        await join(messaging2);
+        const { userId: joinedId } = await client1.join({ name: NAME });
+        await client2.join({ name: NAME });
 
-        const waiter = response(messaging2, 'leave');
-        messaging1.disconnect();
+        const waiter = client2.expect('leave');
+        client1.messaging.socket.close(1000);
         const { userId: leftId } = await waiter;
 
         expect(joinedId).toEqual(leftId);

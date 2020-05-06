@@ -5,13 +5,15 @@ export type MessageEvent = { data: any };
 
 export interface Socket {
     send(data: string): void;
+    close(code?: number, reason?: string): void;
+
     addEventListener(event: string, listener: (event: any) => void): void;
     removeEventListener(event: string, listener: (event: any) => void): void;
 } 
 
 export default class Messaging extends EventEmitter {
     readonly messages = new EventEmitter();
-    private socket: Socket;
+    readonly socket: Socket;
 
     constructor(socket: Socket) {
         super();
