@@ -1079,7 +1079,7 @@ async function load() {
         if (message.items.length === 1) {
             const item = message.items[0];
             const { title, duration } = item.media.details;
-            const username = getUsername((_a = item.info.userId) !== null && _a !== void 0 ? _a : "server");
+            const username = getUsername((_a = item.info.userId) !== null && _a !== void 0 ? _a : 'server');
             const time = utility_1.secondsToTime(duration / 1000);
             chat.log(`{clr=#00FFFF}+ ${title} (${time}) added by {clr=#FF0000}${username}`);
         }

@@ -11,7 +11,13 @@ export interface Socket {
     removeEventListener(event: string, listener: (event: any) => void): void;
 }
 
-export default class Messaging extends EventEmitter {
+export interface Messaging {
+    on(event: 'open', callback: () => void): this;
+    on(event: 'close', callback: (code: number) => void): this;
+    on(event: 'error', callback: (error: any) => void): this;
+}
+
+export class Messaging extends EventEmitter {
     readonly messages = new EventEmitter();
     readonly socket: Socket;
 
@@ -20,6 +26,7 @@ export default class Messaging extends EventEmitter {
         this.socket = socket;
 
         this.socket.addEventListener('open', () => this.emit('open'));
+        this.socket.addEventListener('close', (event) => this.emit(event.code || event));
 
         this.socket.addEventListener('message', (event: MessageEvent) => {
             const { type, ...message } = JSON.parse(event.data) as Message;
@@ -29,6 +36,13 @@ export default class Messaging extends EventEmitter {
 
     send(type: string, message: object) {
         const data = JSON.stringify({ type, ...message });
-        this.socket.send(data);
+        
+        try {
+            this.socket.send(data);
+        } catch (e) {
+            this.emit('error', e);
+        }
     }
 }
+
+export default Messaging;
