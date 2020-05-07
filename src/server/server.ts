@@ -189,6 +189,8 @@ export function host(adapter: low.AdapterSync, options: Partial<HostOptions> = {
             const resume = message.token && tokenToUser.has(message.token);
             const authorised = resume || !opts.joinPassword || message.password === opts.joinPassword;
 
+            console.log('got token', message.token, resume, authorised);
+
             if (!authorised) {
                 messaging.send('reject', { text: 'rejected: password required' });
                 websocket.close(4000);

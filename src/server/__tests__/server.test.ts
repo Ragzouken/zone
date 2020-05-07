@@ -65,7 +65,7 @@ describe('messaging', () => {
         await server({}, async (server) => {
             const messaging = new Messaging(await server.socket());
             const waiter = once(messaging, 'close');
-            messaging.close();
+            await messaging.close();
             await waiter;
         });
     });
@@ -75,11 +75,11 @@ describe('messaging', () => {
             const messaging = new Messaging(await server.socket());
             
             const waiter1 = once(messaging, 'close');
-            messaging.close();
+            await messaging.close();
             await waiter1;
 
             const waiter2 = timeout(messaging, 'close', 100);
-            messaging.close();
+            await messaging.close();
             await waiter2;
         });
     });
@@ -89,13 +89,13 @@ describe('messaging', () => {
             const messaging = new Messaging(await server.socket());
 
             const waiter1 = once(messaging, 'close');
-            messaging.close();
+            await messaging.close();
             await waiter1;
 
             messaging.setSocket(await server.socket());
 
             const waiter2 = once(messaging, 'close');
-            messaging.close();
+            await messaging.close();
             await waiter2;
         });
     });
@@ -103,10 +103,7 @@ describe('messaging', () => {
     test('no response after close', async () => {
         await server({}, async (server) => {
             const messaging = new Messaging(await server.socket());
-
-            const close = once(messaging, 'close');
-            messaging.close(3000);
-            await close;
+            await messaging.close(3000);
 
             const noassign = timeout(messaging.messages, 'assign', 100);
             messaging.send('join', { name: NAME });
@@ -121,10 +118,7 @@ describe('messaging', () => {
 
             const messaging = new Messaging(socket1);
             messaging.on('close', () => messaging.setSocket(socket2));
-
-            const close = once(messaging, 'close');
-            messaging.close(3000);
-            await close;
+            await messaging.close(3000);
 
             const assign = once(messaging.messages, 'assign');
             messaging.send('join', { name: NAME });
@@ -267,7 +261,7 @@ describe('unclean disconnect', () => {
             const client2 = await server.client();
 
             const assign1 = await client1.join({ name: NAME });
-            client1.messaging.close(3000);
+            await client1.messaging.close(3000);
             const assign2 = await client2.join({ name: NAME, token: assign1.token });
 
             expect(assign2.userId).toEqual(assign1.userId);
@@ -281,12 +275,24 @@ describe('unclean disconnect', () => {
             const client2 = await server.client();
 
             const assign1 = await client1.join({ name: NAME });
-            client1.messaging.close(3000);
-            await sleep(100);
+            await client1.messaging.close(3000);
+            await sleep(10); // TODO: server should check expiry at time of join
             const assign2 = await client2.join({ name: NAME, token: assign1.token });
 
             expect(assign2.userId).not.toEqual(assign1.userId);
             expect(assign2.token).not.toEqual(assign1.token);
+        });
+    });
+
+    test('client join reuses existing token', async () => {
+        await server({}, async (server) => {
+            const socket = await server.socket();
+            const client = await server.client();
+            client.messaging.on('close', () => client.messaging.setSocket(socket));
+
+            await client.join({ name: NAME });
+            await client.messaging.close(3000);
+            await client.join({ name: NAME });
         });
     });
 
@@ -299,7 +305,7 @@ describe('unclean disconnect', () => {
             await client2.join({ name: NAME });
 
             const leaveWaiter = client2.expect('leave');
-            client1.messaging.close(3000);
+            await client1.messaging.close(3000);
             expect(await leaveWaiter).toEqual({ userId });
         });
     });
@@ -604,7 +610,7 @@ test('server sends leave on clean quit', async () => {
         await client2.join({ name: NAME });
 
         const waiter = client2.expect('leave');
-        client1.messaging.close(1000);
+        await client1.messaging.close();
         const { userId: leftId } = await waiter;
 
         expect(joinedId).toEqual(leftId);

@@ -38,8 +38,11 @@ export class Messaging extends EventEmitter {
         });
     }
 
-    close(code = 1000) {
+    async close(code = 1000) {
+        if (this.socket.readyState === 3) return;
+        const waiter = once(this, 'close');
         this.socket.close(code);
+        await waiter;
     }
 
     send(type: string, message: object) {
