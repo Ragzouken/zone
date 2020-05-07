@@ -113,16 +113,11 @@ describe('messaging', () => {
 
     test('response after reconnect', async () => {
         await server({}, async (server) => {
-            const socket1 = await server.socket();
-            const socket2 = await server.socket();
-
-            const messaging = new Messaging(socket1);
-            messaging.on('close', () => messaging.setSocket(socket2));
-            await messaging.close(3000);
-
-            const assign = once(messaging.messages, 'assign');
-            messaging.send('join', { name: NAME });
-            await assign;
+            const socket = await server.socket();
+            const client = await server.client();
+            client.messaging.on('close', () => client.messaging.setSocket(socket));
+            await client.messaging.close(3000);
+            await client.join({ name: NAME });
         });
     });
 });
