@@ -1,4 +1,4 @@
-import { once } from 'events';
+import { once, EventEmitter } from 'events';
 import * as Memory from 'lowdb/adapters/Memory';
 import { Server } from 'http';
 import * as WebSocket from 'ws';
@@ -16,9 +16,11 @@ import { ARCHIVE_PATH_TO_MEDIA, YOUTUBE_VIDEOS, TINY_MEDIA, DAY_MEDIA } from './
 const IMMEDIATE_REPLY_TIMEOUT = 50;
 const NAME = 'baby yoda';
 
-function socketAddress(server: Server) {
-    const address = server.address() as AddressInfo;
-    return `ws://localhost:${address.port}/zone`;
+function timeout(emitter: EventEmitter, event: string, ms: number) {
+    return new Promise((resolve, reject) => {
+        setTimeout(resolve, ms);
+        emitter.once(event, reject);
+    });
 }
 
 async function server(options: Partial<HostOptions>, callback: (server: TestServer) => Promise<void>) {
@@ -40,7 +42,8 @@ class TestServer {
     }
 
     public async socket() {
-        const socket = new WebSocket(socketAddress(this.hosting.server));
+        const address = this.hosting.server.address() as AddressInfo;
+        const socket = new WebSocket(`ws://localhost:${address.port}/zone`);
         this.sockets.push(socket);
         await once(socket, 'open');
         return socket;
@@ -56,6 +59,79 @@ class TestServer {
         this.hosting.server.close();
     }
 }
+
+describe('messaging', () => {
+    test('close event', async () => {
+        await server({}, async (server) => {
+            const messaging = new Messaging(await server.socket());
+            const waiter = once(messaging, 'close');
+            messaging.close();
+            await waiter;
+        });
+    });
+
+    test('double close gives only one event', async () => {
+        await server({}, async (server) => {
+            const messaging = new Messaging(await server.socket());
+            
+            const waiter1 = once(messaging, 'close');
+            messaging.close();
+            await waiter1;
+
+            const waiter2 = timeout(messaging, 'close', 100);
+            messaging.close();
+            await waiter2;
+        });
+    });
+
+    test('replace socket', async () => {
+        await server({}, async (server) => {
+            const messaging = new Messaging(await server.socket());
+
+            const waiter1 = once(messaging, 'close');
+            messaging.close();
+            await waiter1;
+
+            messaging.setSocket(await server.socket());
+
+            const waiter2 = once(messaging, 'close');
+            messaging.close();
+            await waiter2;
+        });
+    });
+
+    test('no response after close', async () => {
+        await server({}, async (server) => {
+            const messaging = new Messaging(await server.socket());
+
+            const close = once(messaging, 'close');
+            messaging.close(3000);
+            await close;
+
+            const noassign = timeout(messaging.messages, 'assign', 100);
+            messaging.send('join', { name: NAME });
+            await noassign;
+        });
+    });
+
+    test('response after reconnect', async () => {
+        await server({}, async (server) => {
+            const socket1 = await server.socket();
+            const socket2 = await server.socket();
+
+            const messaging = new Messaging(socket1);
+            messaging.on('close', () => messaging.setSocket(socket2));
+
+            const close = once(messaging, 'close');
+            messaging.close(3000);
+            await close;
+
+            const assign = once(messaging.messages, 'assign');
+            messaging.send('join', { name: NAME });
+            await assign;
+        });
+    });
+});
 
 describe('connectivity', () => {
     test('heartbeat response', async () => {
@@ -191,7 +267,7 @@ describe('unclean disconnect', () => {
             const client2 = await server.client();
 
             const assign1 = await client1.join({ name: NAME });
-            client1.messaging.socket.close(3000);
+            client1.messaging.close(3000);
             const assign2 = await client2.join({ name: NAME, token: assign1.token });
 
             expect(assign2.userId).toEqual(assign1.userId);
@@ -205,7 +281,7 @@ describe('unclean disconnect', () => {
             const client2 = await server.client();
 
             const assign1 = await client1.join({ name: NAME });
-            client1.messaging.socket.close(3000);
+            client1.messaging.close(3000);
             await sleep(100);
             const assign2 = await client2.join({ name: NAME, token: assign1.token });
 
@@ -223,7 +299,7 @@ describe('unclean disconnect', () => {
             await client2.join({ name: NAME });
 
             const leaveWaiter = client2.expect('leave');
-            client1.messaging.socket.close(3000);
+            client1.messaging.close(3000);
             expect(await leaveWaiter).toEqual({ userId });
         });
     });
@@ -528,7 +604,7 @@ test('server sends leave on clean quit', async () => {
         await client2.join({ name: NAME });
 
         const waiter = client2.expect('leave');
-        client1.messaging.socket.close(1000);
+        client1.messaging.close(1000);
         const { userId: leftId } = await waiter;
 
         expect(joinedId).toEqual(leftId);

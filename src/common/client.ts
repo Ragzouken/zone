@@ -1,5 +1,6 @@
 import Messaging from './messaging';
 import { QueueItem } from '../server/playback';
+import { EventEmitter } from 'events';
 
 export type AssignMessage = { userId: string; token: string };
 export type RejectMessage = { text: string };
@@ -12,7 +13,7 @@ export type SearchMessage = { query: string };
 export type ChatMessage = { text: string };
 export type MoveMessage = { position: number[] };
 export type EmotesMessage = { emotes: string[] };
-export type AvatarMessage = { data: string }; 
+export type AvatarMessage = { data: string };
 
 export interface MessageMap {
     heartbeat: {};
@@ -31,10 +32,11 @@ export interface MessageMap {
     avatar: AvatarMessage;
 }
 
-export class ZoneClient {
+export class ZoneClient extends EventEmitter {
     readonly messaging: Messaging;
 
     constructor(messaging: Messaging) {
+        super();
         this.messaging = messaging;
     }
 

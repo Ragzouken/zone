@@ -184,7 +184,7 @@ export function host(adapter: low.AdapterSync, options: Partial<HostOptions> = {
     function waitJoin(websocket: WebSocket, userIp: unknown) {
         const messaging = new Messaging(websocket);
         messaging.on('error', () => {});
- 
+
         messaging.messages.once('join', (message) => {
             const resume = message.token && tokenToUser.has(message.token);
             const authorised = resume || !opts.joinPassword || message.password === opts.joinPassword;
