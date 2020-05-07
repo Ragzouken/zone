@@ -34,6 +34,14 @@ export class Messaging extends EventEmitter {
         });
     }
 
+    setSocket(socket: Socket) {
+
+    }
+
+    close(code: number = 1000) {
+
+    }
+
     send(type: string, message: object) {
         const data = JSON.stringify({ type, ...message });
         

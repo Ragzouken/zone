@@ -9,6 +9,10 @@ export type LeaveMessage = { userId: string };
 export type PlayMessage = { item: QueueItem; time: number };
 export type QueueMessage = { items: QueueItem[] };
 export type SearchMessage = { query: string };
+export type ChatMessage = { text: string };
+export type MoveMessage = { position: number[] };
+export type EmotesMessage = { emotes: string[] };
+export type AvatarMessage = { data: string }; 
 
 export interface MessageMap {
     heartbeat: {};
@@ -20,11 +24,11 @@ export interface MessageMap {
     queue: QueueMessage;
     search: SearchMessage;
 
-    chat: any;
+    chat: ChatMessage;
     name: NameMessage;
-    move: any;
-    emotes: any;
-    avatar: any;
+    move: MoveMessage;
+    emotes: EmotesMessage;
+    avatar: AvatarMessage;
 }
 
 export class ZoneClient {
