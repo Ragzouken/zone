@@ -875,11 +875,10 @@ function animatePage(page) {
 }
 exports.animatePage = animatePage;
 
-},{"../common/utility":18,"./text":14,"./utility":15,"blitsy":7}],12:[function(require,module,exports){
+},{"../common/utility":19,"./text":14,"./utility":15,"blitsy":7}],12:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 const utility_1 = require("./utility");
-const messaging_1 = require("../common/messaging");
 class ZoneState {
     constructor() {
         this.users = new Map();
@@ -892,18 +891,8 @@ class ZoneState {
     }
 }
 exports.ZoneState = ZoneState;
-class ZoneClient {
-    constructor() {
-        this.zone = new ZoneState();
-        this.messaging = new messaging_1.default(new WebSocket('ws://localhost'));
-    }
-    get localUser() {
-        return this.zone.getUser(this.localUserId);
-    }
-}
-exports.ZoneClient = ZoneClient;
 
-},{"../common/messaging":17,"./utility":15}],13:[function(require,module,exports){
+},{"./utility":15}],13:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 const blitsy = require("blitsy");
@@ -913,7 +902,9 @@ const text_1 = require("./text");
 const youtube_1 = require("./youtube");
 const chat_1 = require("./chat");
 const client_1 = require("./client");
-exports.client = new client_1.ZoneClient();
+const client_2 = require("../common/client");
+const messaging_1 = require("../common/messaging");
+exports.client = new client_2.default(new messaging_1.default(new WebSocket('ws://localhost')));
 let player;
 async function start() {
     player = await youtube_1.loadYoutube('youtube', 448, 252);
@@ -1020,6 +1011,10 @@ function parseFakedown(text) {
     return text;
 }
 const chat = new chat_1.ChatPanel();
+const zoneState = new client_1.ZoneState();
+function getLocalUser() {
+    return zoneState.getUser(exports.client.localUserId);
+}
 function setVolume(volume) {
     player.volume = volume;
     localStorage.setItem('volume', volume.toString());
@@ -1036,9 +1031,10 @@ function socket() {
         socket.addEventListener('open', () => resolve(socket));
     });
 }
+let joinPassword;
 async function connect() {
     exports.client.messaging.setSocket(await socket());
-    exports.client.messaging.send('join', { name: localName, token: exports.client.localToken, password: exports.client.joinPassword });
+    exports.client.join({ name: localName, password: joinPassword });
 }
 async function load() {
     setVolume(parseInt(localStorage.getItem('volume') || '100', 10));
@@ -1052,16 +1048,17 @@ async function load() {
     let currentPlayMessage;
     let currentPlayStart;
     function getUsername(userId) {
-        return exports.client.zone.getUser(userId).name || userId;
+        return zoneState.getUser(userId).name || userId;
     }
     let showQueue = false;
     let remember;
     function reset() {
         queue.length = 0;
-        exports.client.zone.reset();
+        zoneState.reset();
     }
     exports.client.messaging.on('close', async (code) => {
-        remember = exports.client.localUser;
+        console.log(code);
+        remember = getLocalUser();
         if (code <= 1001)
             return;
         await utility_2.sleep(100);
@@ -1081,8 +1078,6 @@ async function load() {
                 exports.client.messaging.send('emotes', { emotes: remember.emotes });
             }
         }
-        exports.client.localUserId = message.userId;
-        exports.client.localToken = message.token;
     });
     exports.client.messaging.messages.on('queue', (message) => {
         var _a;
@@ -1131,24 +1126,24 @@ async function load() {
         chat.log('{clr=#00FF00}*** connected ***');
         if (!remember)
             listHelp();
-        exports.client.zone.users.clear();
+        zoneState.users.clear();
         message.users.forEach((user) => {
-            exports.client.zone.users.set(user.userId, user);
+            zoneState.users.set(user.userId, user);
         });
         listUsers();
     });
     exports.client.messaging.messages.on('leave', (message) => {
         const username = getUsername(message.userId);
         chat.log(`{clr=#FF00FF}! {clr=#FF0000}${username}{clr=#FF00FF} left`);
-        exports.client.zone.users.delete(message.userId);
+        zoneState.users.delete(message.userId);
     });
     exports.client.messaging.messages.on('move', (message) => {
-        const user = exports.client.zone.getUser(message.userId);
-        if (user !== exports.client.localUser || !user.position)
+        const user = zoneState.getUser(message.userId);
+        if (user !== getLocalUser() || !user.position)
             user.position = message.position;
     });
     exports.client.messaging.messages.on('avatar', (message) => {
-        exports.client.zone.getUser(message.userId).avatar = message.data;
+        zoneState.getUser(message.userId).avatar = message.data;
         if (message.userId === exports.client.localUserId)
             localStorage.setItem('avatar', message.data);
         if (!avatarTiles.has(message.data)) {
@@ -1161,12 +1156,12 @@ async function load() {
         }
     });
     exports.client.messaging.messages.on('emotes', (message) => {
-        exports.client.zone.getUser(message.userId).emotes = message.emotes;
+        zoneState.getUser(message.userId).emotes = message.emotes;
     });
     exports.client.messaging.messages.on('chat', (message) => {
         const name = getUsername(message.userId);
         chat.log(`{clr=#FF0000}${name}:{-clr} ${message.text}`);
-        if (message.userId !== exports.client.localUserId) {
+        if (message.userId !== getLocalUser()) {
             notify(name, message.text, 'chat');
         }
     });
@@ -1176,14 +1171,14 @@ async function load() {
         if (message.userId === exports.client.localUserId) {
             chat.log(`{clr=#FF00FF}! you are {clr=#FF0000}${next}`);
         }
-        else if (!exports.client.zone.users.has(message.userId)) {
+        else if (!zoneState.users.has(message.userId)) {
             chat.log(`{clr=#FF00FF}! {clr=#FF0000}${next} {clr=#FF00FF}joined`);
         }
         else {
             const prev = getUsername(message.userId);
             chat.log(`{clr=#FF00FF}! {clr=#FF0000}${prev}{clr=#FF00FF} is now {clr=#FF0000}${next}`);
         }
-        exports.client.zone.getUser(message.userId).name = message.name;
+        zoneState.getUser(message.userId).name = message.name;
     });
     let lastSearchResults = [];
     exports.client.messaging.messages.on('search', (message) => {
@@ -1199,7 +1194,7 @@ async function load() {
     window.onbeforeunload = () => exports.client.messaging.close();
     player.on('error', () => exports.client.messaging.send('error', { source: { type: 'youtube', videoId: player.video } }));
     function move(dx, dy) {
-        const user = exports.client.localUser;
+        const user = getLocalUser();
         if (user.position) {
             user.position[0] = utility_2.clamp(0, 15, user.position[0] + dx);
             user.position[1] = utility_2.clamp(0, 15, user.position[1] + dy);
@@ -1216,7 +1211,7 @@ async function load() {
         }
     }
     function listUsers() {
-        const named = Array.from(exports.client.zone.users.values()).filter((user) => !!user.name);
+        const named = Array.from(zoneState.users.values()).filter((user) => !!user.name);
         if (named.length === 0) {
             chat.log('{clr=#FF00FF}! no other users');
         }
@@ -1259,7 +1254,7 @@ async function load() {
     const avatarCancel = document.querySelector('#avatar-cancel');
     const avatarContext = avatarPaint.getContext('2d');
     function openAvatarEditor() {
-        const avatar = getTile(exports.client.localUser.avatar) || avatarImage;
+        const avatar = getTile(getLocalUser().avatar) || avatarImage;
         avatarContext.clearRect(0, 0, 8, 8);
         avatarContext.drawImage(avatar.canvas, 0, 0);
         avatarPanel.hidden = false;
@@ -1284,7 +1279,7 @@ async function load() {
         if (currentPlayMessage)
             exports.client.messaging.send('skip', { password, source: currentPlayMessage.item.media.source });
     });
-    chatCommands.set('password', (args) => (exports.client.joinPassword = args));
+    chatCommands.set('password', (args) => (joinPassword = args));
     chatCommands.set('users', () => listUsers());
     chatCommands.set('help', () => listHelp());
     chatCommands.set('result', playFromSearchResult);
@@ -1313,7 +1308,7 @@ async function load() {
     chatCommands.set('name', rename);
     chatCommands.set('archive', (path) => exports.client.messaging.send('archive', { path }));
     function toggleEmote(emote) {
-        const emotes = exports.client.localUser.emotes;
+        const emotes = getLocalUser().emotes;
         if (emotes.includes(emote))
             exports.client.messaging.send('emotes', { emotes: emotes.filter((e) => e !== emote) });
         else
@@ -1376,7 +1371,7 @@ async function load() {
     function drawZone() {
         sceneContext.clearRect(0, 0, 512, 512);
         sceneContext.drawImage(roomBackground.canvas, 0, 0, 512, 512);
-        exports.client.zone.users.forEach((user) => {
+        zoneState.users.forEach((user) => {
             const { position, emotes, avatar } = user;
             if (!position)
                 return;
@@ -1475,7 +1470,7 @@ function setupEntrySplash() {
         enter();
     });
 }
-let zoneURL = "";
+let zoneURL = '';
 async function enter() {
     localName = document.querySelector('#join-name').value;
     localStorage.setItem('name', localName);
@@ -1484,7 +1479,7 @@ async function enter() {
     await connect();
 }
 
-},{"../common/utility":18,"./chat":11,"./client":12,"./text":14,"./utility":15,"./youtube":16,"blitsy":7}],14:[function(require,module,exports){
+},{"../common/client":17,"../common/messaging":18,"../common/utility":19,"./chat":11,"./client":12,"./text":14,"./utility":15,"./youtube":16,"blitsy":7}],14:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 const blitsy_1 = require("blitsy");
@@ -1999,7 +1994,43 @@ function errorEventToYoutubeError(event) {
     return { code: event.data, reason: CODE_REASONS.get(event.data) || 'unknown' };
 }
 
-},{"../common/utility":18,"events":10}],17:[function(require,module,exports){
+},{"../common/utility":19,"events":10}],17:[function(require,module,exports){
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+const events_1 = require("events");
+class ZoneClient extends events_1.EventEmitter {
+    constructor(messaging) {
+        super();
+        this.messaging = messaging;
+    }
+    get localUserId() {
+        var _a;
+        return (_a = this.assignation) === null || _a === void 0 ? void 0 : _a.userId;
+    }
+    expect(type, timeout) {
+        return new Promise((resolve, reject) => {
+            if (timeout)
+                setTimeout(() => reject('timeout'), timeout);
+            this.messaging.messages.once(type, (message) => resolve(message));
+        });
+    }
+    join(options) {
+        var _a;
+        options.token = options.token || ((_a = this.assignation) === null || _a === void 0 ? void 0 : _a.token);
+        return new Promise((resolve, reject) => {
+            this.expect('assign', 500).then(resolve, reject);
+            this.expect('reject').then(reject);
+            this.messaging.send('join', options);
+        }).then((assign) => {
+            this.assignation = assign;
+            return assign;
+        });
+    }
+}
+exports.ZoneClient = ZoneClient;
+exports.default = ZoneClient;
+
+},{"events":10}],18:[function(require,module,exports){
 "use strict";
 var __rest = (this && this.__rest) || function (s, e) {
     var t = {};
@@ -2053,7 +2084,7 @@ class Messaging extends events_1.EventEmitter {
 exports.Messaging = Messaging;
 exports.default = Messaging;
 
-},{"events":10}],18:[function(require,module,exports){
+},{"events":10}],19:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.objEqual = (a, b) => JSON.stringify(a) === JSON.stringify(b);

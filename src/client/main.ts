@@ -13,11 +13,13 @@ import { sleep, objEqual, randomInt, clamp } from '../common/utility';
 import { scriptToPages, PageRenderer, getPageHeight } from './text';
 import { loadYoutube, YoutubePlayer } from './youtube';
 import { ChatPanel, animatePage } from './chat';
-import { UserId, ZoneClient, UserState } from './client';
+import { UserId, UserState, ZoneState } from './client';
 
 import { QueueItem, PlayableMedia } from '../server/playback';
+import ZoneClient, { PlayMessage } from '../common/client';
+import Messaging from '../common/messaging';
 
-export const client = new ZoneClient();
+export const client = new ZoneClient(new Messaging(new WebSocket('ws://localhost')));
 
 let player: YoutubePlayer | undefined;
 async function start() {
@@ -149,6 +151,11 @@ function parseFakedown(text: string) {
 }
 
 const chat = new ChatPanel();
+const zoneState = new ZoneState();
+
+function getLocalUser() {
+    return zoneState.getUser(client.localUserId!);
+}
 
 function setVolume(volume: number) {
     player!.volume = volume;
@@ -163,8 +170,6 @@ function rename(name: string) {
     client.messaging.send('name', { name });
 }
 
-type PlayMessage = { item: QueueItem; time?: number };
-
 function socket(): Promise<WebSocket> {
     return new Promise((resolve, reject) => {
         const socket = new WebSocket('ws://' + zoneURL);
@@ -172,9 +177,10 @@ function socket(): Promise<WebSocket> {
     });
 }
 
+let joinPassword: string | undefined;
 async function connect() {
     client.messaging.setSocket(await socket());
-    client.messaging.send('join', { name: localName, token: client.localToken, password: client.joinPassword });
+    client.join({ name: localName, password: joinPassword });
 }
 
 async function load() {
@@ -193,7 +199,7 @@ async function load() {
     let currentPlayStart: number | undefined;
 
     function getUsername(userId: UserId) {
-        return client.zone.getUser(userId).name || userId;
+        return zoneState.getUser(userId).name || userId;
     }
 
     let showQueue = false;
@@ -201,11 +207,12 @@ async function load() {
 
     function reset() {
         queue.length = 0;
-        client.zone.reset();
+        zoneState.reset();
     }
 
     client.messaging.on('close', async (code) => {
-        remember = client.localUser;
+        console.log(code);
+        remember = getLocalUser();
         if (code <= 1001) return;
         await sleep(100);
         reset();
@@ -224,9 +231,6 @@ async function load() {
                 client.messaging.send('emotes', { emotes: remember.emotes });
             }
         }
-
-        client.localUserId = message.userId;
-        client.localToken = message.token;
     });
     client.messaging.messages.on('queue', (message: { items: QueueItem[] }) => {
         if (message.items.length === 1) {
@@ -276,24 +280,24 @@ async function load() {
         chat.log('{clr=#00FF00}*** connected ***');
         if (!remember) listHelp();
 
-        client.zone.users.clear();
+        zoneState.users.clear();
         message.users.forEach((user: UserState) => {
-            client.zone.users.set(user.userId, user);
+            zoneState.users.set(user.userId, user);
         });
         listUsers();
     });
     client.messaging.messages.on('leave', (message) => {
         const username = getUsername(message.userId);
         chat.log(`{clr=#FF00FF}! {clr=#FF0000}${username}{clr=#FF00FF} left`);
-        client.zone.users.delete(message.userId);
+        zoneState.users.delete(message.userId);
     });
     client.messaging.messages.on('move', (message) => {
-        const user = client.zone.getUser(message.userId);
+        const user = zoneState.getUser(message.userId);
 
-        if (user !== client.localUser || !user.position) user.position = message.position;
+        if (user !== getLocalUser() || !user.position) user.position = message.position;
     });
     client.messaging.messages.on('avatar', (message) => {
-        client.zone.getUser(message.userId).avatar = message.data;
+        zoneState.getUser(message.userId).avatar = message.data;
 
         if (message.userId === client.localUserId) localStorage.setItem('avatar', message.data);
 
@@ -306,12 +310,12 @@ async function load() {
         }
     });
     client.messaging.messages.on('emotes', (message) => {
-        client.zone.getUser(message.userId).emotes = message.emotes;
+        zoneState.getUser(message.userId).emotes = message.emotes;
     });
     client.messaging.messages.on('chat', (message) => {
         const name = getUsername(message.userId);
         chat.log(`{clr=#FF0000}${name}:{-clr} ${message.text}`);
-        if (message.userId !== client.localUserId) {
+        if (message.userId !== getLocalUser()) {
             notify(name, message.text, 'chat');
         }
     });
@@ -320,14 +324,14 @@ async function load() {
         const next = message.name;
         if (message.userId === client.localUserId) {
             chat.log(`{clr=#FF00FF}! you are {clr=#FF0000}${next}`);
-        } else if (!client.zone.users.has(message.userId)) {
+        } else if (!zoneState.users.has(message.userId)) {
             chat.log(`{clr=#FF00FF}! {clr=#FF0000}${next} {clr=#FF00FF}joined`);
         } else {
             const prev = getUsername(message.userId);
             chat.log(`{clr=#FF00FF}! {clr=#FF0000}${prev}{clr=#FF00FF} is now {clr=#FF0000}${next}`);
         }
 
-        client.zone.getUser(message.userId).name = message.name;
+        zoneState.getUser(message.userId).name = message.name;
     });
 
     let lastSearchResults: PlayableMedia[] = [];
@@ -350,7 +354,7 @@ async function load() {
     player!.on('error', () => client.messaging.send('error', { source: { type: 'youtube', videoId: player!.video } }));
 
     function move(dx: number, dy: number) {
-        const user = client.localUser;
+        const user = getLocalUser();
 
         if (user.position) {
             user.position[0] = clamp(0, 15, user.position[0] + dx);
@@ -369,7 +373,7 @@ async function load() {
     }
 
     function listUsers() {
-        const named = Array.from(client.zone.users.values()).filter((user) => !!user.name);
+        const named = Array.from(zoneState.users.values()).filter((user) => !!user.name);
 
         if (named.length === 0) {
             chat.log('{clr=#FF00FF}! no other users');
@@ -416,7 +420,7 @@ async function load() {
     const avatarContext = avatarPaint.getContext('2d')!;
 
     function openAvatarEditor() {
-        const avatar = getTile(client.localUser.avatar) || avatarImage;
+        const avatar = getTile(getLocalUser().avatar) || avatarImage;
         avatarContext.clearRect(0, 0, 8, 8);
         avatarContext.drawImage(avatar.canvas, 0, 0);
         avatarPanel.hidden = false;
@@ -444,7 +448,7 @@ async function load() {
         if (currentPlayMessage)
             client.messaging.send('skip', { password, source: currentPlayMessage.item.media.source });
     });
-    chatCommands.set('password', (args) => (client.joinPassword = args));
+    chatCommands.set('password', (args) => (joinPassword = args));
     chatCommands.set('users', () => listUsers());
     chatCommands.set('help', () => listHelp());
     chatCommands.set('result', playFromSearchResult);
@@ -473,7 +477,7 @@ async function load() {
     chatCommands.set('archive', (path) => client.messaging.send('archive', { path }));
 
     function toggleEmote(emote: string) {
-        const emotes = client.localUser.emotes;
+        const emotes = getLocalUser().emotes;
         if (emotes.includes(emote))
             client.messaging.send('emotes', { emotes: emotes.filter((e: string) => e !== emote) });
         else client.messaging.send('emotes', { emotes: emotes.concat([emote]) });
@@ -542,7 +546,7 @@ async function load() {
         sceneContext.clearRect(0, 0, 512, 512);
         sceneContext.drawImage(roomBackground.canvas, 0, 0, 512, 512);
 
-        client.zone.users.forEach((user) => {
+        zoneState.users.forEach((user) => {
             const { position, emotes, avatar } = user;
             if (!position) return;
 
