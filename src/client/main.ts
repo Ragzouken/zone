@@ -154,7 +154,7 @@ const chat = new ChatPanel();
 const zoneState = new ZoneState();
 
 function getLocalUser() {
-    return zoneState.getUser(client.localUserId!);
+    return client.localUserId ? zoneState.getUser(client.localUserId) : undefined;
 }
 
 function setVolume(volume: number) {
@@ -178,9 +178,26 @@ function socket(): Promise<WebSocket> {
 }
 
 let joinPassword: string | undefined;
+
 async function connect() {
+    const user = getLocalUser();
+
     client.messaging.setSocket(await socket());
-    client.join({ name: localName, password: joinPassword });
+    
+    try {
+        await client.join({ name: localName, password: joinPassword });
+    } catch (e) {
+        chat.log('{clr=#FF00FF}! enter server password with /password)');
+        return;
+    }
+
+    if (user) {
+        if (user.position) client.messaging.send('move', { position: user.position });
+        if (user.avatar) {
+            client.messaging.send('avatar', { data: user.avatar });
+            client.messaging.send('emotes', { emotes: user.emotes });
+        }
+    }
 }
 
 async function load() {
@@ -219,19 +236,6 @@ async function load() {
         await connect();
     });
 
-    client.messaging.messages.on('reject', () => {
-        chat.log('{clr=#FF00FF}! enter server password with /password)');
-    });
-    client.messaging.messages.on('heartbeat', () => {});
-    client.messaging.messages.on('assign', (message) => {
-        if (remember) {
-            if (remember.position) client.messaging.send('move', { position: remember.position });
-            if (remember.avatar) {
-                client.messaging.send('avatar', { data: remember.avatar });
-                client.messaging.send('emotes', { emotes: remember.emotes });
-            }
-        }
-    });
     client.messaging.messages.on('queue', (message: { items: QueueItem[] }) => {
         if (message.items.length === 1) {
             const item = message.items[0];
@@ -354,7 +358,7 @@ async function load() {
     player!.on('error', () => client.messaging.send('error', { source: { type: 'youtube', videoId: player!.video } }));
 
     function move(dx: number, dy: number) {
-        const user = getLocalUser();
+        const user = getLocalUser()!;
 
         if (user.position) {
             user.position[0] = clamp(0, 15, user.position[0] + dx);
@@ -420,7 +424,7 @@ async function load() {
     const avatarContext = avatarPaint.getContext('2d')!;
 
     function openAvatarEditor() {
-        const avatar = getTile(getLocalUser().avatar) || avatarImage;
+        const avatar = getTile(getLocalUser()!.avatar) || avatarImage;
         avatarContext.clearRect(0, 0, 8, 8);
         avatarContext.drawImage(avatar.canvas, 0, 0);
         avatarPanel.hidden = false;
@@ -477,7 +481,7 @@ async function load() {
     chatCommands.set('archive', (path) => client.messaging.send('archive', { path }));
 
     function toggleEmote(emote: string) {
-        const emotes = getLocalUser().emotes;
+        const emotes = getLocalUser()!.emotes;
         if (emotes.includes(emote))
             client.messaging.send('emotes', { emotes: emotes.filter((e: string) => e !== emote) });
         else client.messaging.send('emotes', { emotes: emotes.concat([emote]) });

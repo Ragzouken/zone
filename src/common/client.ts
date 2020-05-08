@@ -41,6 +41,7 @@ export class ZoneClient extends EventEmitter {
     constructor(messaging: Messaging) {
         super();
         this.messaging = messaging;
+        this.addStandardListeners();
     }
 
     get localUserId() {
@@ -65,6 +66,10 @@ export class ZoneClient extends EventEmitter {
             this.assignation = assign;
             return assign;
         });
+    }
+
+    private addStandardListeners() {
+        this.messaging.messages.on('heartbeat', () => this.messaging.send('heartbeat', {}));
     }
 }
 

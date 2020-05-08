@@ -996,7 +996,7 @@ function parseFakedown(text) {
 const chat = new chat_1.ChatPanel();
 const zoneState = new zone_1.ZoneState();
 function getLocalUser() {
-    return zoneState.getUser(exports.client.localUserId);
+    return exports.client.localUserId ? zoneState.getUser(exports.client.localUserId) : undefined;
 }
 function setVolume(volume) {
     player.volume = volume;
@@ -1016,8 +1016,23 @@ function socket() {
 }
 let joinPassword;
 async function connect() {
+    const user = getLocalUser();
     exports.client.messaging.setSocket(await socket());
-    exports.client.join({ name: localName, password: joinPassword });
+    try {
+        await exports.client.join({ name: localName, password: joinPassword });
+    }
+    catch (e) {
+        chat.log('{clr=#FF00FF}! enter server password with /password)');
+        return;
+    }
+    if (user) {
+        if (user.position)
+            exports.client.messaging.send('move', { position: user.position });
+        if (user.avatar) {
+            exports.client.messaging.send('avatar', { data: user.avatar });
+            exports.client.messaging.send('emotes', { emotes: user.emotes });
+        }
+    }
 }
 async function load() {
     setVolume(parseInt(localStorage.getItem('volume') || '100', 10));
@@ -1047,20 +1062,6 @@ async function load() {
         await utility_2.sleep(100);
         reset();
         await connect();
-    });
-    exports.client.messaging.messages.on('reject', () => {
-        chat.log('{clr=#FF00FF}! enter server password with /password)');
-    });
-    exports.client.messaging.messages.on('heartbeat', () => { });
-    exports.client.messaging.messages.on('assign', (message) => {
-        if (remember) {
-            if (remember.position)
-                exports.client.messaging.send('move', { position: remember.position });
-            if (remember.avatar) {
-                exports.client.messaging.send('avatar', { data: remember.avatar });
-                exports.client.messaging.send('emotes', { emotes: remember.emotes });
-            }
-        }
     });
     exports.client.messaging.messages.on('queue', (message) => {
         var _a;
@@ -1976,6 +1977,7 @@ class ZoneClient extends events_1.EventEmitter {
     constructor(messaging) {
         super();
         this.messaging = messaging;
+        this.addStandardListeners();
     }
     get localUserId() {
         var _a;
@@ -1999,6 +2001,9 @@ class ZoneClient extends events_1.EventEmitter {
             this.assignation = assign;
             return assign;
         });
+    }
+    addStandardListeners() {
+        this.messaging.messages.on('heartbeat', () => this.messaging.send('heartbeat', {}));
     }
 }
 exports.ZoneClient = ZoneClient;
@@ -2025,12 +2030,14 @@ class Messaging extends events_1.EventEmitter {
         this.messages = new events_1.EventEmitter();
         this.setSocket(socket);
         this.socket = socket;
+        this.closeListener = (event) => this.emit('close', event.code || event);
     }
     setSocket(socket) {
-        var _a;
-        (_a = this.socket) === null || _a === void 0 ? void 0 : _a.close();
+        var _a, _b;
+        (_a = this.socket) === null || _a === void 0 ? void 0 : _a.removeEventListener('close', this.closeListener);
+        (_b = this.socket) === null || _b === void 0 ? void 0 : _b.close();
         this.socket = socket;
-        this.socket.addEventListener('close', (event) => this.emit('close', event.code || event));
+        this.socket.addEventListener('close', this.closeListener);
         this.socket.addEventListener('message', (event) => {
             const _a = JSON.parse(event.data), { type } = _a, message = __rest(_a, ["type"]);
             this.messages.emit(type, message);

@@ -9,7 +9,7 @@ const adapter = new FileSync(dataPath);
 
 const { server, app, save, sendAll } = host(adapter, {
     listenHandle: process.env.PORT || 8080,
-    joinPassword: process.env.JOIN_PASSWORD,
+    joinPassword: process.env.JOIN_PASSWORD || 'poo',
     skipPassword: process.env.SKIP_PASSWORD,
 });
 
