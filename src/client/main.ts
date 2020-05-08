@@ -13,7 +13,7 @@ import { sleep, objEqual, randomInt, clamp } from '../common/utility';
 import { scriptToPages, PageRenderer, getPageHeight } from './text';
 import { loadYoutube, YoutubePlayer } from './youtube';
 import { ChatPanel, animatePage } from './chat';
-import { UserId, UserState, ZoneState } from './client';
+import { UserId, UserState, ZoneState } from '../common/zone';
 
 import { QueueItem, PlayableMedia } from '../server/playback';
 import ZoneClient, { PlayMessage } from '../common/client';

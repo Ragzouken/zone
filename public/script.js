@@ -875,24 +875,7 @@ function animatePage(page) {
 }
 exports.animatePage = animatePage;
 
-},{"../common/utility":19,"./text":14,"./utility":15,"blitsy":7}],12:[function(require,module,exports){
-"use strict";
-Object.defineProperty(exports, "__esModule", { value: true });
-const utility_1 = require("./utility");
-class ZoneState {
-    constructor() {
-        this.users = new Map();
-    }
-    reset() {
-        this.users.clear();
-    }
-    getUser(userId) {
-        return utility_1.getDefault(this.users, userId, () => ({ userId, emotes: [] }));
-    }
-}
-exports.ZoneState = ZoneState;
-
-},{"./utility":15}],13:[function(require,module,exports){
+},{"../common/utility":18,"./text":13,"./utility":14,"blitsy":7}],12:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 const blitsy = require("blitsy");
@@ -901,10 +884,10 @@ const utility_2 = require("../common/utility");
 const text_1 = require("./text");
 const youtube_1 = require("./youtube");
 const chat_1 = require("./chat");
-const client_1 = require("./client");
-const client_2 = require("../common/client");
+const zone_1 = require("../common/zone");
+const client_1 = require("../common/client");
 const messaging_1 = require("../common/messaging");
-exports.client = new client_2.default(new messaging_1.default(new WebSocket('ws://localhost')));
+exports.client = new client_1.default(new messaging_1.default(new WebSocket('ws://localhost')));
 let player;
 async function start() {
     player = await youtube_1.loadYoutube('youtube', 448, 252);
@@ -1011,7 +994,7 @@ function parseFakedown(text) {
     return text;
 }
 const chat = new chat_1.ChatPanel();
-const zoneState = new client_1.ZoneState();
+const zoneState = new zone_1.ZoneState();
 function getLocalUser() {
     return zoneState.getUser(exports.client.localUserId);
 }
@@ -1479,7 +1462,7 @@ async function enter() {
     await connect();
 }
 
-},{"../common/client":17,"../common/messaging":18,"../common/utility":19,"./chat":11,"./client":12,"./text":14,"./utility":15,"./youtube":16,"blitsy":7}],14:[function(require,module,exports){
+},{"../common/client":16,"../common/messaging":17,"../common/utility":18,"../common/zone":19,"./chat":11,"./text":13,"./utility":14,"./youtube":15,"blitsy":7}],13:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 const blitsy_1 = require("blitsy");
@@ -1772,7 +1755,7 @@ function getPageHeight(page, font) {
 }
 exports.getPageHeight = getPageHeight;
 
-},{"./utility":15,"blitsy":7}],15:[function(require,module,exports){
+},{"./utility":14,"blitsy":7}],14:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 const blitsy_1 = require("blitsy");
@@ -1876,22 +1859,13 @@ function hex2rgb(color) {
     return [0, 0, 0];
 }
 exports.hex2rgb = hex2rgb;
-function getDefault(map, key, factory) {
-    let value = map.get(key);
-    if (!value) {
-        value = factory(key);
-        map.set(key, value);
-    }
-    return value;
-}
-exports.getDefault = getDefault;
 function eventToElementPixel(event, element) {
     const rect = element.getBoundingClientRect();
     return [event.clientX - rect.x, event.clientY - rect.y];
 }
 exports.eventToElementPixel = eventToElementPixel;
 
-},{"blitsy":7}],16:[function(require,module,exports){
+},{"blitsy":7}],15:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 const events_1 = require("events");
@@ -1994,7 +1968,7 @@ function errorEventToYoutubeError(event) {
     return { code: event.data, reason: CODE_REASONS.get(event.data) || 'unknown' };
 }
 
-},{"../common/utility":19,"events":10}],17:[function(require,module,exports){
+},{"../common/utility":18,"events":10}],16:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 const events_1 = require("events");
@@ -2030,7 +2004,7 @@ class ZoneClient extends events_1.EventEmitter {
 exports.ZoneClient = ZoneClient;
 exports.default = ZoneClient;
 
-},{"events":10}],18:[function(require,module,exports){
+},{"events":10}],17:[function(require,module,exports){
 "use strict";
 var __rest = (this && this.__rest) || function (s, e) {
     var t = {};
@@ -2084,7 +2058,7 @@ class Messaging extends events_1.EventEmitter {
 exports.Messaging = Messaging;
 exports.default = Messaging;
 
-},{"events":10}],19:[function(require,module,exports){
+},{"events":10}],18:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.objEqual = (a, b) => JSON.stringify(a) === JSON.stringify(b);
@@ -2092,6 +2066,32 @@ exports.randomInt = (min, max) => Math.floor(Math.random() * (max - min + 1)) + 
 exports.sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 exports.clamp = (min, max, value) => Math.max(min, Math.min(max, value));
 exports.copy = (object) => JSON.parse(JSON.stringify(object));
+function getDefault(map, key, factory) {
+    let value = map.get(key);
+    if (!value) {
+        value = factory(key);
+        map.set(key, value);
+    }
+    return value;
+}
+exports.getDefault = getDefault;
 
-},{}]},{},[13])(13)
+},{}],19:[function(require,module,exports){
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+const utility_1 = require("./utility");
+class ZoneState {
+    constructor() {
+        this.users = new Map();
+    }
+    reset() {
+        this.users.clear();
+    }
+    getUser(userId) {
+        return utility_1.getDefault(this.users, userId, () => ({ userId, emotes: [] }));
+    }
+}
+exports.ZoneState = ZoneState;
+
+},{"./utility":18}]},{},[12])(12)
 });

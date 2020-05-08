@@ -6,7 +6,7 @@ import * as low from 'lowdb';
 import Youtube from './youtube';
 import Playback, { PlayableMedia, QueueItem, PlayableSource } from './playback';
 import Messaging from '../common/messaging';
-import { ZoneState, UserId, UserState } from './zone';
+import { ZoneState, UserId, UserState } from '../common/zone';
 import { nanoid } from 'nanoid';
 import { archiveOrgToPlayable } from './archiveorg';
 import { objEqual, copy } from '../common/utility';
