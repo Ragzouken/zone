@@ -17,9 +17,8 @@ import { UserId, UserState, ZoneState } from '../common/zone';
 
 import { QueueItem, PlayableMedia } from '../server/playback';
 import ZoneClient, { PlayMessage } from '../common/client';
-import Messaging from '../common/messaging';
 
-export const client = new ZoneClient(new Messaging(new WebSocket('ws://localhost')));
+export const client = new ZoneClient();
 
 let player: YoutubePlayer | undefined;
 async function start() {

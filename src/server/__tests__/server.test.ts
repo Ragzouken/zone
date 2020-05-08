@@ -43,8 +43,9 @@ class TestServer {
     }
 
     public async client() {
-        const messaging = new Messaging(await this.socket());
-        return new ZoneClient(messaging);
+        const client = new ZoneClient();
+        client.messaging.setSocket(await this.socket());
+        return client;
     }
 
     public dispose() {

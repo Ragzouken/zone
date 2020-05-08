@@ -38,7 +38,9 @@ export class EchoServer {
     }
 
     public async messaging() {
-        return new Messaging(await this.socket());
+        const messaging = new Messaging();
+        messaging.setSocket(await this.socket());
+        return messaging;
     }
 
     public dispose() {

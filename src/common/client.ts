@@ -34,13 +34,11 @@ export interface MessageMap {
 }
 
 export class ZoneClient extends EventEmitter {
-    readonly messaging: Messaging;
-
+    readonly messaging = new Messaging();
     private assignation?: AssignMessage;
 
-    constructor(messaging: Messaging) {
+    constructor() {
         super();
-        this.messaging = messaging;
         this.addStandardListeners();
     }
 
@@ -69,7 +67,7 @@ export class ZoneClient extends EventEmitter {
     }
 
     private addStandardListeners() {
-        this.messaging.messages.on('heartbeat', () => this.messaging.send('heartbeat', {}));
+        this.messaging.on('error', (error) => console.log('hmm', error));
     }
 }
 
