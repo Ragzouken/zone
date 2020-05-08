@@ -20,19 +20,19 @@ export interface Messaging {
 export class Messaging extends EventEmitter {
     readonly messages = new EventEmitter();
     private socket: Socket;
-    private closeListener: (event: any) => void;
+    private closeListener = (event: any) => this.emit('close', event.code || event);
 
     constructor(socket: Socket) {
         super();
         this.setSocket(socket);
         this.socket = socket;
-
-        this.closeListener = (event: any) => this.emit('close', event.code || event);
     }
 
     setSocket(socket: Socket) {
-        this.socket?.removeEventListener('close', this.closeListener);
-        this.socket?.close();
+        if (this.socket) {
+            this.socket.removeEventListener('close', this.closeListener);
+            this.socket.close();
+        }
 
         this.socket = socket;
         this.socket.addEventListener('close', this.closeListener);
