@@ -165,6 +165,18 @@ function rename(name: string) {
 
 type PlayMessage = { item: QueueItem; time?: number };
 
+function socket(): Promise<WebSocket> {
+    return new Promise((resolve, reject) => {
+        const socket = new WebSocket('ws://' + zoneURL);
+        socket.addEventListener('open', () => resolve(socket));
+    });
+}
+
+async function connect() {
+    client.messaging.setSocket(await socket());
+    client.messaging.send('join', { name: localName, token: client.localToken, password: client.joinPassword });
+}
+
 async function load() {
     setVolume(parseInt(localStorage.getItem('volume') || '100', 10));
 
@@ -187,23 +199,24 @@ async function load() {
     let showQueue = false;
     let remember: UserState | undefined;
 
-    client.messaging.on('open', async () => {
+    function reset() {
         queue.length = 0;
         client.zone.reset();
-        client.messaging.send('join', { name: localName, token: client.localToken, password: client.joinPassword });
-    });
+    }
+
     client.messaging.on('close', async (code) => {
         remember = client.localUser;
         if (code <= 1001) return;
         await sleep(100);
-        client.messaging.reconnect();
+        reset();
+        await connect();
     });
 
-    client.messaging.setHandler('reject', () => {
+    client.messaging.messages.on('reject', () => {
         chat.log('{clr=#FF00FF}! enter server password with /password)');
     });
-    client.messaging.setHandler('heartbeat', () => {});
-    client.messaging.setHandler('assign', (message) => {
+    client.messaging.messages.on('heartbeat', () => {});
+    client.messaging.messages.on('assign', (message) => {
         if (remember) {
             if (remember.position) client.messaging.send('move', { position: remember.position });
             if (remember.avatar) {
@@ -215,7 +228,7 @@ async function load() {
         client.localUserId = message.userId;
         client.localToken = message.token;
     });
-    client.messaging.setHandler('queue', (message: { items: QueueItem[] }) => {
+    client.messaging.messages.on('queue', (message: { items: QueueItem[] }) => {
         if (message.items.length === 1) {
             const item = message.items[0];
             const { title, duration } = item.media.details;
@@ -225,7 +238,7 @@ async function load() {
         }
         queue.push(...message.items);
     });
-    client.messaging.setHandler('play', (message: PlayMessage) => {
+    client.messaging.messages.on('play', (message: PlayMessage) => {
         if (!message.item) {
             archive.src = '';
             player?.stop();
@@ -259,7 +272,7 @@ async function load() {
         currentPlayStart = performance.now() - time;
     });
 
-    client.messaging.setHandler('users', (message) => {
+    client.messaging.messages.on('users', (message) => {
         chat.log('{clr=#00FF00}*** connected ***');
         if (!remember) listHelp();
 
@@ -269,17 +282,17 @@ async function load() {
         });
         listUsers();
     });
-    client.messaging.setHandler('leave', (message) => {
+    client.messaging.messages.on('leave', (message) => {
         const username = getUsername(message.userId);
         chat.log(`{clr=#FF00FF}! {clr=#FF0000}${username}{clr=#FF00FF} left`);
         client.zone.users.delete(message.userId);
     });
-    client.messaging.setHandler('move', (message) => {
+    client.messaging.messages.on('move', (message) => {
         const user = client.zone.getUser(message.userId);
 
         if (user !== client.localUser || !user.position) user.position = message.position;
     });
-    client.messaging.setHandler('avatar', (message) => {
+    client.messaging.messages.on('avatar', (message) => {
         client.zone.getUser(message.userId).avatar = message.data;
 
         if (message.userId === client.localUserId) localStorage.setItem('avatar', message.data);
@@ -292,18 +305,18 @@ async function load() {
             }
         }
     });
-    client.messaging.setHandler('emotes', (message) => {
+    client.messaging.messages.on('emotes', (message) => {
         client.zone.getUser(message.userId).emotes = message.emotes;
     });
-    client.messaging.setHandler('chat', (message) => {
+    client.messaging.messages.on('chat', (message) => {
         const name = getUsername(message.userId);
         chat.log(`{clr=#FF0000}${name}:{-clr} ${message.text}`);
         if (message.userId !== client.localUserId) {
             notify(name, message.text, 'chat');
         }
     });
-    client.messaging.setHandler('status', (message) => chat.log(`{clr=#FF00FF}! ${message.text}`));
-    client.messaging.setHandler('name', (message) => {
+    client.messaging.messages.on('status', (message) => chat.log(`{clr=#FF00FF}! ${message.text}`));
+    client.messaging.messages.on('name', (message) => {
         const next = message.name;
         if (message.userId === client.localUserId) {
             chat.log(`{clr=#FF00FF}! you are {clr=#FF0000}${next}`);
@@ -319,7 +332,7 @@ async function load() {
 
     let lastSearchResults: PlayableMedia[] = [];
 
-    client.messaging.setHandler('search', (message) => {
+    client.messaging.messages.on('search', (message) => {
         const { results }: { results: PlayableMedia[] } = message;
 
         lastSearchResults = results;
@@ -332,7 +345,7 @@ async function load() {
 
     setInterval(() => client.messaging.send('heartbeat', {}), 30 * 1000);
 
-    window.onbeforeunload = () => client.messaging.disconnect();
+    window.onbeforeunload = () => client.messaging.close();
 
     player!.on('error', () => client.messaging.send('error', { source: { type: 'youtube', videoId: player!.video } }));
 
@@ -561,7 +574,7 @@ async function load() {
             sceneContext.drawImage(image.canvas, x, y, 32, 32);
         });
 
-        const state = client.messaging.websocket?.readyState;
+        const state = (client.messaging as any).socket.readyState;
 
         if (state !== WebSocket.OPEN) {
             const status = scriptToPages('connecting...', layout)[0];
@@ -651,10 +664,11 @@ function setupEntrySplash() {
     });
 }
 
-function enter() {
+let zoneURL = "";
+async function enter() {
     localName = (document.querySelector('#join-name') as HTMLInputElement).value;
     localStorage.setItem('name', localName);
     const urlparams = new URLSearchParams(window.location.search);
-    const zoneURL = urlparams.get('zone') || `${window.location.host}/zone`;
-    client.messaging.connect('ws://' + zoneURL);
+    zoneURL = urlparams.get('zone') || `${window.location.host}/zone`;
+    await connect();
 }
