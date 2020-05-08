@@ -1,5 +1,5 @@
 import { getDefault } from './utility';
-import { WebSocketMessaging } from './messaging';
+import Messaging from '../common/messaging';
 
 export type UserId = string;
 
@@ -25,7 +25,7 @@ export class ZoneState {
 
 export class ZoneClient {
     public readonly zone = new ZoneState();
-    public readonly messaging = new WebSocketMessaging();
+    public readonly messaging = new Messaging(new WebSocket('ws://localhost'));
 
     public get localUser() {
         return this.zone.getUser(this.localUserId!);

@@ -1,6 +1,6 @@
 import { getDefault } from './utility';
 
-export type UserId = unknown;
+export type UserId = string;
 
 export type UserState = {
     userId: UserId;

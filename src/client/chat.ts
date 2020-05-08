@@ -1,6 +1,7 @@
 import { createContext2D, decodeFont, fonts, makeVector2 } from 'blitsy';
 import { Page, scriptToPages, getPageHeight, PageRenderer } from './text';
-import { hex2rgb, rgb2num, hslToRgb, randomInt } from './utility';
+import { hex2rgb, rgb2num, hslToRgb } from './utility';
+import { randomInt } from '../common/utility';
 
 const font = decodeFont(fonts['ascii-small']);
 const layout = { font, lineWidth: 240, lineCount: 9999 };

@@ -824,6 +824,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 const blitsy_1 = require("blitsy");
 const text_1 = require("./text");
 const utility_1 = require("./utility");
+const utility_2 = require("../common/utility");
 const font = blitsy_1.decodeFont(blitsy_1.fonts['ascii-small']);
 const layout = { font, lineWidth: 240, lineCount: 9999 };
 class ChatPanel {
@@ -862,7 +863,7 @@ function animatePage(page) {
             glyph.color = utility_1.rgb2num(...rgb);
         }
         if (glyph.styles.has('shk'))
-            glyph.offset = blitsy_1.makeVector2(utility_1.randomInt(-1, 1), utility_1.randomInt(-1, 1));
+            glyph.offset = blitsy_1.makeVector2(utility_2.randomInt(-1, 1), utility_2.randomInt(-1, 1));
         if (glyph.styles.has('wvy'))
             glyph.offset.y = (Math.sin(i + (performance.now() * 5) / 1000) * 3) | 0;
         if (glyph.styles.has('rbw')) {
@@ -874,11 +875,11 @@ function animatePage(page) {
 }
 exports.animatePage = animatePage;
 
-},{"./text":15,"./utility":16,"blitsy":7}],12:[function(require,module,exports){
+},{"../common/utility":18,"./text":14,"./utility":15,"blitsy":7}],12:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 const utility_1 = require("./utility");
-const messaging_1 = require("./messaging");
+const messaging_1 = require("../common/messaging");
 class ZoneState {
     constructor() {
         this.users = new Map();
@@ -894,7 +895,7 @@ exports.ZoneState = ZoneState;
 class ZoneClient {
     constructor() {
         this.zone = new ZoneState();
-        this.messaging = new messaging_1.WebSocketMessaging();
+        this.messaging = new messaging_1.default(new WebSocket('ws://localhost'));
     }
     get localUser() {
         return this.zone.getUser(this.localUserId);
@@ -902,11 +903,12 @@ class ZoneClient {
 }
 exports.ZoneClient = ZoneClient;
 
-},{"./messaging":14,"./utility":16}],13:[function(require,module,exports){
+},{"../common/messaging":17,"./utility":15}],13:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 const blitsy = require("blitsy");
 const utility_1 = require("./utility");
+const utility_2 = require("../common/utility");
 const text_1 = require("./text");
 const youtube_1 = require("./youtube");
 const chat_1 = require("./chat");
@@ -1028,6 +1030,16 @@ function rename(name) {
     localName = name;
     exports.client.messaging.send('name', { name });
 }
+function socket() {
+    return new Promise((resolve, reject) => {
+        const socket = new WebSocket('ws://' + zoneURL);
+        socket.addEventListener('open', () => resolve(socket));
+    });
+}
+async function connect() {
+    exports.client.messaging.setSocket(await socket());
+    exports.client.messaging.send('join', { name: localName, token: exports.client.localToken, password: exports.client.joinPassword });
+}
 async function load() {
     setVolume(parseInt(localStorage.getItem('volume') || '100', 10));
     const youtube = document.querySelector('#youtube');
@@ -1044,23 +1056,23 @@ async function load() {
     }
     let showQueue = false;
     let remember;
-    exports.client.messaging.on('open', async () => {
+    function reset() {
         queue.length = 0;
         exports.client.zone.reset();
-        exports.client.messaging.send('join', { name: localName, token: exports.client.localToken, password: exports.client.joinPassword });
-    });
+    }
     exports.client.messaging.on('close', async (code) => {
         remember = exports.client.localUser;
         if (code <= 1001)
             return;
-        await utility_1.sleep(100);
-        exports.client.messaging.reconnect();
+        await utility_2.sleep(100);
+        reset();
+        await connect();
     });
-    exports.client.messaging.setHandler('reject', () => {
+    exports.client.messaging.messages.on('reject', () => {
         chat.log('{clr=#FF00FF}! enter server password with /password)');
     });
-    exports.client.messaging.setHandler('heartbeat', () => { });
-    exports.client.messaging.setHandler('assign', (message) => {
+    exports.client.messaging.messages.on('heartbeat', () => { });
+    exports.client.messaging.messages.on('assign', (message) => {
         if (remember) {
             if (remember.position)
                 exports.client.messaging.send('move', { position: remember.position });
@@ -1072,17 +1084,18 @@ async function load() {
         exports.client.localUserId = message.userId;
         exports.client.localToken = message.token;
     });
-    exports.client.messaging.setHandler('queue', (message) => {
+    exports.client.messaging.messages.on('queue', (message) => {
+        var _a;
         if (message.items.length === 1) {
             const item = message.items[0];
             const { title, duration } = item.media.details;
-            const username = getUsername(item.info.userId);
+            const username = getUsername((_a = item.info.userId) !== null && _a !== void 0 ? _a : 'server');
             const time = utility_1.secondsToTime(duration / 1000);
             chat.log(`{clr=#00FFFF}+ ${title} (${time}) added by {clr=#FF0000}${username}`);
         }
         queue.push(...message.items);
     });
-    exports.client.messaging.setHandler('play', (message) => {
+    exports.client.messaging.messages.on('play', (message) => {
         if (!message.item) {
             archive.src = '';
             player === null || player === void 0 ? void 0 : player.stop();
@@ -1093,7 +1106,7 @@ async function load() {
         }
         const { source, details } = message.item.media;
         chat.log(`{clr=#00FFFF}> ${details.title} (${utility_1.secondsToTime(details.duration / 1000)})`);
-        queue = queue.filter((item) => !utility_1.objEqual(item.media.source, source));
+        queue = queue.filter((item) => !utility_2.objEqual(item.media.source, source));
         const time = message.time || 0;
         const seconds = time / 1000;
         if (source.type === 'youtube') {
@@ -1114,7 +1127,7 @@ async function load() {
         currentPlayMessage = message;
         currentPlayStart = performance.now() - time;
     });
-    exports.client.messaging.setHandler('users', (message) => {
+    exports.client.messaging.messages.on('users', (message) => {
         chat.log('{clr=#00FF00}*** connected ***');
         if (!remember)
             listHelp();
@@ -1124,17 +1137,17 @@ async function load() {
         });
         listUsers();
     });
-    exports.client.messaging.setHandler('leave', (message) => {
+    exports.client.messaging.messages.on('leave', (message) => {
         const username = getUsername(message.userId);
         chat.log(`{clr=#FF00FF}! {clr=#FF0000}${username}{clr=#FF00FF} left`);
         exports.client.zone.users.delete(message.userId);
     });
-    exports.client.messaging.setHandler('move', (message) => {
+    exports.client.messaging.messages.on('move', (message) => {
         const user = exports.client.zone.getUser(message.userId);
         if (user !== exports.client.localUser || !user.position)
             user.position = message.position;
     });
-    exports.client.messaging.setHandler('avatar', (message) => {
+    exports.client.messaging.messages.on('avatar', (message) => {
         exports.client.zone.getUser(message.userId).avatar = message.data;
         if (message.userId === exports.client.localUserId)
             localStorage.setItem('avatar', message.data);
@@ -1147,18 +1160,18 @@ async function load() {
             }
         }
     });
-    exports.client.messaging.setHandler('emotes', (message) => {
+    exports.client.messaging.messages.on('emotes', (message) => {
         exports.client.zone.getUser(message.userId).emotes = message.emotes;
     });
-    exports.client.messaging.setHandler('chat', (message) => {
+    exports.client.messaging.messages.on('chat', (message) => {
         const name = getUsername(message.userId);
         chat.log(`{clr=#FF0000}${name}:{-clr} ${message.text}`);
         if (message.userId !== exports.client.localUserId) {
             notify(name, message.text, 'chat');
         }
     });
-    exports.client.messaging.setHandler('status', (message) => chat.log(`{clr=#FF00FF}! ${message.text}`));
-    exports.client.messaging.setHandler('name', (message) => {
+    exports.client.messaging.messages.on('status', (message) => chat.log(`{clr=#FF00FF}! ${message.text}`));
+    exports.client.messaging.messages.on('name', (message) => {
         const next = message.name;
         if (message.userId === exports.client.localUserId) {
             chat.log(`{clr=#FF00FF}! you are {clr=#FF0000}${next}`);
@@ -1173,7 +1186,7 @@ async function load() {
         exports.client.zone.getUser(message.userId).name = message.name;
     });
     let lastSearchResults = [];
-    exports.client.messaging.setHandler('search', (message) => {
+    exports.client.messaging.messages.on('search', (message) => {
         const { results } = message;
         lastSearchResults = results;
         const lines = results
@@ -1183,16 +1196,16 @@ async function load() {
         chat.log('{clr=#FFFF00}? queue Search result with /result n\n{clr=#00FFFF}' + lines.join('\n'));
     });
     setInterval(() => exports.client.messaging.send('heartbeat', {}), 30 * 1000);
-    window.onbeforeunload = () => exports.client.messaging.disconnect();
+    window.onbeforeunload = () => exports.client.messaging.close();
     player.on('error', () => exports.client.messaging.send('error', { source: { type: 'youtube', videoId: player.video } }));
     function move(dx, dy) {
         const user = exports.client.localUser;
         if (user.position) {
-            user.position[0] = utility_1.clamp(0, 15, user.position[0] + dx);
-            user.position[1] = utility_1.clamp(0, 15, user.position[1] + dy);
+            user.position[0] = utility_2.clamp(0, 15, user.position[0] + dx);
+            user.position[1] = utility_2.clamp(0, 15, user.position[1] + dy);
         }
         else {
-            user.position = [utility_1.randomInt(0, 15), 15];
+            user.position = [utility_2.randomInt(0, 15), 15];
         }
         exports.client.messaging.send('move', { position: user.position });
         if (!user.avatar) {
@@ -1361,7 +1374,6 @@ async function load() {
     const pageRenderer = new text_1.PageRenderer(256, 256);
     const zoneLogo = document.querySelector('#zone-logo');
     function drawZone() {
-        var _a;
         sceneContext.clearRect(0, 0, 512, 512);
         sceneContext.drawImage(roomBackground.canvas, 0, 0, 512, 512);
         exports.client.zone.users.forEach((user) => {
@@ -1371,8 +1383,8 @@ async function load() {
             let dx = 0;
             let dy = 0;
             if (emotes && emotes.includes('shk')) {
-                dx += utility_1.randomInt(-8, 8);
-                dy += utility_1.randomInt(-8, 8);
+                dx += utility_2.randomInt(-8, 8);
+                dy += utility_2.randomInt(-8, 8);
             }
             if (emotes && emotes.includes('wvy')) {
                 dy += Math.sin(performance.now() / 250 - position[0] / 2) * 4;
@@ -1388,7 +1400,7 @@ async function load() {
             }
             sceneContext.drawImage(image.canvas, x, y, 32, 32);
         });
-        const state = (_a = exports.client.messaging.websocket) === null || _a === void 0 ? void 0 : _a.readyState;
+        const state = exports.client.messaging.socket.readyState;
         if (state !== WebSocket.OPEN) {
             const status = text_1.scriptToPages('connecting...', layout)[0];
             chat_1.animatePage(status);
@@ -1463,84 +1475,16 @@ function setupEntrySplash() {
         enter();
     });
 }
-function enter() {
+let zoneURL = "";
+async function enter() {
     localName = document.querySelector('#join-name').value;
     localStorage.setItem('name', localName);
     const urlparams = new URLSearchParams(window.location.search);
-    const zoneURL = urlparams.get('zone') || `${window.location.host}/zone`;
-    exports.client.messaging.connect('ws://' + zoneURL);
+    zoneURL = urlparams.get('zone') || `${window.location.host}/zone`;
+    await connect();
 }
 
-},{"./chat":11,"./client":12,"./text":15,"./utility":16,"./youtube":17,"blitsy":7}],14:[function(require,module,exports){
-"use strict";
-Object.defineProperty(exports, "__esModule", { value: true });
-const utility_1 = require("./utility");
-const events_1 = require("events");
-class WebSocketMessaging extends events_1.EventEmitter {
-    constructor() {
-        super(...arguments);
-        this.websocket = undefined;
-        this.handlers = new Map();
-    }
-    connect(address) {
-        this.disconnect();
-        this.websocket = new WebSocket(address);
-        this.websocket.onopen = (event) => this.onOpen(event);
-        this.websocket.onclose = (event) => this.onClose(event);
-        this.websocket.onmessage = (event) => this.onMessage(event);
-    }
-    reconnect() {
-        if (!this.websocket)
-            return;
-        this.connect(this.websocket.url);
-    }
-    disconnect() {
-        if (!this.websocket)
-            return;
-        this.websocket.close(1000);
-        this.websocket = undefined;
-    }
-    async wait() {
-        while (this.websocket && this.websocket.readyState === WebSocket.CONNECTING)
-            await utility_1.sleep(10);
-    }
-    send(type, message) {
-        message.type = type;
-        try {
-            this.websocket.send(JSON.stringify(message));
-        }
-        catch (e) {
-            console.log("couldn't send", message, e);
-        }
-    }
-    setHandler(type, handler) {
-        this.handlers.set(type, handler);
-    }
-    onMessage(event) {
-        const message = JSON.parse(event.data);
-        const handler = this.handlers.get(message.type);
-        if (handler) {
-            try {
-                handler(message);
-            }
-            catch (e) {
-                console.log('EXCEPTION HANDLING MESSAGE', message, e);
-            }
-        }
-        else {
-            console.log(`NO HANDLER FOR MESSAGE TYPE ${message.type}`);
-        }
-    }
-    onOpen(event) {
-        this.emit('open');
-    }
-    async onClose(event) {
-        this.emit('close', event.code);
-    }
-}
-exports.WebSocketMessaging = WebSocketMessaging;
-
-},{"./utility":16,"events":10}],15:[function(require,module,exports){
+},{"../common/utility":18,"./chat":11,"./client":12,"./text":14,"./utility":15,"./youtube":16,"blitsy":7}],14:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 const blitsy_1 = require("blitsy");
@@ -1833,14 +1777,10 @@ function getPageHeight(page, font) {
 }
 exports.getPageHeight = getPageHeight;
 
-},{"./utility":16,"blitsy":7}],16:[function(require,module,exports){
+},{"./utility":15,"blitsy":7}],15:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 const blitsy_1 = require("blitsy");
-exports.objEqual = (a, b) => JSON.stringify(a) === JSON.stringify(b);
-exports.randomInt = (min, max) => Math.floor(Math.random() * (max - min + 1)) + min;
-exports.sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
-exports.clamp = (min, max, value) => Math.max(min, Math.min(max, value));
 function fakedownToTag(text, fd, tag) {
     const pattern = new RegExp(`${fd}([^${fd}]+)${fd}`, 'g');
     return text.replace(pattern, `{+${tag}}$1{-${tag}}`);
@@ -1956,11 +1896,11 @@ function eventToElementPixel(event, element) {
 }
 exports.eventToElementPixel = eventToElementPixel;
 
-},{"blitsy":7}],17:[function(require,module,exports){
+},{"blitsy":7}],16:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 const events_1 = require("events");
-const utility_1 = require("./utility");
+const utility_1 = require("../common/utility");
 class YoutubePlayer extends events_1.EventEmitter {
     constructor(player) {
         super();
@@ -2059,5 +1999,68 @@ function errorEventToYoutubeError(event) {
     return { code: event.data, reason: CODE_REASONS.get(event.data) || 'unknown' };
 }
 
-},{"./utility":16,"events":10}]},{},[13])(13)
+},{"../common/utility":18,"events":10}],17:[function(require,module,exports){
+"use strict";
+var __rest = (this && this.__rest) || function (s, e) {
+    var t = {};
+    for (var p in s) if (Object.prototype.hasOwnProperty.call(s, p) && e.indexOf(p) < 0)
+        t[p] = s[p];
+    if (s != null && typeof Object.getOwnPropertySymbols === "function")
+        for (var i = 0, p = Object.getOwnPropertySymbols(s); i < p.length; i++) {
+            if (e.indexOf(p[i]) < 0 && Object.prototype.propertyIsEnumerable.call(s, p[i]))
+                t[p[i]] = s[p[i]];
+        }
+    return t;
+};
+Object.defineProperty(exports, "__esModule", { value: true });
+const events_1 = require("events");
+class Messaging extends events_1.EventEmitter {
+    constructor(socket) {
+        super();
+        this.messages = new events_1.EventEmitter();
+        this.setSocket(socket);
+        this.socket = socket;
+    }
+    setSocket(socket) {
+        var _a;
+        (_a = this.socket) === null || _a === void 0 ? void 0 : _a.close();
+        this.socket = socket;
+        this.socket.addEventListener('close', (event) => this.emit('close', event.code || event));
+        this.socket.addEventListener('message', (event) => {
+            const _a = JSON.parse(event.data), { type } = _a, message = __rest(_a, ["type"]);
+            this.messages.emit(type, message);
+        });
+    }
+    async close(code = 1000) {
+        if (this.socket.readyState === 3)
+            return;
+        const waiter = events_1.once(this, 'close');
+        this.socket.close(code);
+        await waiter;
+    }
+    send(type, message) {
+        if (this.socket.readyState !== 1)
+            this.emit('error', new Error('socket not open'));
+        const data = JSON.stringify(Object.assign({ type }, message));
+        try {
+            this.socket.send(data);
+        }
+        catch (e) {
+            this.emit('error', e);
+        }
+    }
+}
+exports.Messaging = Messaging;
+exports.default = Messaging;
+
+},{"events":10}],18:[function(require,module,exports){
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.objEqual = (a, b) => JSON.stringify(a) === JSON.stringify(b);
+exports.randomInt = (min, max) => Math.floor(Math.random() * (max - min + 1)) + min;
+exports.sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+exports.clamp = (min, max, value) => Math.max(min, Math.min(max, value));
+exports.copy = (object) => JSON.parse(JSON.stringify(object));
+
+},{}]},{},[13])(13)
 });

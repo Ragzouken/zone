@@ -5,11 +5,11 @@ import * as low from 'lowdb';
 
 import Youtube from './youtube';
 import Playback, { PlayableMedia, QueueItem, PlayableSource } from './playback';
-import Messaging from './messaging';
+import Messaging from '../common/messaging';
 import { ZoneState, UserId, UserState } from './zone';
 import { nanoid } from 'nanoid';
 import { archiveOrgToPlayable } from './archiveorg';
-import { objEqual, copy } from './utility';
+import { objEqual, copy } from '../common/utility';
 import { MESSAGE_SCHEMAS } from './protocol';
 
 const SECONDS = 1000;
@@ -183,10 +183,9 @@ export function host(adapter: low.AdapterSync, options: Partial<HostOptions> = {
 
     function waitJoin(websocket: WebSocket, userIp: unknown) {
         const messaging = new Messaging(websocket);
+        messaging.on('error', () => {});
 
-        messaging.setHandler('join', (message) => {
-            messaging.setHandler('join', () => {});
-
+        messaging.messages.once('join', (message) => {
             const resume = message.token && tokenToUser.has(message.token);
             const authorised = resume || !opts.joinPassword || message.password === opts.joinPassword;
 
@@ -197,7 +196,7 @@ export function host(adapter: low.AdapterSync, options: Partial<HostOptions> = {
             }
 
             const token = resume ? message.token : nanoid();
-            const user = resume ? tokenToUser.get(token)! : zone.getUser(++lastUserId as UserId);
+            const user = resume ? tokenToUser.get(token)! : zone.getUser((++lastUserId).toString() as UserId);
 
             addUserToken(user, token);
             addConnectionToUser(user, messaging);
@@ -258,19 +257,19 @@ export function host(adapter: low.AdapterSync, options: Partial<HostOptions> = {
     }
 
     function bindMessagingToUser(user: UserState, messaging: Messaging, userIp: unknown) {
-        messaging.setHandler('heartbeat', () => {
+        messaging.messages.on('heartbeat', () => {
             sendOnly('heartbeat', {}, user.userId);
         });
 
-        messaging.setHandler('chat', (message: any) => {
+        messaging.messages.on('chat', (message: any) => {
             let { text } = message;
             text = text.substring(0, opts.chatLengthLimit);
             sendAll('chat', { text, userId: user.userId });
         });
 
-        messaging.setHandler('name', (message: any) => setUserName(user, message.name));
+        messaging.messages.on('name', (message: any) => setUserName(user, message.name));
 
-        messaging.setHandler('resync', () => sendCurrent(user));
+        messaging.messages.on('resync', () => sendCurrent(user));
 
         async function tryQueueMedia(media: PlayableMedia) {
             const existing = playback.queue.find((queued) => objEqual(queued.media.source, media.source))?.media;
@@ -293,21 +292,21 @@ export function host(adapter: low.AdapterSync, options: Partial<HostOptions> = {
             tryQueueMedia(await youtube.details(videoId));
         }
 
-        messaging.setHandler('youtube', (message: any) => tryQueueYoutubeById(message.videoId));
-        messaging.setHandler('archive', (message: any) => tryQueueArchiveByPath(message.path));
+        messaging.messages.on('youtube', (message: any) => tryQueueYoutubeById(message.videoId));
+        messaging.messages.on('archive', (message: any) => tryQueueArchiveByPath(message.path));
 
-        messaging.setHandler('search', (message: any) => {
+        messaging.messages.on('search', (message: any) => {
             youtube.search(message.query).then((results) => {
                 if (message.lucky) tryQueueMedia(results[0]);
                 else sendOnly('search', { results }, user.userId);
             });
         });
 
-        messaging.setHandler('error', (message: any) => voteError(message.source, user));
-        messaging.setHandler('skip', (message: any) => voteSkip(message.source, user, message.password));
+        messaging.messages.on('error', (message: any) => voteError(message.source, user));
+        messaging.messages.on('skip', (message: any) => voteSkip(message.source, user, message.password));
 
         function setSchemaHandler(type: string, handler: (message: any) => void) {
-            messaging.setHandler(type, ({ type, ...message }) => {
+            messaging.messages.on(type, (message) => {
                 const { value, error } = MESSAGE_SCHEMAS.get(type)!.validate(message);
                 if (error) {
                     sendOnly('reject', { text: error.details[0].message }, user.userId);

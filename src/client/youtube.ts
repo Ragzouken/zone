@@ -1,5 +1,5 @@
 import { EventEmitter } from 'events';
-import { sleep } from './utility';
+import { sleep } from '../common/utility';
 
 declare const YT: any;
 declare global {

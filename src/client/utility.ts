@@ -1,22 +1,4 @@
 import { rgbaToColor } from 'blitsy';
-import { UserId } from './client';
-
-export type PlayableSource = { type: string };
-export interface PlayableMetadata {
-    title: string;
-    duration: number;
-}
-export interface PlayableMedia<TSource extends PlayableSource = PlayableSource> {
-    source: TSource;
-    details: PlayableMetadata;
-}
-export type QueueInfo = { userId: UserId };
-export type QueueItem = { media: PlayableMedia; info: QueueInfo };
-
-export const objEqual = (a: any, b: any) => JSON.stringify(a) === JSON.stringify(b);
-export const randomInt = (min: number, max: number) => Math.floor(Math.random() * (max - min + 1)) + min;
-export const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
-export const clamp = (min: number, max: number, value: number) => Math.max(min, Math.min(max, value));
 
 export function fakedownToTag(text: string, fd: string, tag: string) {
     const pattern = new RegExp(`${fd}([^${fd}]+)${fd}`, 'g');
