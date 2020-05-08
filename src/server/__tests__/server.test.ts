@@ -1,4 +1,4 @@
-import { once, EventEmitter } from 'events';
+import { once } from 'events';
 import * as Memory from 'lowdb/adapters/Memory';
 import { Server } from 'http';
 import * as WebSocket from 'ws';
@@ -15,13 +15,6 @@ import { ARCHIVE_PATH_TO_MEDIA, YOUTUBE_VIDEOS, TINY_MEDIA, DAY_MEDIA } from './
 
 const IMMEDIATE_REPLY_TIMEOUT = 50;
 const NAME = 'baby yoda';
-
-function timeout(emitter: EventEmitter, event: string, ms: number) {
-    return new Promise((resolve, reject) => {
-        setTimeout(resolve, ms);
-        emitter.once(event, reject);
-    });
-}
 
 async function server(options: Partial<HostOptions>, callback: (server: TestServer) => Promise<void>) {
     const server = new TestServer(options);
@@ -59,68 +52,6 @@ class TestServer {
         this.hosting.server.close();
     }
 }
-
-describe('messaging', () => {
-    test('close event', async () => {
-        await server({}, async (server) => {
-            const messaging = new Messaging(await server.socket());
-            const waiter = once(messaging, 'close');
-            await messaging.close();
-            await waiter;
-        });
-    });
-
-    test('double close gives only one event', async () => {
-        await server({}, async (server) => {
-            const messaging = new Messaging(await server.socket());
-            
-            const waiter1 = once(messaging, 'close');
-            await messaging.close();
-            await waiter1;
-
-            const waiter2 = timeout(messaging, 'close', 100);
-            await messaging.close();
-            await waiter2;
-        });
-    });
-
-    test('replace socket', async () => {
-        await server({}, async (server) => {
-            const messaging = new Messaging(await server.socket());
-
-            const waiter1 = once(messaging, 'close');
-            await messaging.close();
-            await waiter1;
-
-            messaging.setSocket(await server.socket());
-
-            const waiter2 = once(messaging, 'close');
-            await messaging.close();
-            await waiter2;
-        });
-    });
-
-    test('no response after close', async () => {
-        await server({}, async (server) => {
-            const messaging = new Messaging(await server.socket());
-            await messaging.close(3000);
-
-            const noassign = timeout(messaging.messages, 'assign', 100);
-            messaging.send('join', { name: NAME });
-            await noassign;
-        });
-    });
-
-    test('response after reconnect', async () => {
-        await server({}, async (server) => {
-            const socket = await server.socket();
-            const client = await server.client();
-            client.messaging.on('close', () => client.messaging.setSocket(socket));
-            await client.messaging.close(3000);
-            await client.join({ name: NAME });
-        });
-    });
-});
 
 describe('connectivity', () => {
     test('heartbeat response', async () => {
