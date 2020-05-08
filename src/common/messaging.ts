@@ -20,6 +20,7 @@ export interface Messaging {
 export class Messaging extends EventEmitter {
     readonly messages = new EventEmitter();
     private socket: Socket;
+    private closeListener = (event: any) => this.emit('close', event.code || event);
 
     constructor(socket: Socket) {
         super();
@@ -28,10 +29,13 @@ export class Messaging extends EventEmitter {
     }
 
     setSocket(socket: Socket) {
-        this.socket?.close();
+        if (this.socket) {
+            this.socket.removeEventListener('close', this.closeListener);
+            this.socket.close();
+        }
 
         this.socket = socket;
-        this.socket.addEventListener('close', (event) => this.emit('close', event.code || event));
+        this.socket.addEventListener('close', this.closeListener);
         this.socket.addEventListener('message', (event: MessageEvent) => {
             const { type, ...message } = JSON.parse(event.data) as Message;
             this.messages.emit(type, message);
@@ -46,8 +50,7 @@ export class Messaging extends EventEmitter {
     }
 
     send(type: string, message: object) {
-        if (this.socket.readyState !== 1)
-            this.emit('error', new Error('socket not open'));
+        if (this.socket.readyState !== 1) this.emit('error', new Error('socket not open'));
 
         const data = JSON.stringify({ type, ...message });
 
