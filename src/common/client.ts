@@ -2,7 +2,7 @@ import Messaging from './messaging';
 import { QueueItem } from '../server/playback';
 import { EventEmitter } from 'events';
 
-export type JoinMessage = { name: string, token?: string, password?: string };
+export type JoinMessage = { name: string; token?: string; password?: string };
 export type AssignMessage = { userId: string; token: string };
 export type RejectMessage = { text: string };
 export type UsersMessage = { users: any[] };
@@ -43,7 +43,9 @@ export class ZoneClient extends EventEmitter {
         this.messaging = messaging;
     }
 
-    get localUserId() { return this.assignation?.userId; }
+    get localUserId() {
+        return this.assignation?.userId;
+    }
 
     expect<K extends keyof MessageMap>(type: K, timeout?: number): Promise<MessageMap[K]> {
         return new Promise((resolve, reject) => {

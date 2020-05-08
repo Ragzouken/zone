@@ -1,7 +1,7 @@
-import { EventEmitter, once } from "events";
+import { EventEmitter, once } from 'events';
 import { AddressInfo } from 'net';
 import * as WebSocket from 'ws';
-import Messaging from "../messaging";
+import Messaging from '../messaging';
 
 export function timeout(emitter: EventEmitter, event: string, ms: number) {
     return new Promise((resolve, reject) => {

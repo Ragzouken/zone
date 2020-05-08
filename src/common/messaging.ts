@@ -46,8 +46,7 @@ export class Messaging extends EventEmitter {
     }
 
     send(type: string, message: object) {
-        if (this.socket.readyState !== 1)
-            this.emit('error', new Error('socket not open'));
+        if (this.socket.readyState !== 1) this.emit('error', new Error('socket not open'));
 
         const data = JSON.stringify({ type, ...message });
 
