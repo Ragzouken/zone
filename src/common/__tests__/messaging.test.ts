@@ -25,6 +25,17 @@ describe('messaging', () => {
         });
     });
 
+    it('does not emit close when replacing open socket', async () => {
+        await server({}, async (server) => {
+            const socket = await server.socket();
+            const messaging = await server.messaging();
+
+            const noclose = timeout(messaging, 'close', 100);
+            messaging.setSocket(socket);
+            await noclose;
+        });
+    });
+
     it('emits second close event when second socket closed', async () => {
         await server({}, async (server) => {
             const socket = await server.socket();
