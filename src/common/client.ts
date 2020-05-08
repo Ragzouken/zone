@@ -1,6 +1,8 @@
 import Messaging from './messaging';
-import { QueueItem } from '../server/playback';
+import { QueueItem, PlayableMedia, PlayableSource } from '../server/playback';
 import { EventEmitter } from 'events';
+import { YoutubeVideo } from '../server/youtube';
+import { objEqual } from './utility';
 
 export type JoinMessage = { name: string; token?: string; password?: string };
 export type AssignMessage = { userId: string; token: string };
@@ -15,6 +17,12 @@ export type ChatMessage = { text: string };
 export type MoveMessage = { position: number[] };
 export type EmotesMessage = { emotes: string[] };
 export type AvatarMessage = { data: string };
+
+export type SearchResult = { results: YoutubeVideo[] };
+
+function isYoutube(item: PlayableMedia): item is YoutubeVideo {
+    return item.source.type === 'youtube';
+}
 
 export interface MessageMap {
     heartbeat: {};
@@ -35,6 +43,10 @@ export interface MessageMap {
 
 export class ZoneClient extends EventEmitter {
     readonly messaging = new Messaging();
+    readonly queue: QueueItem[] = [];
+
+    lastPlayedItem?: QueueItem;
+
     private assignation?: AssignMessage;
 
     constructor() {
@@ -46,14 +58,18 @@ export class ZoneClient extends EventEmitter {
         return this.assignation?.userId;
     }
 
-    expect<K extends keyof MessageMap>(type: K, timeout?: number): Promise<MessageMap[K]> {
+    clear() {
+        this.queue.length = 0;
+    }
+
+    async expect<K extends keyof MessageMap>(type: K, timeout?: number): Promise<MessageMap[K]> {
         return new Promise((resolve, reject) => {
             if (timeout) setTimeout(() => reject('timeout'), timeout);
             this.messaging.messages.once(type, (message) => resolve(message));
         });
     }
 
-    join(options: JoinMessage) {
+    async join(options: JoinMessage) {
         options.token = options.token || this.assignation?.token;
 
         return new Promise<AssignMessage>((resolve, reject) => {
@@ -66,8 +82,51 @@ export class ZoneClient extends EventEmitter {
         });
     }
 
+    async search(query: string, lucky = false) {
+        return new Promise<SearchResult>((resolve, reject) => {
+            this.expect('search', 5000).then(resolve as any, reject);
+            this.messaging.send('search', { query, lucky });
+        });
+    }
+
+    async youtube(videoId: string) {
+        return new Promise<QueueMessage>((resolve, reject) => {
+            setTimeout(() => reject('timeout'), 5000);
+            this.messaging.messages.on('queue', (queue: QueueMessage) => {
+                const media = queue.items[0].media;
+                if (isYoutube(media) && media.source.videoId === videoId) resolve(queue);
+            });
+            this.messaging.send('youtube', { videoId });
+        });
+    }
+
+    async skip(password?: string) {
+        if (!this.lastPlayedItem) return;
+
+        this.messaging.send('skip', {
+            password,
+            source: this.lastPlayedItem.media.source,
+        });
+    }
+
+    async unplayable(source?: PlayableSource) {
+        source = source || this.lastPlayedItem?.media.source;
+        if (!source) return;
+        this.messaging.send('error', { source });
+    }
+
     private addStandardListeners() {
         this.messaging.on('error', (error) => console.log('hmm', error));
+
+        this.messaging.messages.on('play', (message: PlayMessage) => {
+            this.lastPlayedItem = message.item;
+
+            const index = this.queue.findIndex((item) => objEqual(item.media.source, message.item.media.source));
+            if (index >= 0) this.queue.splice(index, 1);
+        });
+        this.messaging.messages.on('queue', (message: QueueMessage) => {
+            this.queue.push(...message.items);
+        });
     }
 }
 

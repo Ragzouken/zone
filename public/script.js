@@ -886,8 +886,7 @@ const youtube_1 = require("./youtube");
 const chat_1 = require("./chat");
 const zone_1 = require("../common/zone");
 const client_1 = require("../common/client");
-const messaging_1 = require("../common/messaging");
-exports.client = new client_1.default(new messaging_1.default(new WebSocket('ws://localhost')));
+exports.client = new client_1.default();
 let player;
 async function start() {
     player = await youtube_1.loadYoutube('youtube', 448, 252);
@@ -1017,6 +1016,7 @@ function socket() {
 let joinPassword;
 async function connect() {
     const user = getLocalUser();
+    exports.client.clear();
     exports.client.messaging.setSocket(await socket());
     try {
         await exports.client.join({ name: localName, password: joinPassword });
@@ -1042,7 +1042,6 @@ async function load() {
     const joinName = document.querySelector('#join-name');
     const chatInput = document.querySelector('#chat-input');
     joinName.value = localName;
-    let queue = [];
     let currentPlayMessage;
     let currentPlayStart;
     function getUsername(userId) {
@@ -1051,7 +1050,6 @@ async function load() {
     let showQueue = false;
     let remember;
     function reset() {
-        queue.length = 0;
         zoneState.reset();
     }
     exports.client.messaging.on('close', async (code) => {
@@ -1072,7 +1070,6 @@ async function load() {
             const time = utility_1.secondsToTime(duration / 1000);
             chat.log(`{clr=#00FFFF}+ ${title} (${time}) added by {clr=#FF0000}${username}`);
         }
-        queue.push(...message.items);
     });
     exports.client.messaging.messages.on('play', (message) => {
         if (!message.item) {
@@ -1085,7 +1082,9 @@ async function load() {
         }
         const { source, details } = message.item.media;
         chat.log(`{clr=#00FFFF}> ${details.title} (${utility_1.secondsToTime(details.duration / 1000)})`);
-        queue = queue.filter((item) => !utility_2.objEqual(item.media.source, source));
+        const index = exports.client.queue.findIndex((item) => utility_2.objEqual(item.media.source, source));
+        if (index >= 0)
+            exports.client.queue.splice(index, 1);
         const time = message.time || 0;
         const seconds = time / 1000;
         if (source.type === 'youtube') {
@@ -1163,16 +1162,6 @@ async function load() {
             chat.log(`{clr=#FF00FF}! {clr=#FF0000}${prev}{clr=#FF00FF} is now {clr=#FF0000}${next}`);
         }
         zoneState.getUser(message.userId).name = message.name;
-    });
-    let lastSearchResults = [];
-    exports.client.messaging.messages.on('search', (message) => {
-        const { results } = message;
-        lastSearchResults = results;
-        const lines = results
-            .slice(0, 5)
-            .map((media) => media.details)
-            .map(({ title, duration }, i) => `${i + 1}. ${title} (${utility_1.secondsToTime(duration / 1000)})`);
-        chat.log('{clr=#FFFF00}? queue Search result with /result n\n{clr=#00FFFF}' + lines.join('\n'));
     });
     setInterval(() => exports.client.messaging.send('heartbeat', {}), 30 * 1000);
     window.onbeforeunload = () => exports.client.messaging.close();
@@ -1256,8 +1245,16 @@ async function load() {
         exports.client.messaging.send('avatar', { data });
     });
     avatarCancel.addEventListener('click', () => (avatarPanel.hidden = true));
+    let lastSearchResults = [];
     const chatCommands = new Map();
-    chatCommands.set('search', (query) => exports.client.messaging.send('search', { query }));
+    chatCommands.set('search', async (query) => {
+        ({ results: lastSearchResults } = await exports.client.search(query));
+        const lines = lastSearchResults
+            .slice(0, 5)
+            .map((media) => media.details)
+            .map(({ title, duration }, i) => `${i + 1}. ${title} (${utility_1.secondsToTime(duration / 1000)})`);
+        chat.log('{clr=#FFFF00}? queue Search result with /result n\n{clr=#00FFFF}' + lines.join('\n'));
+    });
     chatCommands.set('youtube', (videoId) => exports.client.messaging.send('youtube', { videoId }));
     chatCommands.set('skip', (password) => {
         if (currentPlayMessage)
@@ -1379,7 +1376,8 @@ async function load() {
             }
             sceneContext.drawImage(image.canvas, x, y, 32, 32);
         });
-        const state = exports.client.messaging.socket.readyState;
+        const socket = exports.client.messaging.socket;
+        const state = socket ? socket.readyState : 0;
         if (state !== WebSocket.OPEN) {
             const status = text_1.scriptToPages('connecting...', layout)[0];
             chat_1.animatePage(status);
@@ -1414,7 +1412,7 @@ async function load() {
             line(currentPlayMessage.item.media.details.title, remaining);
         let total = remaining;
         if (showQueue) {
-            queue.forEach((item) => {
+            exports.client.queue.forEach((item) => {
                 line(item.media.details.title, item.media.details.duration / 1000);
                 total += item.media.details.duration / 1000;
             });
@@ -1463,7 +1461,7 @@ async function enter() {
     await connect();
 }
 
-},{"../common/client":16,"../common/messaging":17,"../common/utility":18,"../common/zone":19,"./chat":11,"./text":13,"./utility":14,"./youtube":15,"blitsy":7}],13:[function(require,module,exports){
+},{"../common/client":16,"../common/utility":18,"../common/zone":19,"./chat":11,"./text":13,"./utility":14,"./youtube":15,"blitsy":7}],13:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 const blitsy_1 = require("blitsy");
@@ -1972,25 +1970,30 @@ function errorEventToYoutubeError(event) {
 },{"../common/utility":18,"events":10}],16:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
+const messaging_1 = require("./messaging");
 const events_1 = require("events");
 class ZoneClient extends events_1.EventEmitter {
-    constructor(messaging) {
+    constructor() {
         super();
-        this.messaging = messaging;
+        this.messaging = new messaging_1.default();
+        this.queue = [];
         this.addStandardListeners();
     }
     get localUserId() {
         var _a;
         return (_a = this.assignation) === null || _a === void 0 ? void 0 : _a.userId;
     }
-    expect(type, timeout) {
+    clear() {
+        this.queue.length = 0;
+    }
+    async expect(type, timeout) {
         return new Promise((resolve, reject) => {
             if (timeout)
                 setTimeout(() => reject('timeout'), timeout);
             this.messaging.messages.once(type, (message) => resolve(message));
         });
     }
-    join(options) {
+    async join(options) {
         var _a;
         options.token = options.token || ((_a = this.assignation) === null || _a === void 0 ? void 0 : _a.token);
         return new Promise((resolve, reject) => {
@@ -2002,14 +2005,23 @@ class ZoneClient extends events_1.EventEmitter {
             return assign;
         });
     }
+    async search(query, lucky = false) {
+        return new Promise((resolve, reject) => {
+            this.expect('search', 2000).then(resolve, reject);
+            this.messaging.send('search', { query, lucky });
+        });
+    }
     addStandardListeners() {
-        this.messaging.messages.on('heartbeat', () => this.messaging.send('heartbeat', {}));
+        this.messaging.on('error', (error) => console.log('hmm', error));
+        this.messaging.messages.on('queue', (message) => {
+            this.queue.push(...message.items);
+        });
     }
 }
 exports.ZoneClient = ZoneClient;
 exports.default = ZoneClient;
 
-},{"events":10}],17:[function(require,module,exports){
+},{"./messaging":17,"events":10}],17:[function(require,module,exports){
 "use strict";
 var __rest = (this && this.__rest) || function (s, e) {
     var t = {};
@@ -2025,17 +2037,16 @@ var __rest = (this && this.__rest) || function (s, e) {
 Object.defineProperty(exports, "__esModule", { value: true });
 const events_1 = require("events");
 class Messaging extends events_1.EventEmitter {
-    constructor(socket) {
-        super();
+    constructor() {
+        super(...arguments);
         this.messages = new events_1.EventEmitter();
-        this.setSocket(socket);
-        this.socket = socket;
         this.closeListener = (event) => this.emit('close', event.code || event);
     }
     setSocket(socket) {
-        var _a, _b;
-        (_a = this.socket) === null || _a === void 0 ? void 0 : _a.removeEventListener('close', this.closeListener);
-        (_b = this.socket) === null || _b === void 0 ? void 0 : _b.close();
+        if (this.socket) {
+            this.socket.removeEventListener('close', this.closeListener);
+            this.socket.close();
+        }
         this.socket = socket;
         this.socket.addEventListener('close', this.closeListener);
         this.socket.addEventListener('message', (event) => {
@@ -2044,15 +2055,21 @@ class Messaging extends events_1.EventEmitter {
         });
     }
     async close(code = 1000) {
-        if (this.socket.readyState === 3)
+        if (!this.socket || this.socket.readyState === 3)
             return;
         const waiter = events_1.once(this, 'close');
         this.socket.close(code);
         await waiter;
     }
     send(type, message) {
-        if (this.socket.readyState !== 1)
+        if (!this.socket) {
+            this.emit('error', new Error('no socket'));
+            return;
+        }
+        else if (this.socket.readyState !== 1) {
             this.emit('error', new Error('socket not open'));
+            return;
+        }
         const data = JSON.stringify(Object.assign({ type }, message));
         try {
             this.socket.send(data);

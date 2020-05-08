@@ -16,7 +16,7 @@ import { ChatPanel, animatePage } from './chat';
 import { UserId, UserState, ZoneState } from '../common/zone';
 
 import { QueueItem, PlayableMedia } from '../server/playback';
-import ZoneClient, { PlayMessage } from '../common/client';
+import ZoneClient, { PlayMessage, QueueMessage, SearchResult } from '../common/client';
 
 export const client = new ZoneClient();
 
@@ -181,8 +181,9 @@ let joinPassword: string | undefined;
 async function connect() {
     const user = getLocalUser();
 
+    client.clear();
     client.messaging.setSocket(await socket());
-    
+
     try {
         await client.join({ name: localName, password: joinPassword });
     } catch (e) {
@@ -210,8 +211,6 @@ async function load() {
 
     joinName.value = localName;
 
-    let queue: QueueItem[] = [];
-    let currentPlayMessage: PlayMessage | undefined;
     let currentPlayStart: number | undefined;
 
     function getUsername(userId: UserId) {
@@ -222,7 +221,6 @@ async function load() {
     let remember: UserState | undefined;
 
     function reset() {
-        queue.length = 0;
         zoneState.reset();
     }
 
@@ -235,7 +233,7 @@ async function load() {
         await connect();
     });
 
-    client.messaging.messages.on('queue', (message: { items: QueueItem[] }) => {
+    client.messaging.messages.on('queue', (message: QueueMessage) => {
         if (message.items.length === 1) {
             const item = message.items[0];
             const { title, duration } = item.media.details;
@@ -243,7 +241,6 @@ async function load() {
             const time = secondsToTime(duration / 1000);
             chat.log(`{clr=#00FFFF}+ ${title} (${time}) added by {clr=#FF0000}${username}`);
         }
-        queue.push(...message.items);
     });
     client.messaging.messages.on('play', (message: PlayMessage) => {
         if (!message.item) {
@@ -251,12 +248,10 @@ async function load() {
             player?.stop();
             httpvideo.pause();
             httpvideo.src = '';
-            currentPlayMessage = undefined;
             return;
         }
         const { source, details } = message.item.media;
         chat.log(`{clr=#00FFFF}> ${details.title} (${secondsToTime(details.duration / 1000)})`);
-        queue = queue.filter((item) => !objEqual(item.media.source, source));
 
         const time = message.time || 0;
         const seconds = time / 1000;
@@ -272,10 +267,9 @@ async function load() {
             // archive.src = ((source as any).src).replace('download', 'embed') + `?autoplay=1&start=${seconds}`;
         } else {
             chat.log(`{clr=#FF00FF}! unsupported media type`);
-            client.messaging.send('error', { source });
+            client.unplayable();
         }
 
-        currentPlayMessage = message;
         currentPlayStart = performance.now() - time;
     });
 
@@ -335,19 +329,6 @@ async function load() {
         }
 
         zoneState.getUser(message.userId).name = message.name;
-    });
-
-    let lastSearchResults: PlayableMedia[] = [];
-
-    client.messaging.messages.on('search', (message) => {
-        const { results }: { results: PlayableMedia[] } = message;
-
-        lastSearchResults = results;
-        const lines = results
-            .slice(0, 5)
-            .map((media) => media.details)
-            .map(({ title, duration }, i) => `${i + 1}. ${title} (${secondsToTime(duration / 1000)})`);
-        chat.log('{clr=#FFFF00}? queue Search result with /result n\n{clr=#00FFFF}' + lines.join('\n'));
     });
 
     setInterval(() => client.messaging.send('heartbeat', {}), 30 * 1000);
@@ -444,13 +425,21 @@ async function load() {
     });
     avatarCancel.addEventListener('click', () => (avatarPanel.hidden = true));
 
+    let lastSearchResults: PlayableMedia[] = [];
+
     const chatCommands = new Map<string, (args: string) => void>();
-    chatCommands.set('search', (query) => client.messaging.send('search', { query }));
-    chatCommands.set('youtube', (videoId) => client.messaging.send('youtube', { videoId }));
-    chatCommands.set('skip', (password) => {
-        if (currentPlayMessage)
-            client.messaging.send('skip', { password, source: currentPlayMessage.item.media.source });
+    chatCommands.set('search', async (query) => {
+        ({ results: lastSearchResults } = await client.search(query));
+        const lines = lastSearchResults
+            .slice(0, 5)
+            .map((media) => media.details)
+            .map(({ title, duration }, i) => `${i + 1}. ${title} (${secondsToTime(duration / 1000)})`);
+        chat.log('{clr=#FFFF00}? queue Search result with /result n\n{clr=#00FFFF}' + lines.join('\n'));
     });
+    chatCommands.set('youtube', (videoId) => {
+        client.youtube(videoId).catch(() => chat.log("{clr=#FF00FF}! couldn't queue video :("));
+    });
+    chatCommands.set('skip', (password) => client.skip(password));
     chatCommands.set('password', (args) => (joinPassword = args));
     chatCommands.set('users', () => listUsers());
     chatCommands.set('help', () => listHelp());
@@ -581,7 +570,8 @@ async function load() {
             sceneContext.drawImage(image.canvas, x, y, 32, 32);
         });
 
-        const state = (client.messaging as any).socket.readyState;
+        const socket = (client.messaging as any).socket;
+        const state = socket ? socket.readyState : 0;
 
         if (state !== WebSocket.OPEN) {
             const status = scriptToPages('connecting...', layout)[0];
@@ -603,24 +593,24 @@ async function load() {
 
         let remaining = 0;
 
-        if (currentPlayMessage) {
-            if (currentPlayMessage.item.media.source.type === 'youtube') {
+        if (client.lastPlayedItem) {
+            if (client.lastPlayedItem.media.source.type === 'youtube') {
                 remaining = Math.round(player!.duration - player!.time);
-            } else if (currentPlayMessage.item.media.source.type === 'archive') {
+            } else if (client.lastPlayedItem.media.source.type === 'archive') {
                 remaining = httpvideo.duration - httpvideo.currentTime;
             } else {
-                const duration = currentPlayMessage.item.media.details.duration;
+                const duration = client.lastPlayedItem.media.details.duration;
                 const elapsed = performance.now() - currentPlayStart!;
                 remaining = Math.max(0, duration - elapsed) / 1000;
             }
         }
 
-        if (currentPlayMessage && remaining > 0) line(currentPlayMessage.item.media.details.title, remaining);
+        if (client.lastPlayedItem && remaining > 0) line(client.lastPlayedItem.media.details.title, remaining);
 
         let total = remaining;
 
         if (showQueue) {
-            queue.forEach((item) => {
+            client.queue.forEach((item) => {
                 line(item.media.details.title, item.media.details.duration / 1000);
                 total += item.media.details.duration / 1000;
             });
@@ -638,9 +628,9 @@ async function load() {
     }
 
     function redraw() {
-        const playing = !!currentPlayMessage;
+        const playing = !!client.lastPlayedItem;
         youtube.hidden = !player!.playing;
-        httpvideo.hidden = !playing || currentPlayMessage?.item.media.source.type !== 'archive';
+        httpvideo.hidden = !playing || client.lastPlayedItem?.media.source.type !== 'archive';
         archive.hidden = true; // !playing || currentPlayMessage?.item.media.source.type !== "archive";
         zoneLogo.hidden = playing;
 
