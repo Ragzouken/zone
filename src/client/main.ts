@@ -664,7 +664,7 @@ function setupEntrySplash() {
     });
 }
 
-let zoneURL = "";
+let zoneURL = '';
 async function enter() {
     localName = (document.querySelector('#join-name') as HTMLInputElement).value;
     localStorage.setItem('name', localName);
