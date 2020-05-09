@@ -22,22 +22,6 @@ export function timeout(emitter: EventEmitter, event: string, ms: number) {
     });
 }
 
-export function specifically<T extends any[]>(
-    emitter: EventEmitter, 
-    event: string, 
-    predicate: (...args: T) => boolean,
-    callback: (...args: T) => void,
-) {
-    const handler = (...args: T) => {
-        if (predicate(...args)) {
-            emitter.off(event, handler as any);
-            callback(...args);
-        }
-    };
-
-    emitter.on(event, handler as any);
-}
-
 export async function echoServer(options: Partial<{}>, callback: (server: EchoServer) => Promise<void>) {
     const server = new EchoServer(options);
     try {

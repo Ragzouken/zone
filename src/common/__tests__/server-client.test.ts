@@ -17,7 +17,7 @@ describe('connectivity', () => {
     });
 
     test('server sends ping', async () => {
-        await zoneServer({ pingInterval: 50 }, async (server) => {
+        await zoneServer({ pingInterval: 10 }, async (server) => {
             const socket = await server.socket();
             await once(socket, 'ping');
         });

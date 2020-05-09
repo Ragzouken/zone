@@ -1006,7 +1006,7 @@ let localName = localStorage.getItem('name') || '';
 function rename(name) {
     localStorage.setItem('name', name);
     localName = name;
-    exports.client.messaging.send('name', { name });
+    exports.client.rename(name);
 }
 function socket() {
     return new Promise((resolve, reject) => {
@@ -1969,6 +1969,13 @@ class ZoneClient extends events_1.EventEmitter {
     clear() {
         this.zone.clear();
     }
+    async rename(name) {
+        return new Promise((resolve, reject) => {
+            setTimeout(() => reject('timeout'), this.options.quickResponseTimeout);
+            utility_1.specifically(this.messaging.messages, 'name', (message) => message.userId === this.localUserId, resolve);
+            this.messaging.send('name', { name });
+        });
+    }
     async expect(type, timeout) {
         return new Promise((resolve, reject) => {
             if (timeout)
@@ -1976,8 +1983,9 @@ class ZoneClient extends events_1.EventEmitter {
             this.messaging.messages.once(type, (message) => resolve(message));
         });
     }
-    async join(options) {
+    async join(options = {}) {
         var _a;
+        options.name = options.name || this.options.joinName || 'anonymous';
         options.token = options.token || ((_a = this.assignation) === null || _a === void 0 ? void 0 : _a.token);
         return new Promise((resolve, reject) => {
             this.expect('assign', this.options.quickResponseTimeout).then(resolve, reject);
@@ -2170,6 +2178,16 @@ function getDefault(map, key, factory) {
     return value;
 }
 exports.getDefault = getDefault;
+function specifically(emitter, event, predicate, callback) {
+    const handler = (...args) => {
+        if (predicate(...args)) {
+            emitter.off(event, handler);
+            callback(...args);
+        }
+    };
+    emitter.on(event, handler);
+}
+exports.specifically = specifically;
 
 },{}],19:[function(require,module,exports){
 "use strict";

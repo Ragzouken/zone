@@ -2,9 +2,8 @@ import Messaging from './messaging';
 import { QueueItem, PlayableMedia, PlayableSource } from '../server/playback';
 import { EventEmitter } from 'events';
 import { YoutubeVideo } from '../server/youtube';
-import { objEqual } from './utility';
+import { objEqual, specifically } from './utility';
 import { ZoneState, UserState } from './zone';
-import { specifically } from './__tests__/utilities';
 
 export type StatusMesage = { text: string };
 export type JoinMessage = { name: string; token?: string; password?: string };

@@ -165,7 +165,7 @@ let localName = localStorage.getItem('name') || '';
 function rename(name: string) {
     localStorage.setItem('name', name);
     localName = name;
-    client.messaging.send('name', { name });
+    client.rename(name);
 }
 
 function socket(): Promise<WebSocket> {

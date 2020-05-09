@@ -1,3 +1,5 @@
+import { EventEmitter } from "events";
+
 export const objEqual = (a: any, b: any) => JSON.stringify(a) === JSON.stringify(b);
 export const randomInt = (min: number, max: number) => Math.floor(Math.random() * (max - min + 1)) + min;
 export const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
@@ -20,4 +22,20 @@ export interface TypedEventEmitter<TEventMap extends EventMap> {
     off<K extends keyof TEventMap>(event: K, callback: TEventMap[K]): this;
     once<K extends keyof TEventMap>(event: K, callback: TEventMap[K]): this;
     emit<K extends keyof TEventMap>(event: K, ...args: Parameters<TEventMap[K]>): boolean;
+}
+
+export function specifically<T extends any[]>(
+    emitter: EventEmitter, 
+    event: string, 
+    predicate: (...args: T) => boolean,
+    callback: (...args: T) => void,
+) {
+    const handler = (...args: T) => {
+        if (predicate(...args)) {
+            emitter.off(event, handler as any);
+            callback(...args);
+        }
+    };
+
+    emitter.on(event, handler as any);
 }
