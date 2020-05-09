@@ -103,15 +103,6 @@ export function hex2rgb(color: string): [number, number, number] {
     return [0, 0, 0];
 }
 
-export function getDefault<K, V>(map: Map<K, V>, key: K, factory: (key: K) => V): V {
-    let value = map.get(key);
-    if (!value) {
-        value = factory(key);
-        map.set(key, value);
-    }
-    return value!;
-}
-
 export function eventToElementPixel(event: PointerEvent, element: HTMLElement) {
     const rect = element.getBoundingClientRect();
     return [event.clientX - rect.x, event.clientY - rect.y];

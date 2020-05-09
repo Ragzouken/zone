@@ -2,6 +2,17 @@ import { EventEmitter, once } from 'events';
 import { AddressInfo } from 'net';
 import * as WebSocket from 'ws';
 import Messaging from '../messaging';
+import { Server } from 'http';
+
+import * as Memory from 'lowdb/adapters/Memory';
+import { host, HostOptions } from '../../server/server';
+import ZoneClient, { ClientOptions } from '../../common/client';
+import Playback from '../../server/playback';
+
+export const TEST_CLIENT_OPTIONS: Partial<ClientOptions> = {
+    quickResponseTimeout: 50,
+    slowResponseTimeout: 2000,
+}
 
 export function timeout(emitter: EventEmitter, event: string, ms: number) {
     return new Promise((resolve, reject) => {
@@ -10,13 +21,52 @@ export function timeout(emitter: EventEmitter, event: string, ms: number) {
     });
 }
 
-export async function server(options: Partial<{}>, callback: (server: EchoServer) => Promise<void>) {
+export async function echoServer(options: Partial<{}>, callback: (server: EchoServer) => Promise<void>) {
     const server = new EchoServer(options);
     try {
         await once(server.server, 'listening');
         await callback(server);
     } finally {
         server.dispose();
+    }
+}
+
+export async function zoneServer(options: Partial<HostOptions>, callback: (server: ZoneServer) => Promise<void>) {
+    const server = new ZoneServer(options);
+    try {
+        await once(server.hosting.server, 'listening');
+        await callback(server);
+    } finally {
+        server.dispose();
+    }
+}
+
+export class ZoneServer {
+    public hosting: { server: Server; playback: Playback };
+    private readonly sockets: WebSocket[] = [];
+
+    constructor(options?: Partial<HostOptions>) {
+        this.hosting = host(new Memory(''), options);
+    }
+
+    public async socket() {
+        const address = this.hosting.server.address() as AddressInfo;
+        const socket = new WebSocket(`ws://localhost:${address.port}/zone`);
+        this.sockets.push(socket);
+        await once(socket, 'open');
+        return socket;
+    }
+
+    public async client(options: Partial<ClientOptions> = {}) {
+        options = Object.assign({}, TEST_CLIENT_OPTIONS, options);
+        const client = new ZoneClient(options);
+        client.messaging.setSocket(await this.socket());
+        return client;
+    }
+
+    public dispose() {
+        this.sockets.forEach((socket) => socket.close());
+        this.hosting.server.close();
     }
 }
 
@@ -38,7 +88,9 @@ export class EchoServer {
     }
 
     public async messaging() {
-        return new Messaging(await this.socket());
+        const messaging = new Messaging();
+        messaging.setSocket(await this.socket());
+        return messaging;
     }
 
     public dispose() {

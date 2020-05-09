@@ -1,7 +1,7 @@
 import { EventEmitter } from 'events';
 import { performance } from 'perf_hooks';
 import { copy } from '../common/utility';
-import { UserId } from './zone';
+import { UserId } from '../common/zone';
 
 export type PlayableSource = { type: string };
 

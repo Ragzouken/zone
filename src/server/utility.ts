@@ -21,12 +21,3 @@ export async function fetchDom(url: string): Promise<HTMLParser.HTMLElement> {
     const html = await response.text();
     return HTMLParser.parse(html) as HTMLParser.HTMLElement;
 }
-
-export function getDefault<K, V>(map: Map<K, V>, key: K, factory: (key: K) => V): V {
-    let value = map.get(key);
-    if (!value) {
-        value = factory(key);
-        map.set(key, value);
-    }
-    return value!;
-}

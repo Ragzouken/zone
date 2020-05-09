@@ -19,14 +19,8 @@ export interface Messaging {
 
 export class Messaging extends EventEmitter {
     readonly messages = new EventEmitter();
-    private socket: Socket;
+    private socket?: Socket;
     private closeListener = (event: any) => this.emit('close', event.code || event);
-
-    constructor(socket: Socket) {
-        super();
-        this.setSocket(socket);
-        this.socket = socket;
-    }
 
     setSocket(socket: Socket) {
         if (this.socket) {
@@ -43,14 +37,20 @@ export class Messaging extends EventEmitter {
     }
 
     async close(code = 1000) {
-        if (this.socket.readyState === 3) return;
+        if (!this.socket || this.socket.readyState === 3) return;
         const waiter = once(this, 'close');
         this.socket.close(code);
         await waiter;
     }
 
-    send(type: string, message: object) {
-        if (this.socket.readyState !== 1) this.emit('error', new Error('socket not open'));
+    send(type: string, message: object = {}) {
+        if (!this.socket) {
+            this.emit('error', new Error('no socket'));
+            return;
+        } else if (this.socket.readyState !== 1) {
+            this.emit('error', new Error('socket not open'));
+            return;
+        }
 
         const data = JSON.stringify({ type, ...message });
 

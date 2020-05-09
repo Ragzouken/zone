@@ -1,6 +1,6 @@
-import { YoutubeVideo } from '../youtube';
-import { PlayableMedia } from '../playback';
-import { ArchiveSource } from '../archiveorg';
+import { YoutubeVideo } from '../../server/youtube';
+import { PlayableMedia } from '../../server/playback';
+import { ArchiveSource } from '../../server/archiveorg';
 
 export const TINY_MEDIA: PlayableMedia = {
     source: { type: 'null' },

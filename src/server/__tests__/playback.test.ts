@@ -1,6 +1,6 @@
 import Playback from '../playback';
 import { once } from 'events';
-import { MEDIA, TINY_MEDIA, DAY_MEDIA } from './media.data';
+import { MEDIA, TINY_MEDIA, DAY_MEDIA } from '../../common/__tests__/media.data';
 
 it('plays the first item queued', () => {
     const playback = new Playback();

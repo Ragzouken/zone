@@ -6,7 +6,7 @@ import * as low from 'lowdb';
 import Youtube from './youtube';
 import Playback, { PlayableMedia, QueueItem, PlayableSource } from './playback';
 import Messaging from '../common/messaging';
-import { ZoneState, UserId, UserState } from './zone';
+import { ZoneState, UserId, UserState } from '../common/zone';
 import { nanoid } from 'nanoid';
 import { archiveOrgToPlayable } from './archiveorg';
 import { objEqual, copy } from '../common/utility';
@@ -182,9 +182,9 @@ export function host(adapter: low.AdapterSync, options: Partial<HostOptions> = {
     }
 
     function waitJoin(websocket: WebSocket, userIp: unknown) {
-        const messaging = new Messaging(websocket);
+        const messaging = new Messaging();
+        messaging.setSocket(websocket);
         messaging.on('error', () => {});
-
         messaging.messages.once('join', (message) => {
             const resume = message.token && tokenToUser.has(message.token);
             const authorised = resume || !opts.joinPassword || message.password === opts.joinPassword;

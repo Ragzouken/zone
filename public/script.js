@@ -875,35 +875,7 @@ function animatePage(page) {
 }
 exports.animatePage = animatePage;
 
-},{"../common/utility":18,"./text":14,"./utility":15,"blitsy":7}],12:[function(require,module,exports){
-"use strict";
-Object.defineProperty(exports, "__esModule", { value: true });
-const utility_1 = require("./utility");
-const messaging_1 = require("../common/messaging");
-class ZoneState {
-    constructor() {
-        this.users = new Map();
-    }
-    reset() {
-        this.users.clear();
-    }
-    getUser(userId) {
-        return utility_1.getDefault(this.users, userId, () => ({ userId, emotes: [] }));
-    }
-}
-exports.ZoneState = ZoneState;
-class ZoneClient {
-    constructor() {
-        this.zone = new ZoneState();
-        this.messaging = new messaging_1.default(new WebSocket('ws://localhost'));
-    }
-    get localUser() {
-        return this.zone.getUser(this.localUserId);
-    }
-}
-exports.ZoneClient = ZoneClient;
-
-},{"../common/messaging":17,"./utility":15}],13:[function(require,module,exports){
+},{"../common/utility":18,"./text":13,"./utility":14,"blitsy":7}],12:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 const blitsy = require("blitsy");
@@ -912,8 +884,9 @@ const utility_2 = require("../common/utility");
 const text_1 = require("./text");
 const youtube_1 = require("./youtube");
 const chat_1 = require("./chat");
-const client_1 = require("./client");
-exports.client = new client_1.ZoneClient();
+const zone_1 = require("../common/zone");
+const client_1 = require("../common/client");
+exports.client = new client_1.default();
 let player;
 async function start() {
     player = await youtube_1.loadYoutube('youtube', 448, 252);
@@ -1020,6 +993,10 @@ function parseFakedown(text) {
     return text;
 }
 const chat = new chat_1.ChatPanel();
+const zoneState = new zone_1.ZoneState();
+function getLocalUser() {
+    return exports.client.localUserId ? zoneState.getUser(exports.client.localUserId) : undefined;
+}
 function setVolume(volume) {
     player.volume = volume;
     localStorage.setItem('volume', volume.toString());
@@ -1036,9 +1013,26 @@ function socket() {
         socket.addEventListener('open', () => resolve(socket));
     });
 }
+let joinPassword;
 async function connect() {
+    const user = getLocalUser();
+    exports.client.clear();
     exports.client.messaging.setSocket(await socket());
-    exports.client.messaging.send('join', { name: localName, token: exports.client.localToken, password: exports.client.joinPassword });
+    try {
+        await exports.client.join({ name: localName, password: joinPassword });
+    }
+    catch (e) {
+        chat.log('{clr=#FF00FF}! enter server password with /password)');
+        return;
+    }
+    if (user) {
+        if (user.position)
+            exports.client.messaging.send('move', { position: user.position });
+        if (user.avatar) {
+            exports.client.messaging.send('avatar', { data: user.avatar });
+            exports.client.messaging.send('emotes', { emotes: user.emotes });
+        }
+    }
 }
 async function load() {
     setVolume(parseInt(localStorage.getItem('volume') || '100', 10));
@@ -1048,41 +1042,24 @@ async function load() {
     const joinName = document.querySelector('#join-name');
     const chatInput = document.querySelector('#chat-input');
     joinName.value = localName;
-    let queue = [];
     let currentPlayMessage;
     let currentPlayStart;
     function getUsername(userId) {
-        return exports.client.zone.getUser(userId).name || userId;
+        return zoneState.getUser(userId).name || userId;
     }
     let showQueue = false;
     let remember;
     function reset() {
-        queue.length = 0;
-        exports.client.zone.reset();
+        zoneState.reset();
     }
     exports.client.messaging.on('close', async (code) => {
-        remember = exports.client.localUser;
+        console.log(code);
+        remember = getLocalUser();
         if (code <= 1001)
             return;
         await utility_2.sleep(100);
         reset();
         await connect();
-    });
-    exports.client.messaging.messages.on('reject', () => {
-        chat.log('{clr=#FF00FF}! enter server password with /password)');
-    });
-    exports.client.messaging.messages.on('heartbeat', () => { });
-    exports.client.messaging.messages.on('assign', (message) => {
-        if (remember) {
-            if (remember.position)
-                exports.client.messaging.send('move', { position: remember.position });
-            if (remember.avatar) {
-                exports.client.messaging.send('avatar', { data: remember.avatar });
-                exports.client.messaging.send('emotes', { emotes: remember.emotes });
-            }
-        }
-        exports.client.localUserId = message.userId;
-        exports.client.localToken = message.token;
     });
     exports.client.messaging.messages.on('queue', (message) => {
         var _a;
@@ -1093,7 +1070,6 @@ async function load() {
             const time = utility_1.secondsToTime(duration / 1000);
             chat.log(`{clr=#00FFFF}+ ${title} (${time}) added by {clr=#FF0000}${username}`);
         }
-        queue.push(...message.items);
     });
     exports.client.messaging.messages.on('play', (message) => {
         if (!message.item) {
@@ -1106,7 +1082,9 @@ async function load() {
         }
         const { source, details } = message.item.media;
         chat.log(`{clr=#00FFFF}> ${details.title} (${utility_1.secondsToTime(details.duration / 1000)})`);
-        queue = queue.filter((item) => !utility_2.objEqual(item.media.source, source));
+        const index = exports.client.queue.findIndex((item) => utility_2.objEqual(item.media.source, source));
+        if (index >= 0)
+            exports.client.queue.splice(index, 1);
         const time = message.time || 0;
         const seconds = time / 1000;
         if (source.type === 'youtube') {
@@ -1131,24 +1109,24 @@ async function load() {
         chat.log('{clr=#00FF00}*** connected ***');
         if (!remember)
             listHelp();
-        exports.client.zone.users.clear();
+        zoneState.users.clear();
         message.users.forEach((user) => {
-            exports.client.zone.users.set(user.userId, user);
+            zoneState.users.set(user.userId, user);
         });
         listUsers();
     });
     exports.client.messaging.messages.on('leave', (message) => {
         const username = getUsername(message.userId);
         chat.log(`{clr=#FF00FF}! {clr=#FF0000}${username}{clr=#FF00FF} left`);
-        exports.client.zone.users.delete(message.userId);
+        zoneState.users.delete(message.userId);
     });
     exports.client.messaging.messages.on('move', (message) => {
-        const user = exports.client.zone.getUser(message.userId);
-        if (user !== exports.client.localUser || !user.position)
+        const user = zoneState.getUser(message.userId);
+        if (user !== getLocalUser() || !user.position)
             user.position = message.position;
     });
     exports.client.messaging.messages.on('avatar', (message) => {
-        exports.client.zone.getUser(message.userId).avatar = message.data;
+        zoneState.getUser(message.userId).avatar = message.data;
         if (message.userId === exports.client.localUserId)
             localStorage.setItem('avatar', message.data);
         if (!avatarTiles.has(message.data)) {
@@ -1161,12 +1139,12 @@ async function load() {
         }
     });
     exports.client.messaging.messages.on('emotes', (message) => {
-        exports.client.zone.getUser(message.userId).emotes = message.emotes;
+        zoneState.getUser(message.userId).emotes = message.emotes;
     });
     exports.client.messaging.messages.on('chat', (message) => {
         const name = getUsername(message.userId);
         chat.log(`{clr=#FF0000}${name}:{-clr} ${message.text}`);
-        if (message.userId !== exports.client.localUserId) {
+        if (message.userId !== getLocalUser()) {
             notify(name, message.text, 'chat');
         }
     });
@@ -1176,30 +1154,20 @@ async function load() {
         if (message.userId === exports.client.localUserId) {
             chat.log(`{clr=#FF00FF}! you are {clr=#FF0000}${next}`);
         }
-        else if (!exports.client.zone.users.has(message.userId)) {
+        else if (!zoneState.users.has(message.userId)) {
             chat.log(`{clr=#FF00FF}! {clr=#FF0000}${next} {clr=#FF00FF}joined`);
         }
         else {
             const prev = getUsername(message.userId);
             chat.log(`{clr=#FF00FF}! {clr=#FF0000}${prev}{clr=#FF00FF} is now {clr=#FF0000}${next}`);
         }
-        exports.client.zone.getUser(message.userId).name = message.name;
-    });
-    let lastSearchResults = [];
-    exports.client.messaging.messages.on('search', (message) => {
-        const { results } = message;
-        lastSearchResults = results;
-        const lines = results
-            .slice(0, 5)
-            .map((media) => media.details)
-            .map(({ title, duration }, i) => `${i + 1}. ${title} (${utility_1.secondsToTime(duration / 1000)})`);
-        chat.log('{clr=#FFFF00}? queue Search result with /result n\n{clr=#00FFFF}' + lines.join('\n'));
+        zoneState.getUser(message.userId).name = message.name;
     });
     setInterval(() => exports.client.messaging.send('heartbeat', {}), 30 * 1000);
     window.onbeforeunload = () => exports.client.messaging.close();
     player.on('error', () => exports.client.messaging.send('error', { source: { type: 'youtube', videoId: player.video } }));
     function move(dx, dy) {
-        const user = exports.client.localUser;
+        const user = getLocalUser();
         if (user.position) {
             user.position[0] = utility_2.clamp(0, 15, user.position[0] + dx);
             user.position[1] = utility_2.clamp(0, 15, user.position[1] + dy);
@@ -1216,7 +1184,7 @@ async function load() {
         }
     }
     function listUsers() {
-        const named = Array.from(exports.client.zone.users.values()).filter((user) => !!user.name);
+        const named = Array.from(zoneState.users.values()).filter((user) => !!user.name);
         if (named.length === 0) {
             chat.log('{clr=#FF00FF}! no other users');
         }
@@ -1259,7 +1227,7 @@ async function load() {
     const avatarCancel = document.querySelector('#avatar-cancel');
     const avatarContext = avatarPaint.getContext('2d');
     function openAvatarEditor() {
-        const avatar = getTile(exports.client.localUser.avatar) || avatarImage;
+        const avatar = getTile(getLocalUser().avatar) || avatarImage;
         avatarContext.clearRect(0, 0, 8, 8);
         avatarContext.drawImage(avatar.canvas, 0, 0);
         avatarPanel.hidden = false;
@@ -1277,14 +1245,22 @@ async function load() {
         exports.client.messaging.send('avatar', { data });
     });
     avatarCancel.addEventListener('click', () => (avatarPanel.hidden = true));
+    let lastSearchResults = [];
     const chatCommands = new Map();
-    chatCommands.set('search', (query) => exports.client.messaging.send('search', { query }));
+    chatCommands.set('search', async (query) => {
+        ({ results: lastSearchResults } = await exports.client.search(query));
+        const lines = lastSearchResults
+            .slice(0, 5)
+            .map((media) => media.details)
+            .map(({ title, duration }, i) => `${i + 1}. ${title} (${utility_1.secondsToTime(duration / 1000)})`);
+        chat.log('{clr=#FFFF00}? queue Search result with /result n\n{clr=#00FFFF}' + lines.join('\n'));
+    });
     chatCommands.set('youtube', (videoId) => exports.client.messaging.send('youtube', { videoId }));
     chatCommands.set('skip', (password) => {
         if (currentPlayMessage)
             exports.client.messaging.send('skip', { password, source: currentPlayMessage.item.media.source });
     });
-    chatCommands.set('password', (args) => (exports.client.joinPassword = args));
+    chatCommands.set('password', (args) => (joinPassword = args));
     chatCommands.set('users', () => listUsers());
     chatCommands.set('help', () => listHelp());
     chatCommands.set('result', playFromSearchResult);
@@ -1313,7 +1289,7 @@ async function load() {
     chatCommands.set('name', rename);
     chatCommands.set('archive', (path) => exports.client.messaging.send('archive', { path }));
     function toggleEmote(emote) {
-        const emotes = exports.client.localUser.emotes;
+        const emotes = getLocalUser().emotes;
         if (emotes.includes(emote))
             exports.client.messaging.send('emotes', { emotes: emotes.filter((e) => e !== emote) });
         else
@@ -1376,7 +1352,7 @@ async function load() {
     function drawZone() {
         sceneContext.clearRect(0, 0, 512, 512);
         sceneContext.drawImage(roomBackground.canvas, 0, 0, 512, 512);
-        exports.client.zone.users.forEach((user) => {
+        zoneState.users.forEach((user) => {
             const { position, emotes, avatar } = user;
             if (!position)
                 return;
@@ -1400,7 +1376,8 @@ async function load() {
             }
             sceneContext.drawImage(image.canvas, x, y, 32, 32);
         });
-        const state = exports.client.messaging.socket.readyState;
+        const socket = exports.client.messaging.socket;
+        const state = socket ? socket.readyState : 0;
         if (state !== WebSocket.OPEN) {
             const status = text_1.scriptToPages('connecting...', layout)[0];
             chat_1.animatePage(status);
@@ -1435,7 +1412,7 @@ async function load() {
             line(currentPlayMessage.item.media.details.title, remaining);
         let total = remaining;
         if (showQueue) {
-            queue.forEach((item) => {
+            exports.client.queue.forEach((item) => {
                 line(item.media.details.title, item.media.details.duration / 1000);
                 total += item.media.details.duration / 1000;
             });
@@ -1475,7 +1452,7 @@ function setupEntrySplash() {
         enter();
     });
 }
-let zoneURL = "";
+let zoneURL = '';
 async function enter() {
     localName = document.querySelector('#join-name').value;
     localStorage.setItem('name', localName);
@@ -1484,7 +1461,7 @@ async function enter() {
     await connect();
 }
 
-},{"../common/utility":18,"./chat":11,"./client":12,"./text":14,"./utility":15,"./youtube":16,"blitsy":7}],14:[function(require,module,exports){
+},{"../common/client":16,"../common/utility":18,"../common/zone":19,"./chat":11,"./text":13,"./utility":14,"./youtube":15,"blitsy":7}],13:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 const blitsy_1 = require("blitsy");
@@ -1777,7 +1754,7 @@ function getPageHeight(page, font) {
 }
 exports.getPageHeight = getPageHeight;
 
-},{"./utility":15,"blitsy":7}],15:[function(require,module,exports){
+},{"./utility":14,"blitsy":7}],14:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 const blitsy_1 = require("blitsy");
@@ -1881,22 +1858,13 @@ function hex2rgb(color) {
     return [0, 0, 0];
 }
 exports.hex2rgb = hex2rgb;
-function getDefault(map, key, factory) {
-    let value = map.get(key);
-    if (!value) {
-        value = factory(key);
-        map.set(key, value);
-    }
-    return value;
-}
-exports.getDefault = getDefault;
 function eventToElementPixel(event, element) {
     const rect = element.getBoundingClientRect();
     return [event.clientX - rect.x, event.clientY - rect.y];
 }
 exports.eventToElementPixel = eventToElementPixel;
 
-},{"blitsy":7}],16:[function(require,module,exports){
+},{"blitsy":7}],15:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 const events_1 = require("events");
@@ -1999,7 +1967,61 @@ function errorEventToYoutubeError(event) {
     return { code: event.data, reason: CODE_REASONS.get(event.data) || 'unknown' };
 }
 
-},{"../common/utility":18,"events":10}],17:[function(require,module,exports){
+},{"../common/utility":18,"events":10}],16:[function(require,module,exports){
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+const messaging_1 = require("./messaging");
+const events_1 = require("events");
+class ZoneClient extends events_1.EventEmitter {
+    constructor() {
+        super();
+        this.messaging = new messaging_1.default();
+        this.queue = [];
+        this.addStandardListeners();
+    }
+    get localUserId() {
+        var _a;
+        return (_a = this.assignation) === null || _a === void 0 ? void 0 : _a.userId;
+    }
+    clear() {
+        this.queue.length = 0;
+    }
+    async expect(type, timeout) {
+        return new Promise((resolve, reject) => {
+            if (timeout)
+                setTimeout(() => reject('timeout'), timeout);
+            this.messaging.messages.once(type, (message) => resolve(message));
+        });
+    }
+    async join(options) {
+        var _a;
+        options.token = options.token || ((_a = this.assignation) === null || _a === void 0 ? void 0 : _a.token);
+        return new Promise((resolve, reject) => {
+            this.expect('assign', 500).then(resolve, reject);
+            this.expect('reject').then(reject);
+            this.messaging.send('join', options);
+        }).then((assign) => {
+            this.assignation = assign;
+            return assign;
+        });
+    }
+    async search(query, lucky = false) {
+        return new Promise((resolve, reject) => {
+            this.expect('search', 2000).then(resolve, reject);
+            this.messaging.send('search', { query, lucky });
+        });
+    }
+    addStandardListeners() {
+        this.messaging.on('error', (error) => console.log('hmm', error));
+        this.messaging.messages.on('queue', (message) => {
+            this.queue.push(...message.items);
+        });
+    }
+}
+exports.ZoneClient = ZoneClient;
+exports.default = ZoneClient;
+
+},{"./messaging":17,"events":10}],17:[function(require,module,exports){
 "use strict";
 var __rest = (this && this.__rest) || function (s, e) {
     var t = {};
@@ -2015,32 +2037,39 @@ var __rest = (this && this.__rest) || function (s, e) {
 Object.defineProperty(exports, "__esModule", { value: true });
 const events_1 = require("events");
 class Messaging extends events_1.EventEmitter {
-    constructor(socket) {
-        super();
+    constructor() {
+        super(...arguments);
         this.messages = new events_1.EventEmitter();
-        this.setSocket(socket);
-        this.socket = socket;
+        this.closeListener = (event) => this.emit('close', event.code || event);
     }
     setSocket(socket) {
-        var _a;
-        (_a = this.socket) === null || _a === void 0 ? void 0 : _a.close();
+        if (this.socket) {
+            this.socket.removeEventListener('close', this.closeListener);
+            this.socket.close();
+        }
         this.socket = socket;
-        this.socket.addEventListener('close', (event) => this.emit('close', event.code || event));
+        this.socket.addEventListener('close', this.closeListener);
         this.socket.addEventListener('message', (event) => {
             const _a = JSON.parse(event.data), { type } = _a, message = __rest(_a, ["type"]);
             this.messages.emit(type, message);
         });
     }
     async close(code = 1000) {
-        if (this.socket.readyState === 3)
+        if (!this.socket || this.socket.readyState === 3)
             return;
         const waiter = events_1.once(this, 'close');
         this.socket.close(code);
         await waiter;
     }
     send(type, message) {
-        if (this.socket.readyState !== 1)
+        if (!this.socket) {
+            this.emit('error', new Error('no socket'));
+            return;
+        }
+        else if (this.socket.readyState !== 1) {
             this.emit('error', new Error('socket not open'));
+            return;
+        }
         const data = JSON.stringify(Object.assign({ type }, message));
         try {
             this.socket.send(data);
@@ -2061,6 +2090,32 @@ exports.randomInt = (min, max) => Math.floor(Math.random() * (max - min + 1)) + 
 exports.sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 exports.clamp = (min, max, value) => Math.max(min, Math.min(max, value));
 exports.copy = (object) => JSON.parse(JSON.stringify(object));
+function getDefault(map, key, factory) {
+    let value = map.get(key);
+    if (!value) {
+        value = factory(key);
+        map.set(key, value);
+    }
+    return value;
+}
+exports.getDefault = getDefault;
 
-},{}]},{},[13])(13)
+},{}],19:[function(require,module,exports){
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+const utility_1 = require("./utility");
+class ZoneState {
+    constructor() {
+        this.users = new Map();
+    }
+    reset() {
+        this.users.clear();
+    }
+    getUser(userId) {
+        return utility_1.getDefault(this.users, userId, () => ({ userId, emotes: [] }));
+    }
+}
+exports.ZoneState = ZoneState;
+
+},{"./utility":18}]},{},[12])(12)
 });

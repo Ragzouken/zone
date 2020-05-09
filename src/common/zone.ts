@@ -11,7 +11,7 @@ export type UserState = {
 };
 
 export class ZoneState {
-    public users = new Map<UserId, UserState>();
+    public readonly users = new Map<UserId, UserState>();
 
     public reset() {
         this.users.clear();
