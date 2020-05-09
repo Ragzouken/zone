@@ -183,11 +183,7 @@ async function connect() {
     client.messaging.setSocket(await socket());
 
     try {
-        if (joined) {
-            await client.rejoin(joinPassword);
-        } else {
-            await client.join({ name: localName, password: joinPassword });
-        }
+        await client.join({ name: localName, password: joinPassword });
     } catch (e) {
         chat.status('enter server password with /password)');
         return;

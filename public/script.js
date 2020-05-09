@@ -1990,11 +1990,9 @@ class ZoneClient extends events_1.EventEmitter {
         const user = this.zone.getUser(this.assignation.userId);
         this.clear();
         await this.join({ name: user.name, token: this.assignation.token, password });
-        if (user.position)
-            this.messaging.send('move', { position: user.position });
-        if (user.avatar)
-            this.messaging.send('avatar', { data: user.avatar });
-        this.messaging.send('emotes', { emotes: user.emotes });
+        // if (user.position) this.messaging.send('move', { position: user.position });
+        // if (user.avatar) this.messaging.send('avatar', { data: user.avatar });
+        // this.messaging.send('emotes', { emotes: user.emotes });
         return this.assignation;
     }
     async heartbeat() {
