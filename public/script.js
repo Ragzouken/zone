@@ -1012,43 +1012,39 @@ function socket() {
     return new Promise((resolve, reject) => {
         const socket = new WebSocket('ws://' + zoneURL);
         socket.addEventListener('open', () => resolve(socket));
+        socket.addEventListener('error', reject);
     });
 }
 let joinPassword;
-let remember;
 async function connect() {
-    const user = getLocalUser();
-    exports.client.clear();
+    const joined = !!exports.client.localUserId;
     exports.client.messaging.setSocket(await socket());
     try {
-        await exports.client.join({ name: localName, password: joinPassword });
-        chat.log('{clr=#00FF00}*** connected ***');
-        if (!remember)
-            listHelp();
-        listUsers();
-    }
-    catch (e) {
-        chat.log('{clr=#FF00FF}! enter server password with /password)');
-        return;
-    }
-    if (user) {
-        if (user.position)
-            exports.client.messaging.send('move', { position: user.position });
-        if (user.avatar) {
-            exports.client.messaging.send('avatar', { data: user.avatar });
-            exports.client.messaging.send('emotes', { emotes: user.emotes });
+        if (joined) {
+            await exports.client.rejoin(joinPassword);
+        }
+        else {
+            await exports.client.join({ name: localName, password: joinPassword });
         }
     }
+    catch (e) {
+        chat.status('enter server password with /password)');
+        return;
+    }
+    chat.log('{clr=#00FF00}*** connected ***');
+    if (!joined)
+        listHelp();
+    listUsers();
 }
 function listUsers() {
     const named = Array.from(exports.client.zone.users.values()).filter((user) => !!user.name);
     if (named.length === 0) {
-        chat.log('{clr=#FF00FF}! no other users');
+        chat.status('no other users');
     }
     else {
         const names = named.map((user) => user.name);
         const line = names.join('{clr=#FF00FF}, {clr=#FF0000}');
-        chat.log(`{clr=#FF00FF}! ${names.length} users: {clr=#FF0000}${line}`);
+        chat.status(`${names.length} users: {clr=#FF0000}${line}`);
     }
 }
 const help = [
@@ -1082,25 +1078,20 @@ async function load() {
         return exports.client.zone.getUser(userId).name || userId;
     }
     let showQueue = false;
-    exports.client.messaging.on('close', async (code) => {
-        console.log(code);
-        remember = getLocalUser();
-        if (code <= 1001)
+    exports.client.on('disconnect', async ({ clean }) => {
+        if (clean)
             return;
         await utility_2.sleep(100);
         await connect();
     });
-    exports.client.messaging.messages.on('queue', (message) => {
+    exports.client.on('queue', ({ item }) => {
         var _a;
-        if (message.items.length === 1) {
-            const item = message.items[0];
-            const { title, duration } = item.media.details;
-            const username = getUsername((_a = item.info.userId) !== null && _a !== void 0 ? _a : 'server');
-            const time = utility_1.secondsToTime(duration / 1000);
-            chat.log(`{clr=#00FFFF}+ ${title} (${time}) added by {clr=#FF0000}${username}`);
-        }
+        const { title, duration } = item.media.details;
+        const username = getUsername((_a = item.info.userId) !== null && _a !== void 0 ? _a : 'server');
+        const time = utility_1.secondsToTime(duration / 1000);
+        chat.log(`{clr=#00FFFF}+ ${title} (${time}) added by {clr=#FF0000}${username}`);
     });
-    exports.client.messaging.messages.on('play', (message) => {
+    exports.client.on('play', ({ message }) => {
         if (!message.item) {
             archive.src = '';
             player === null || player === void 0 ? void 0 : player.stop();
@@ -1124,13 +1115,14 @@ async function load() {
             // archive.src = ((source as any).src).replace('download', 'embed') + `?autoplay=1&start=${seconds}`;
         }
         else {
-            chat.log(`{clr=#FF00FF}! unsupported media type`);
+            chat.status(`unsupported media type`);
             exports.client.unplayable();
         }
         currentPlayStart = performance.now() - time;
     });
-    exports.client.on('leave', (event) => chat.log(`{clr=#FF00FF}! {clr=#FF0000}${event.user.name}{clr=#FF00FF} left`));
-    exports.client.on('status', (event) => chat.log(`{clr=#FF00FF}! ${event.text}`));
+    exports.client.on('join', (event) => chat.status(`{clr=#FF0000}${event.user.name} {clr=#FF00FF}joined`));
+    exports.client.on('leave', (event) => chat.status(`{clr=#FF0000}${event.user.name}{clr=#FF00FF} left`));
+    exports.client.on('status', (event) => chat.status(event.text));
     exports.client.messaging.messages.on('avatar', (message) => {
         exports.client.zone.getUser(message.userId).avatar = message.data;
         if (message.userId === exports.client.localUserId)
@@ -1147,23 +1139,19 @@ async function load() {
     exports.client.on('chat', (message) => {
         const { user, text } = message;
         chat.log(`{clr=#FF0000}${user.name}:{-clr} ${text}`);
-        if (user !== getLocalUser()) {
+        if (!message.local) {
             notify(user.name || 'anonymous', text, 'chat');
         }
     });
-    exports.client.on('join', (event) => {
-        chat.status(`{clr=#FF0000}${event.user.name} {clr=#FF00FF}joined`);
-    });
     exports.client.on('rename', (message) => {
-        const name = message.user.name;
-        if (message.user.userId === exports.client.localUserId) {
-            chat.status(`you are {clr=#FF0000}${name}`);
+        if (message.local) {
+            chat.status(`you are {clr=#FF0000}${message.user.name}`);
         }
         else {
-            chat.status(`{clr=#FF0000}${message.previous}{clr=#FF00FF} is now {clr=#FF0000}${name}`);
+            chat.status(`{clr=#FF0000}${message.previous}{clr=#FF00FF} is now {clr=#FF0000}${message.user.name}`);
         }
     });
-    setInterval(() => exports.client.messaging.send('heartbeat', {}), 30 * 1000);
+    setInterval(() => exports.client.heartbeat(), 30 * 1000);
     player.on('error', () => exports.client.unplayable({ type: 'youtube', videoId: player.video }));
     function move(dx, dy) {
         const user = getLocalUser();
@@ -1185,9 +1173,9 @@ async function load() {
     function playFromSearchResult(args) {
         const index = parseInt(args, 10) - 1;
         if (isNaN(index))
-            chat.log(`{clr=#FF00FF}! did not understand '${args}' as a number`);
+            chat.status(`did not understand '${args}' as a number`);
         else if (!lastSearchResults || index < 0 || index >= lastSearchResults.length)
-            chat.log(`{clr=#FF00FF}! there is no #${index + 1} search result`);
+            chat.status(`there is no #${index + 1} search result`);
         else
             exports.client.youtube(lastSearchResults[index].source.videoId);
     }
@@ -1226,15 +1214,14 @@ async function load() {
         chat.log('{clr=#FFFF00}? queue Search result with /result n\n{clr=#00FFFF}' + lines.join('\n'));
     });
     chatCommands.set('youtube', (videoId) => {
-        exports.client.youtube(videoId).catch(() => chat.log("{clr=#FF00FF}! couldn't queue video :("));
+        exports.client.youtube(videoId).catch(() => chat.status("couldn't queue video :("));
     });
     chatCommands.set('skip', (password) => exports.client.skip(password));
     chatCommands.set('password', (args) => (joinPassword = args));
     chatCommands.set('users', () => listUsers());
     chatCommands.set('help', () => listHelp());
     chatCommands.set('result', playFromSearchResult);
-    chatCommands.set('lucky', (query) => exports.client.messaging.send('search', { query, lucky: true }));
-    chatCommands.set('reboot', (password) => exports.client.messaging.send('reboot', { password }));
+    chatCommands.set('lucky', (query) => exports.client.lucky(query));
     chatCommands.set('avatar', (data) => {
         if (data.trim().length === 0) {
             openAvatarEditor();
@@ -1253,7 +1240,7 @@ async function load() {
     chatCommands.set('resync', () => exports.client.resync());
     chatCommands.set('notify', async () => {
         const permission = await Notification.requestPermission();
-        chat.log(`{clr=#FF00FF}! notifications ${permission}`);
+        chat.status(`notifications ${permission}`);
     });
     chatCommands.set('name', rename);
     chatCommands.set('archive', (path) => exports.client.messaging.send('archive', { path }));
@@ -1283,7 +1270,7 @@ async function load() {
                 command(slash[2].trim());
             }
             else {
-                chat.log(`{clr=#FF00FF}! no command /${slash[1]}`);
+                chat.status(`no command /${slash[1]}`);
                 listHelp();
             }
         }
@@ -1985,6 +1972,7 @@ class ZoneClient extends events_1.EventEmitter {
     }
     async join(options = {}) {
         var _a;
+        this.clear();
         options.name = options.name || this.options.joinName || 'anonymous';
         options.token = options.token || ((_a = this.assignation) === null || _a === void 0 ? void 0 : _a.token);
         return new Promise((resolve, reject) => {
@@ -1995,6 +1983,19 @@ class ZoneClient extends events_1.EventEmitter {
             this.assignation = assign;
             return assign;
         });
+    }
+    async rejoin(password) {
+        if (!this.assignation)
+            return this.join({ password });
+        const user = this.zone.getUser(this.assignation.userId);
+        this.clear();
+        await this.join({ name: user.name, token: this.assignation.token, password });
+        if (user.position)
+            this.messaging.send('move', { position: user.position });
+        if (user.avatar)
+            this.messaging.send('avatar', { data: user.avatar });
+        this.messaging.send('emotes', { emotes: user.emotes });
+        return this.assignation;
     }
     async heartbeat() {
         return new Promise((resolve, reject) => {
@@ -2026,10 +2027,9 @@ class ZoneClient extends events_1.EventEmitter {
     async youtube(videoId) {
         return new Promise((resolve, reject) => {
             setTimeout(() => reject('timeout'), this.options.slowResponseTimeout);
-            this.messaging.messages.on('queue', (queue) => {
-                const media = queue.items[0].media;
-                if (isYoutube(media) && media.source.videoId === videoId)
-                    resolve(queue);
+            this.on('queue', ({ item }) => {
+                if (isYoutube(item.media) && item.media.source.videoId === videoId)
+                    resolve(item);
             });
             this.messaging.send('youtube', { videoId });
         });
@@ -2050,15 +2050,20 @@ class ZoneClient extends events_1.EventEmitter {
         this.messaging.send('error', { source });
     }
     addStandardListeners() {
+        this.messaging.on('close', (code) => {
+            const clean = code <= 1001;
+            this.emit('disconnect', { clean });
+        });
         this.messaging.messages.on('status', (message) => {
             this.emit('status', { text: message.text });
         });
         this.messaging.messages.on('name', (message) => {
             const user = this.zone.getUser(message.userId);
+            const local = user.userId === this.localUserId;
             const previous = user.name;
             user.name = message.name;
             if (previous)
-                this.emit('rename', { user, previous });
+                this.emit('rename', { user, previous, local });
             else
                 this.emit('join', { user });
         });
@@ -2075,15 +2080,19 @@ class ZoneClient extends events_1.EventEmitter {
         });
         this.messaging.messages.on('chat', (message) => {
             const user = this.zone.getUser(message.userId);
-            this.emit('chat', { user, text: message.text });
+            const local = user.userId === this.localUserId;
+            this.emit('chat', { user, text: message.text, local });
         });
         this.messaging.messages.on('play', (message) => {
             this.zone.lastPlayedItem = message.item;
             const index = this.zone.queue.findIndex((item) => mediaEquals(item.media, message.item.media));
             if (index >= 0)
                 this.zone.queue.splice(index, 1);
+            this.emit('play', { message });
         });
         this.messaging.messages.on('queue', (message) => {
+            if (message.items.length === 1)
+                this.emit('queue', { item: message.items[0] });
             this.zone.queue.push(...message.items);
         });
         this.messaging.messages.on('move', (message) => {

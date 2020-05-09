@@ -13,10 +13,10 @@ import { sleep, randomInt, clamp } from '../common/utility';
 import { scriptToPages, PageRenderer, getPageHeight } from './text';
 import { loadYoutube, YoutubePlayer } from './youtube';
 import { ChatPanel, animatePage } from './chat';
-import { UserId, UserState } from '../common/zone';
+import { UserId } from '../common/zone';
 
-import { PlayableMedia, PlayableSource, QueueItem } from '../server/playback';
-import ZoneClient, { PlayMessage, QueueMessage } from '../common/client';
+import { PlayableMedia, PlayableSource } from '../server/playback';
+import ZoneClient from '../common/client';
 
 export const client = new ZoneClient();
 
@@ -177,31 +177,25 @@ function socket(): Promise<WebSocket> {
 }
 
 let joinPassword: string | undefined;
-let remember: UserState | undefined;
 
 async function connect() {
-    const user = getLocalUser();
-
-    client.clear();
+    const joined = !!client.localUserId;
     client.messaging.setSocket(await socket());
 
     try {
-        await client.join({ name: localName, password: joinPassword });
-        chat.log('{clr=#00FF00}*** connected ***');
-        if (!remember) listHelp();
-        listUsers();
+        if (joined) {
+            await client.rejoin(joinPassword);
+        } else {
+            await client.join({ name: localName, password: joinPassword });
+        }
     } catch (e) {
         chat.status('enter server password with /password)');
         return;
     }
 
-    if (user) {
-        if (user.position) client.messaging.send('move', { position: user.position });
-        if (user.avatar) {
-            client.messaging.send('avatar', { data: user.avatar });
-            client.messaging.send('emotes', { emotes: user.emotes });
-        }
-    }
+    chat.log('{clr=#00FF00}*** connected ***');
+    if (!joined) listHelp();
+    listUsers();
 }
 
 function listUsers() {
@@ -257,7 +251,6 @@ async function load() {
 
     client.on('disconnect', async ({ clean }) => {
         if (clean) return;
-        remember = getLocalUser();
         await sleep(100);
         await connect();
     });
@@ -298,7 +291,7 @@ async function load() {
 
         currentPlayStart = performance.now() - time;
     });
-    
+
     client.on('join', (event) => chat.status(`{clr=#FF0000}${event.user.name} {clr=#FF00FF}joined`));
     client.on('leave', (event) => chat.status(`{clr=#FF0000}${event.user.name}{clr=#FF00FF} left`));
     client.on('status', (event) => chat.status(event.text));

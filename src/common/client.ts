@@ -66,14 +66,14 @@ export const DEFAULT_OPTIONS: ClientOptions = {
 export interface ClientEventMap {
     disconnect: (event: { clean: boolean }) => void;
 
-    chat: (event: { user: UserState; text: string, local: boolean }) => void;
+    chat: (event: { user: UserState; text: string; local: boolean }) => void;
     join: (event: { user: UserState }) => void;
     leave: (event: { user: UserState }) => void;
-    rename: (event: { user: UserState; previous: string, local: boolean }) => void;
+    rename: (event: { user: UserState; previous: string; local: boolean }) => void;
     status: (event: { text: string }) => void;
 
     play: (event: { message: PlayMessage }) => void;
-    queue: (event: {item: QueueItem}) => void;
+    queue: (event: { item: QueueItem }) => void;
 }
 
 export interface ZoneClient {
@@ -125,6 +125,7 @@ export class ZoneClient extends EventEmitter {
     }
 
     async join(options: { name?: string; token?: string; password?: string } = {}) {
+        this.clear();
         options.name = options.name || this.options.joinName || 'anonymous';
         options.token = options.token || this.assignation?.token;
 
@@ -136,6 +137,21 @@ export class ZoneClient extends EventEmitter {
             this.assignation = assign;
             return assign;
         });
+    }
+
+    async rejoin(password?: string) {
+        if (!this.assignation) return this.join({ password });
+
+        const user = this.zone.getUser(this.assignation.userId);
+        this.clear();
+
+        await this.join({ name: user.name, token: this.assignation.token, password });
+
+        if (user.position) this.messaging.send('move', { position: user.position });
+        if (user.avatar) this.messaging.send('avatar', { data: user.avatar });
+        this.messaging.send('emotes', { emotes: user.emotes });
+
+        return this.assignation;
     }
 
     async heartbeat() {
@@ -197,15 +213,15 @@ export class ZoneClient extends EventEmitter {
 
     private addStandardListeners() {
         this.messaging.on('close', (code) => {
-            const clean = (code <= 1001);
+            const clean = code <= 1001;
             this.emit('disconnect', { clean });
-        }); 
+        });
         this.messaging.messages.on('status', (message: StatusMesage) => {
             this.emit('status', { text: message.text });
         });
         this.messaging.messages.on('name', (message: NameMessage) => {
             const user = this.zone.getUser(message.userId);
-            const local = (user.userId === this.localUserId);
+            const local = user.userId === this.localUserId;
             const previous = user.name;
             user.name = message.name;
 
@@ -225,7 +241,7 @@ export class ZoneClient extends EventEmitter {
         });
         this.messaging.messages.on('chat', (message: RecvChat) => {
             const user = this.zone.getUser(message.userId);
-            const local = (user.userId === this.localUserId);
+            const local = user.userId === this.localUserId;
             this.emit('chat', { user, text: message.text, local });
         });
         this.messaging.messages.on('play', (message: PlayMessage) => {
