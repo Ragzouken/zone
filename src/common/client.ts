@@ -69,6 +69,8 @@ export interface ClientEventMap {
     leave: (event: { user: UserState }) => void;
     rename: (event: { user: UserState; previous: string, local: boolean }) => void;
     status: (event: { text: string }) => void;
+
+    queue: (event: {item: QueueItem}) => void;
 }
 
 export interface ZoneClient {
@@ -166,11 +168,10 @@ export class ZoneClient extends EventEmitter {
     }
 
     async youtube(videoId: string) {
-        return new Promise<QueueMessage>((resolve, reject) => {
+        return new Promise<QueueItem>((resolve, reject) => {
             setTimeout(() => reject('timeout'), this.options.slowResponseTimeout);
-            this.messaging.messages.on('queue', (queue: QueueMessage) => {
-                const media = queue.items[0].media;
-                if (isYoutube(media) && media.source.videoId === videoId) resolve(queue);
+            this.on('queue', ({ item }) => {
+                if (isYoutube(item.media) && item.media.source.videoId === videoId) resolve(item);
             });
             this.messaging.send('youtube', { videoId });
         });
@@ -227,6 +228,7 @@ export class ZoneClient extends EventEmitter {
             if (index >= 0) this.zone.queue.splice(index, 1);
         });
         this.messaging.messages.on('queue', (message: QueueMessage) => {
+            if (message.items.length === 1) this.emit('queue', { item: message.items[0] });
             this.zone.queue.push(...message.items);
         });
         this.messaging.messages.on('move', (message: UserMovedMessage) => {

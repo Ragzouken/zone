@@ -461,8 +461,8 @@ describe('media sources', () => {
             const client = await server.client();
             await client.join();
 
-            const { items } = await client.youtube(source.videoId);
-            expect(items[0].media.source).toEqual(source);
+            const item = await client.youtube(source.videoId);
+            expect(item.media.source).toEqual(source);
         });
     });
 

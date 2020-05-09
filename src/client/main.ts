@@ -15,7 +15,7 @@ import { loadYoutube, YoutubePlayer } from './youtube';
 import { ChatPanel, animatePage } from './chat';
 import { UserId, UserState } from '../common/zone';
 
-import { PlayableMedia, PlayableSource } from '../server/playback';
+import { PlayableMedia, PlayableSource, QueueItem } from '../server/playback';
 import ZoneClient, { PlayMessage, QueueMessage } from '../common/client';
 
 export const client = new ZoneClient();
@@ -263,14 +263,11 @@ async function load() {
         await connect();
     });
 
-    client.messaging.messages.on('queue', (message: QueueMessage) => {
-        if (message.items.length === 1) {
-            const item = message.items[0];
-            const { title, duration } = item.media.details;
-            const username = getUsername(item.info.userId ?? 'server');
-            const time = secondsToTime(duration / 1000);
-            chat.log(`{clr=#00FFFF}+ ${title} (${time}) added by {clr=#FF0000}${username}`);
-        }
+    client.on('queue', ({ item }) => {
+        const { title, duration } = item.media.details;
+        const username = getUsername(item.info.userId ?? 'server');
+        const time = secondsToTime(duration / 1000);
+        chat.log(`{clr=#00FFFF}+ ${title} (${time}) added by {clr=#FF0000}${username}`);
     });
     client.messaging.messages.on('play', (message: PlayMessage) => {
         if (!message.item) {
