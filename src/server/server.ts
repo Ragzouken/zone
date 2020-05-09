@@ -11,6 +11,7 @@ import { nanoid } from 'nanoid';
 import { archiveOrgToPlayable } from './archiveorg';
 import { objEqual, copy } from '../common/utility';
 import { MESSAGE_SCHEMAS } from './protocol';
+import { JoinMessage } from '../common/client';
 
 const SECONDS = 1000;
 
@@ -185,7 +186,7 @@ export function host(adapter: low.AdapterSync, options: Partial<HostOptions> = {
         const messaging = new Messaging();
         messaging.setSocket(websocket);
         messaging.on('error', () => {});
-        messaging.messages.once('join', (message) => {
+        messaging.messages.once('join', (message: JoinMessage) => {
             const resume = message.token && tokenToUser.has(message.token);
             const authorised = resume || !opts.joinPassword || message.password === opts.joinPassword;
 
@@ -195,8 +196,9 @@ export function host(adapter: low.AdapterSync, options: Partial<HostOptions> = {
                 return;
             }
 
-            const token = resume ? message.token : nanoid();
+            const token = resume ? message.token! : nanoid();
             const user = resume ? tokenToUser.get(token)! : zone.getUser((++lastUserId).toString() as UserId);
+            user.name = message.name;
 
             addUserToken(user, token);
             addConnectionToUser(user, messaging);
@@ -225,7 +227,7 @@ export function host(adapter: low.AdapterSync, options: Partial<HostOptions> = {
 
             sendAllState(user);
             sendOnly('assign', { userId: user.userId, token }, user.userId);
-            if (!resume) setUserName(user, message.name);
+            if (!resume) sendAll('user', user);
         });
     }
 
@@ -251,11 +253,6 @@ export function host(adapter: low.AdapterSync, options: Partial<HostOptions> = {
         sendCurrent(user);
     }
 
-    function setUserName(user: UserState, name: string) {
-        user.name = name.substring(0, opts.nameLengthLimit);
-        sendAll('name', { name: user.name, userId: user.userId });
-    }
-
     function bindMessagingToUser(user: UserState, messaging: Messaging, userIp: unknown) {
         messaging.messages.on('heartbeat', () => {
             sendOnly('heartbeat', {}, user.userId);
@@ -266,8 +263,6 @@ export function host(adapter: low.AdapterSync, options: Partial<HostOptions> = {
             text = text.substring(0, opts.chatLengthLimit);
             sendAll('chat', { text, userId: user.userId });
         });
-
-        messaging.messages.on('name', (message: any) => setUserName(user, message.name));
 
         messaging.messages.on('resync', () => sendCurrent(user));
 
@@ -305,30 +300,15 @@ export function host(adapter: low.AdapterSync, options: Partial<HostOptions> = {
         messaging.messages.on('error', (message: any) => voteError(message.source, user));
         messaging.messages.on('skip', (message: any) => voteSkip(message.source, user, message.password));
 
-        function setSchemaHandler(type: string, handler: (message: any) => void) {
-            messaging.messages.on(type, (message) => {
-                const { value, error } = MESSAGE_SCHEMAS.get(type)!.validate(message);
-                if (error) {
-                    sendOnly('reject', { text: error.details[0].message }, user.userId);
-                } else {
-                    handler(value);
-                }
-            });
-        }
-
-        setSchemaHandler('avatar', (message: any) => {
-            user.avatar = message.data;
-            sendAll('avatar', { ...message, userId: user.userId });
-        });
-
-        setSchemaHandler('move', (message: any) => {
-            user.position = message.position;
-            sendAll('move', { ...message, userId: user.userId });
-        });
-
-        setSchemaHandler('emotes', (message: any) => {
-            user.emotes = message.emotes;
-            sendAll('emotes', { ...message, userId: user.userId });
+        messaging.messages.on('user', (changes: Partial<UserState>) => {
+            const { value, error } = MESSAGE_SCHEMAS.get('user')!.validate(changes);
+            
+            if (error) {
+                sendOnly('reject', { text: error.details[0].message }, user.userId);
+            } else {
+                Object.assign(user, value);
+                sendAll('user', { ...value, userId: user.userId });
+            }
         });
     }
 

@@ -10,7 +10,6 @@ export type JoinMessage = { name: string; token?: string; password?: string };
 export type AssignMessage = { userId: string; token: string };
 export type RejectMessage = { text: string };
 export type UsersMessage = { users: UserState[] };
-export type NameMessage = { userId: string; name: string };
 export type LeaveMessage = { userId: string };
 export type PlayMessage = { item: QueueItem; time: number };
 export type QueueMessage = { items: QueueItem[] };
@@ -18,12 +17,6 @@ export type SearchMessage = { query: string };
 
 export type SendChat = { text: string };
 export type RecvChat = { text: string; userId: string };
-
-export type MoveMessage = { position: number[] };
-export type UserMovedMessage = MoveMessage & { userId: string };
-
-export type EmotesMessage = { emotes: string[] };
-export type AvatarMessage = { data: string };
 
 export type SearchResult = { results: YoutubeVideo[] };
 
@@ -46,10 +39,7 @@ export interface MessageMap {
     search: SearchMessage;
 
     chat: SendChat;
-    name: NameMessage;
-    move: MoveMessage;
-    emotes: EmotesMessage;
-    avatar: AvatarMessage;
+    user: UserState;
 }
 
 export interface ClientOptions {
@@ -110,16 +100,16 @@ export class ZoneClient extends EventEmitter {
         this.zone.clear();
     }
 
-    async rename(name: string): Promise<NameMessage> {
+    async rename(name: string): Promise<UserState> {
         return new Promise((resolve, reject) => {
             setTimeout(() => reject('timeout'), this.options.quickResponseTimeout);
             specifically(
                 this.messaging.messages,
-                'name',
-                (message: NameMessage) => message.userId === this.localUserId,
+                'user',
+                (message: UserState) => message.userId === this.localUserId && message.name === name,
                 resolve,
             );
-            this.messaging.send('name', { name });
+            this.messaging.send('user', { name });
         });
     }
 
@@ -165,15 +155,15 @@ export class ZoneClient extends EventEmitter {
     }
 
     async move(position: number[]) {
-        this.messaging.send('move', { position });
+        this.messaging.send('user', { position });
     }
 
-    async avatar(data: string) {
-        this.messaging.send('avatar', { data });
+    async avatar(avatar: string) {
+        this.messaging.send('user', { avatar });
     }
 
     async emotes(emotes: string[]) {
-        this.messaging.send('emotes', { emotes });
+        this.messaging.send('user', { emotes });
     }
 
     async search(query: string) {
@@ -223,15 +213,6 @@ export class ZoneClient extends EventEmitter {
         this.messaging.messages.on('status', (message: StatusMesage) => {
             this.emit('status', { text: message.text });
         });
-        this.messaging.messages.on('name', (message: NameMessage) => {
-            const user = this.zone.getUser(message.userId);
-            const local = user.userId === this.localUserId;
-            const previous = user.name;
-            user.name = message.name;
-
-            if (previous) this.emit('rename', { user, previous, local });
-            else this.emit('join', { user });
-        });
         this.messaging.messages.on('leave', (message: LeaveMessage) => {
             const user = this.zone.getUser(message.userId);
             this.zone.users.delete(message.userId);
@@ -260,28 +241,30 @@ export class ZoneClient extends EventEmitter {
             if (message.items.length === 1) this.emit('queue', { item: message.items[0] });
             this.zone.queue.push(...message.items);
         });
-
-        this.messaging.messages.on('move', (message: UserMovedMessage) => {
+        this.messaging.messages.on('user', (message: UserState) => {
             const user = this.zone.getUser(message.userId);
             const local = user.userId === this.localUserId;
+            
+            const prev = { ...user };
+            const { userId, ...changes } = message;
 
-            if (!local || !user.position) {
-                user.position = message.position;
+            if (local && prev.position) delete changes.position;
+            
+            Object.assign(user, changes);
+
+            if (!prev.name) {
+                this.emit('join', { user });
+            } else if (prev.name !== user.name) {
+                this.emit('rename', { user, local, previous: prev.name });
             }
-
-            this.emit('move', { user, local, position: message.position });
-        });
-        this.messaging.messages.on('emotes', (message) => {
-            const user = this.zone.getUser(message.userId);
-            const local = user.userId === this.localUserId;
-            user.emotes = message.emotes;
-            this.emit('emotes', { user, local, emotes: message.emotes });
-        });
-        this.messaging.messages.on('avatar', (message) => {
-            const user = this.zone.getUser(message.userId);
-            const local = user.userId === this.localUserId;
-            user.avatar = message.data;
-            this.emit('avatar', { user, local, data: message.data });
+            
+            if (changes.position) {
+                this.emit('move', { user, local, position: changes.position });
+            }
+            
+            if (changes.emotes) {
+                this.emit('emotes', { user, local, emotes: changes.emotes });
+            }
         });
     }
 }
