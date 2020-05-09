@@ -1974,6 +1974,7 @@ class ZoneClient extends events_1.EventEmitter {
             this.messaging.send('join', options);
         }).then((assign) => {
             this.assignation = assign;
+            this.localUser = this.zone.getUser(assign.userId);
             return assign;
         });
     }

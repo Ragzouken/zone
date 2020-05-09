@@ -475,7 +475,7 @@ describe('playback', () => {
     });
 });
 
-describe('media sources', () => {
+describe.only('media sources', () => {
     it('can play archive item', async () => {
         await zoneServer({}, async (server) => {
             const { path, media } = ARCHIVE_PATH_TO_MEDIA[0];

@@ -16,12 +16,12 @@ export const MEDIA: PlayableMedia[] = [TINY_MEDIA, DAY_MEDIA];
 
 export const YOUTUBE_VIDEOS: YoutubeVideo[] = [
     {
-        source: { type: 'youtube', videoId: '5dA5ynP-j-I' },
-        details: { title: 'Tetris (CD-i) Music - Level 9', duration: 246000 },
-    },
-    {
         source: { type: 'youtube', videoId: '2GjyNgQ4Dos' },
         details: { title: 'dobby pussy indulgence', duration: 20000 },
+    },
+    {
+        source: { type: 'youtube', videoId: '5dA5ynP-j-I' },
+        details: { title: 'Tetris (CD-i) Music - Level 9', duration: 246000 },
     },
 ];
 
