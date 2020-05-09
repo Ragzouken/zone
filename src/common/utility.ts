@@ -12,3 +12,12 @@ export function getDefault<K, V>(map: Map<K, V>, key: K, factory: (key: K) => V)
     }
     return value!;
 }
+
+export type EventMap = { [event: string]: (...args: any[]) => void };
+
+export interface TypedEventEmitter<TEventMap extends EventMap> {
+    on<K extends keyof TEventMap>(event: K, callback: TEventMap[K]): this;
+    off<K extends keyof TEventMap>(event: K, callback: TEventMap[K]): this;
+    once<K extends keyof TEventMap>(event: K, callback: TEventMap[K]): this;
+    emit<K extends keyof TEventMap>(event: K, ...args: Parameters<TEventMap[K]>): boolean;
+}

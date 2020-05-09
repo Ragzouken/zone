@@ -317,11 +317,11 @@ async function load() {
             }
         }
     });
-    client.messaging.messages.on('chat', (message) => {
-        const name = getUsername(message.userId);
-        chat.log(`{clr=#FF0000}${name}:{-clr} ${message.text}`);
-        if (message.userId !== getLocalUser()) {
-            notify(name, message.text, 'chat');
+    client.on('chat', (message) => {
+        const { user, text } = message;
+        chat.log(`{clr=#FF0000}${user.name}:{-clr} ${text}`);
+        if (user !== getLocalUser()) {
+            notify(user.name || "anonymous", text, 'chat');
         }
     });
     client.on('join', (event) => {
@@ -470,7 +470,7 @@ async function load() {
                 listHelp();
             }
         } else if (line.length > 0) {
-            client.messaging.send('chat', { text: parseFakedown(line) });
+            client.chat(parseFakedown(line));
         }
 
         chatInput.value = '';

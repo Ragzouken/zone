@@ -15,7 +15,9 @@ export type LeaveMessage = { userId: string };
 export type PlayMessage = { item: QueueItem; time: number };
 export type QueueMessage = { items: QueueItem[] };
 export type SearchMessage = { query: string };
-export type ChatMessage = { text: string };
+
+export type SendChat = { text: string };
+export type RecvChat = { text: string, userId: string };
 
 export type MoveMessage = { position: number[] };
 export type UserMovedMessage = MoveMessage & { userId: string }; 
@@ -43,7 +45,7 @@ export interface MessageMap {
     queue: QueueMessage;
     search: SearchMessage;
 
-    chat: ChatMessage;
+    chat: SendChat;
     name: NameMessage;
     move: MoveMessage;
     emotes: EmotesMessage;
@@ -61,6 +63,7 @@ export const DEFAULT_OPTIONS: ClientOptions = {
 };
 
 export interface ClientEventMap {
+    chat: (event: { user: UserState, text: string }) => void;
     join: (event: { user: UserState }) => void;
     leave: (event: { user: UserState }) => void;
     rename: (event: { user: UserState, previous: string }) => void;
@@ -69,6 +72,8 @@ export interface ClientEventMap {
 
 export interface ZoneClient {
     on<K extends keyof ClientEventMap>(event: K, callback: ClientEventMap[K]): this;
+    off<K extends keyof ClientEventMap>(event: K, callback: ClientEventMap[K]): this;
+    once<K extends keyof ClientEventMap>(event: K, callback: ClientEventMap[K]): this;
     emit<K extends keyof ClientEventMap>(event: K, ...args: Parameters<ClientEventMap[K]>): boolean;
 }
 
@@ -125,6 +130,10 @@ export class ZoneClient extends EventEmitter {
             this.expect('play', this.options.quickResponseTimeout).then(resolve, reject);
             this.messaging.send('resync');
         });
+    }
+
+    async chat(text: string) {
+        this.messaging.send('chat', { text });
     }
 
     async search(query: string) {
@@ -191,6 +200,10 @@ export class ZoneClient extends EventEmitter {
             message.users.forEach((user: UserState) => {
                 this.zone.users.set(user.userId, user);
             });
+        });
+        this.messaging.messages.on('chat', (message: RecvChat) => {
+            const user = this.zone.getUser(message.userId);
+            this.emit('chat', { user, text: message.text });
         });
         this.messaging.messages.on('play', (message: PlayMessage) => {
             this.zone.lastPlayedItem = message.item;

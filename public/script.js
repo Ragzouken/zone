@@ -1144,11 +1144,11 @@ async function load() {
             }
         }
     });
-    exports.client.messaging.messages.on('chat', (message) => {
-        const name = getUsername(message.userId);
-        chat.log(`{clr=#FF0000}${name}:{-clr} ${message.text}`);
-        if (message.userId !== getLocalUser()) {
-            notify(name, message.text, 'chat');
+    exports.client.on('chat', (message) => {
+        const { user, text } = message;
+        chat.log(`{clr=#FF0000}${user.name}:{-clr} ${text}`);
+        if (user !== getLocalUser()) {
+            notify(user.name || "anonymous", text, 'chat');
         }
     });
     exports.client.on('join', (event) => {
@@ -1288,7 +1288,7 @@ async function load() {
             }
         }
         else if (line.length > 0) {
-            exports.client.messaging.send('chat', { text: parseFakedown(line) });
+            exports.client.chat(parseFakedown(line));
         }
         chatInput.value = '';
     }
@@ -2000,6 +2000,9 @@ class ZoneClient extends events_1.EventEmitter {
             this.messaging.send('resync');
         });
     }
+    async chat(text) {
+        this.messaging.send('chat', { text });
+    }
     async search(query) {
         return new Promise((resolve, reject) => {
             this.expect('search', this.options.slowResponseTimeout).then(resolve, reject);
@@ -2061,6 +2064,10 @@ class ZoneClient extends events_1.EventEmitter {
             message.users.forEach((user) => {
                 this.zone.users.set(user.userId, user);
             });
+        });
+        this.messaging.messages.on('chat', (message) => {
+            const user = this.zone.getUser(message.userId);
+            this.emit('chat', { user, text: message.text });
         });
         this.messaging.messages.on('play', (message) => {
             this.zone.lastPlayedItem = message.item;
