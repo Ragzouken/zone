@@ -6,8 +6,13 @@ import { Server } from 'http';
 
 import * as Memory from 'lowdb/adapters/Memory';
 import { host, HostOptions } from '../../server/server';
-import ZoneClient from '../../common/client';
+import ZoneClient, { ClientOptions } from '../../common/client';
 import Playback from '../../server/playback';
+
+export const TEST_CLIENT_OPTIONS: Partial<ClientOptions> = {
+    quickResponseTimeout: 50,
+    slowResponseTimeout: 1000,
+}
 
 export function timeout(emitter: EventEmitter, event: string, ms: number) {
     return new Promise((resolve, reject) => {
@@ -52,8 +57,9 @@ export class ZoneServer {
         return socket;
     }
 
-    public async client() {
-        const client = new ZoneClient();
+    public async client(options: Partial<ClientOptions> = {}) {
+        options = Object.assign({}, TEST_CLIENT_OPTIONS, options);
+        const client = new ZoneClient(options);
         client.messaging.setSocket(await this.socket());
         return client;
     }

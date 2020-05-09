@@ -43,7 +43,7 @@ export class Messaging extends EventEmitter {
         await waiter;
     }
 
-    send(type: string, message: object) {
+    send(type: string, message: object = {}) {
         if (!this.socket) {
             this.emit('error', new Error('no socket'));
             return;

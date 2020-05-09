@@ -251,13 +251,11 @@ describe('playback', () => {
             server.hosting.playback.queueMedia(DAY_MEDIA);
 
             const client = await server.client();
-            const waiter1 = client.expect('play');
+            const waiter = client.expect('play');
             await client.join({ name: NAME });
-            await waiter1;
+            await waiter;
 
-            const waiter2 = client.expect('play');
-            client.messaging.send('resync', {});
-            const play = await waiter2;
+            const play = await client.resync();
 
             expect(play.time).toBeGreaterThan(0);
             expect(play.item).toEqual(server.hosting.playback.currentItem);
@@ -288,10 +286,9 @@ describe('playback', () => {
             server.hosting.playback.queueMedia(media);
 
             await client.join({ name: NAME });
-            const waiter = client.expect('queue', 200);
-            client.messaging.send('youtube', { videoId: media.source.videoId });
+            const queued = client.youtube(media.source.videoId);
 
-            await expect(waiter).rejects.toEqual('timeout');
+            await expect(queued).rejects.toEqual('timeout');
         });
     });
 
@@ -300,10 +297,9 @@ describe('playback', () => {
             const client = await server.client();
 
             await client.join({ name: NAME });
-            const queue = client.expect('queue', 200);
-            client.messaging.send('youtube', { videoId: '2GjyNgQ4Dos' });
+            const queued = client.youtube('2GjyNgQ4Dos');
 
-            await expect(queue).rejects.toEqual('timeout');
+            await expect(queued).rejects.toEqual('timeout');
         });
     });
 
@@ -320,18 +316,17 @@ describe('playback', () => {
             await client1.join({ name: NAME });
             await client2.join({ name: NAME });
 
-            const { item }: { item: QueueItem } = await waiter1;
+            await waiter1;
             await waiter2;
 
             const waiter = client1.expect('play');
-            client1.messaging.send('skip', { source: item.media.source });
-            client2.messaging.send('skip', { source: item.media.source });
-
+            client1.skip();
+            client2.skip();
             await waiter;
         });
     });
 
-    it('skips with sufficient errors', async () => {
+    it('skips with sufficient unplayables', async () => {
         await zoneServer({ voteSkipThreshold: 1 }, async (server) => {
             const client1 = await server.client();
             const client2 = await server.client();
@@ -344,13 +339,12 @@ describe('playback', () => {
             await client1.join({ name: NAME });
             await client2.join({ name: NAME });
 
-            const { item }: { item: QueueItem } = await waiter1;
+            await waiter1;
             await waiter2;
 
             const waiter = client1.expect('play');
-            client1.messaging.send('error', { source: item.media.source });
-            client2.messaging.send('error', { source: item.media.source });
-
+            client1.unplayable();
+            client2.unplayable();
             await waiter;
         });
     });
@@ -362,14 +356,13 @@ describe('playback', () => {
 
             server.hosting.playback.queueMedia(DAY_MEDIA);
 
-            const playWaiter = client.expect('play');
+            const played = client.expect('play');
             await client.join({ name: NAME });
-            const { item } = await playWaiter;
+            await played;
 
-            const stopWaiter = client.expect('play');
-            client.messaging.send('skip', { source: item.media.source, password });
-
-            await stopWaiter;
+            const skipped = client.expect('play');
+            client.skip(password);
+            await skipped;
         });
     });
 
@@ -379,14 +372,13 @@ describe('playback', () => {
 
             server.hosting.playback.queueMedia(DAY_MEDIA);
 
-            const playWaiter = client.expect('play');
+            const played = client.expect('play');
             await client.join({ name: NAME });
-            const { item } = await playWaiter;
+            await played;
 
-            const skip = client.expect('play', IMMEDIATE_REPLY_TIMEOUT);
-            client.messaging.send('skip', { source: item.media.source });
-
-            await expect(skip).rejects.toEqual('timeout');
+            const skipped = client.expect('play', IMMEDIATE_REPLY_TIMEOUT);
+            client.skip();
+            await expect(skipped).rejects.toEqual('timeout');
         });
     });
 
@@ -396,14 +388,13 @@ describe('playback', () => {
 
             server.hosting.playback.queueMedia(DAY_MEDIA);
 
-            const playWaiter = client.expect('play');
+            const played = client.expect('play');
             await client.join({ name: NAME });
-            const { item } = await playWaiter;
+            await played;
 
-            const skip = client.expect('play', IMMEDIATE_REPLY_TIMEOUT);
-            client.messaging.send('error', { source: item.media.source });
-
-            await expect(skip).rejects.toEqual('timeout');
+            const skipped = client.expect('play', IMMEDIATE_REPLY_TIMEOUT);
+            client.unplayable();
+            await expect(skipped).rejects.toEqual('timeout');
         });
     });
 

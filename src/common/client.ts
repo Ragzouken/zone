@@ -41,7 +41,18 @@ export interface MessageMap {
     avatar: AvatarMessage;
 }
 
+export interface ClientOptions {
+    quickResponseTimeout: number;
+    slowResponseTimeout: number;
+}
+
+export const DEFAULT_OPTIONS: ClientOptions = {
+    quickResponseTimeout: 1000,
+    slowResponseTimeout: 5000,
+}
+
 export class ZoneClient extends EventEmitter {
+    readonly options: ClientOptions;
     readonly messaging = new Messaging();
     readonly queue: QueueItem[] = [];
 
@@ -49,8 +60,9 @@ export class ZoneClient extends EventEmitter {
 
     private assignation?: AssignMessage;
 
-    constructor() {
+    constructor(options: Partial<ClientOptions> = {}) {
         super();
+        this.options = Object.assign({}, DEFAULT_OPTIONS, options);
         this.addStandardListeners();
     }
 
@@ -73,7 +85,7 @@ export class ZoneClient extends EventEmitter {
         options.token = options.token || this.assignation?.token;
 
         return new Promise<AssignMessage>((resolve, reject) => {
-            this.expect('assign', 500).then(resolve, reject);
+            this.expect('assign', this.options.quickResponseTimeout).then(resolve, reject);
             this.expect('reject').then(reject);
             this.messaging.send('join', options);
         }).then((assign) => {
@@ -82,16 +94,23 @@ export class ZoneClient extends EventEmitter {
         });
     }
 
+    async resync() {
+        return new Promise<PlayMessage>((resolve, reject) => {
+            this.expect('play', this.options.quickResponseTimeout).then(resolve, reject);
+            this.messaging.send('resync');
+        });
+    }
+
     async search(query: string, lucky = false) {
         return new Promise<SearchResult>((resolve, reject) => {
-            this.expect('search', 5000).then(resolve as any, reject);
+            this.expect('search', this.options.slowResponseTimeout).then(resolve as any, reject);
             this.messaging.send('search', { query, lucky });
         });
     }
 
     async youtube(videoId: string) {
         return new Promise<QueueMessage>((resolve, reject) => {
-            setTimeout(() => reject('timeout'), 5000);
+            setTimeout(() => reject('timeout'), this.options.slowResponseTimeout);
             this.messaging.messages.on('queue', (queue: QueueMessage) => {
                 const media = queue.items[0].media;
                 if (isYoutube(media) && media.source.videoId === videoId) resolve(queue);

@@ -460,7 +460,7 @@ async function load() {
         client.messaging.send('avatar', { data });
     });
     chatCommands.set('volume', (args) => setVolume(parseInt(args.trim(), 10)));
-    chatCommands.set('resync', () => client.messaging.send('resync', {}));
+    chatCommands.set('resync', () => client.resync());
     chatCommands.set('notify', async () => {
         const permission = await Notification.requestPermission();
         chat.log(`{clr=#FF00FF}! notifications ${permission}`);
