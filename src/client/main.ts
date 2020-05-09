@@ -15,7 +15,7 @@ import { loadYoutube, YoutubePlayer } from './youtube';
 import { ChatPanel, animatePage } from './chat';
 import { UserId, UserState } from '../common/zone';
 
-import { PlayableMedia } from '../server/playback';
+import { PlayableMedia, PlayableSource } from '../server/playback';
 import ZoneClient, { PlayMessage, QueueMessage } from '../common/client';
 
 export const client = new ZoneClient();
@@ -324,25 +324,21 @@ async function load() {
             notify(name, message.text, 'chat');
         }
     });
-    client.messaging.messages.on('name', (message) => {
-        const next = message.name;
-        if (message.userId === client.localUserId) {
-            chat.log(`{clr=#FF00FF}! you are {clr=#FF0000}${next}`);
-        } else if (!client.zone.users.has(message.userId)) {
-            chat.log(`{clr=#FF00FF}! {clr=#FF0000}${next} {clr=#FF00FF}joined`);
+    client.on('join', (event) => {
+        chat.status(`{clr=#FF0000}${event.user.name} {clr=#FF00FF}joined`);
+    });
+    client.on('rename', (message) => {
+        const name = message.user.name;
+        if (message.user.userId === client.localUserId) {
+            chat.status(`you are {clr=#FF0000}${name}`);
         } else {
-            const prev = getUsername(message.userId);
-            chat.log(`{clr=#FF00FF}! {clr=#FF0000}${prev}{clr=#FF00FF} is now {clr=#FF0000}${next}`);
+            chat.status(`{clr=#FF0000}${message.previous}{clr=#FF00FF} is now {clr=#FF0000}${name}`);
         }
-
-        client.zone.getUser(message.userId).name = message.name;
     });
 
     setInterval(() => client.messaging.send('heartbeat', {}), 30 * 1000);
 
-    window.onbeforeunload = () => client.messaging.close();
-
-    player!.on('error', () => client.messaging.send('error', { source: { type: 'youtube', videoId: player!.video } }));
+    player!.on('error', () => client.unplayable({ type: 'youtube', videoId: player!.video } as PlayableSource));
 
     function move(dx: number, dy: number) {
         const user = getLocalUser()!;
@@ -369,7 +365,7 @@ async function load() {
         if (isNaN(index)) chat.log(`{clr=#FF00FF}! did not understand '${args}' as a number`);
         else if (!lastSearchResults || index < 0 || index >= lastSearchResults.length)
             chat.log(`{clr=#FF00FF}! there is no #${index + 1} search result`);
-        else client.messaging.send('youtube', { videoId: (lastSearchResults[index].source as any).videoId });
+        else client.youtube((lastSearchResults[index].source as any).videoId);
     }
 
     const avatarPanel = document.querySelector('#avatar-panel') as HTMLElement;

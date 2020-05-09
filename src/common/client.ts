@@ -60,9 +60,16 @@ export const DEFAULT_OPTIONS: ClientOptions = {
     slowResponseTimeout: 5000,
 };
 
+export interface ClientEventMap {
+    join: (event: { user: UserState }) => void;
+    leave: (event: { user: UserState }) => void;
+    rename: (event: { user: UserState, previous: string }) => void;
+    status: (event: { text: string }) => void;
+}
+
 export interface ZoneClient {
-    on(event: 'leave', callback: (event: { user: UserState }) => void): this;
-    on(event: 'status', callback: (event: { text: string }) => void): this;
+    on<K extends keyof ClientEventMap>(event: K, callback: ClientEventMap[K]): this;
+    emit<K extends keyof ClientEventMap>(event: K, ...args: Parameters<ClientEventMap[K]>): boolean;
 }
 
 export class ZoneClient extends EventEmitter {
@@ -163,6 +170,16 @@ export class ZoneClient extends EventEmitter {
     private addStandardListeners() {
         this.messaging.messages.on('status', (message: StatusMesage) => {
             this.emit('status', { text: message.text });
+        });
+        this.messaging.messages.on('name', (message: NameMessage) => {
+            const user = this.zone.getUser(message.userId);
+            const previous = user.name;
+            user.name = message.name;
+
+            if (previous)
+                this.emit('rename', { user, previous });
+            else
+                this.emit('join', { user });
         });
         this.messaging.messages.on('leave', (message: LeaveMessage) => {
             const user = this.zone.getUser(message.userId);

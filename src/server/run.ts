@@ -8,8 +8,8 @@ const dataPath = process.env.ZONE_DATA_PATH || '.data/db.json';
 const adapter = new FileSync(dataPath);
 
 const { server, app, save, sendAll } = host(adapter, {
-    listenHandle: process.env.PORT || 8080,
-    joinPassword: process.env.JOIN_PASSWORD || 'poo',
+    listenHandle: process.env.PORT || 4000,
+    joinPassword: process.env.JOIN_PASSWORD,
     skipPassword: process.env.SKIP_PASSWORD,
 });
 

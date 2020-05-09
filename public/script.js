@@ -833,6 +833,9 @@ class ChatPanel {
         this.chatPages = [];
         this.pageRenderer = new text_1.PageRenderer(256, 256);
     }
+    status(text) {
+        this.log('{clr=#FF00FF}! ' + text);
+    }
     log(text) {
         this.chatPages.push(text_1.scriptToPages(text, layout)[0]);
         this.chatPages = this.chatPages.slice(-32);
@@ -1148,23 +1151,20 @@ async function load() {
             notify(name, message.text, 'chat');
         }
     });
-    exports.client.messaging.messages.on('name', (message) => {
-        const next = message.name;
-        if (message.userId === exports.client.localUserId) {
-            chat.log(`{clr=#FF00FF}! you are {clr=#FF0000}${next}`);
-        }
-        else if (!exports.client.zone.users.has(message.userId)) {
-            chat.log(`{clr=#FF00FF}! {clr=#FF0000}${next} {clr=#FF00FF}joined`);
+    exports.client.on('join', (event) => {
+        chat.status(`{clr=#FF0000}${event.user.name} {clr=#FF00FF}joined`);
+    });
+    exports.client.on('rename', (message) => {
+        const name = message.user.name;
+        if (message.user.userId === exports.client.localUserId) {
+            chat.status(`you are {clr=#FF0000}${name}`);
         }
         else {
-            const prev = getUsername(message.userId);
-            chat.log(`{clr=#FF00FF}! {clr=#FF0000}${prev}{clr=#FF00FF} is now {clr=#FF0000}${next}`);
+            chat.status(`{clr=#FF0000}${message.previous}{clr=#FF00FF} is now {clr=#FF0000}${name}`);
         }
-        exports.client.zone.getUser(message.userId).name = message.name;
     });
     setInterval(() => exports.client.messaging.send('heartbeat', {}), 30 * 1000);
-    window.onbeforeunload = () => exports.client.messaging.close();
-    player.on('error', () => exports.client.messaging.send('error', { source: { type: 'youtube', videoId: player.video } }));
+    player.on('error', () => exports.client.unplayable({ type: 'youtube', videoId: player.video }));
     function move(dx, dy) {
         const user = getLocalUser();
         if (user.position) {
@@ -1189,7 +1189,7 @@ async function load() {
         else if (!lastSearchResults || index < 0 || index >= lastSearchResults.length)
             chat.log(`{clr=#FF00FF}! there is no #${index + 1} search result`);
         else
-            exports.client.messaging.send('youtube', { videoId: lastSearchResults[index].source.videoId });
+            exports.client.youtube(lastSearchResults[index].source.videoId);
     }
     const avatarPanel = document.querySelector('#avatar-panel');
     const avatarPaint = document.querySelector('#avatar-paint');
@@ -2041,6 +2041,15 @@ class ZoneClient extends events_1.EventEmitter {
     addStandardListeners() {
         this.messaging.messages.on('status', (message) => {
             this.emit('status', { text: message.text });
+        });
+        this.messaging.messages.on('name', (message) => {
+            const user = this.zone.getUser(message.userId);
+            const previous = user.name;
+            user.name = message.name;
+            if (previous)
+                this.emit('rename', { user, previous });
+            else
+                this.emit('join', { user });
         });
         this.messaging.messages.on('leave', (message) => {
             const user = this.zone.getUser(message.userId);

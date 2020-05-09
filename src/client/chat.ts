@@ -12,6 +12,10 @@ export class ChatPanel {
 
     private pageRenderer = new PageRenderer(256, 256);
 
+    public status(text: string) {
+        this.log('{clr=#FF00FF}! ' + text);
+    }
+
     public log(text: string) {
         this.chatPages.push(scriptToPages(text, layout)[0]);
         this.chatPages = this.chatPages.slice(-32);
