@@ -25,7 +25,7 @@ describe('connectivity', () => {
     }, 100);
 
     test('server responds with pong', async () => {
-        await zoneServer({ pingInterval: 50 }, async (server) => {
+        await zoneServer({}, async (server) => {
             const socket = await server.socket();
             const waiter = once(socket, 'pong');
             socket.ping();
@@ -122,7 +122,7 @@ describe('join server', () => {
             const client2 = await server.client();
 
             await client1.join();
-            const waiter = client1.expect('name');
+            const waiter = client1.expect('user');
             const { userId } = await client2.join({ name });
             const message = await waiter;
 
@@ -190,14 +190,6 @@ describe('unclean disconnect', () => {
 });
 
 describe('user presence', () => {
-    const MESSAGES: { type: keyof MessageMap; [key: string]: any }[] = [
-        { type: 'chat', text: 'hello baby yoda' },
-        { type: 'name', name: 'baby yoda' },
-        { type: 'move', position: [0, 0] },
-        { type: 'emotes', emotes: ['shk', 'wvy'] },
-        { type: 'avatar', data: 'AGb/w+f/WmY=' },
-    ];
-
     test('client chat', async () => {
         const message = 'hello baby yoda';
         await zoneServer({}, async (server) => {
@@ -226,7 +218,7 @@ describe('user presence', () => {
         await zoneServer({}, async (server) => {
             const client = await server.client();
             await client.join();
-            const waiter = client.expect('avatar');
+            const waiter = client.expect('user');
             client.avatar(avatar);
             await waiter;
             expect(client.localUser?.avatar).toEqual(avatar);
@@ -238,7 +230,7 @@ describe('user presence', () => {
         await zoneServer({}, async (server) => {
             const client = await server.client();
             await client.join();
-            const waiter = client.expect('move');
+            const waiter = client.expect('user');
             client.move(position);
             await waiter;
             expect(client.localUser?.position).toEqual(position);
@@ -250,39 +242,10 @@ describe('user presence', () => {
         await zoneServer({}, async (server) => {
             const client = await server.client();
             await client.join();
-            const waiter = client.expect('emotes');
+            const waiter = client.expect('user');
             client.emotes(emotes);
             await waiter;
             expect(client.localUser?.emotes).toEqual(emotes);
-        });
-    });
-
-    it.each(MESSAGES)('echoes own change', async ({ type, ...message }) => {
-        await zoneServer({}, async (server) => {
-            const client = await server.client();
-            const { userId } = await client.join();
-
-            const waiter = client.expect(type);
-            client.messaging.send(type, message);
-            const echo = await waiter;
-
-            expect(echo).toEqual({ userId, ...message });
-        });
-    });
-
-    it.each(MESSAGES)('forwards own change', async (message) => {
-        await zoneServer({}, async (server) => {
-            const client1 = await server.client();
-            const client2 = await server.client();
-
-            const { userId } = await client1.join();
-            await client2.join();
-
-            const waiter = client2.expect(message.type);
-            client1.messaging.send(message.type, message);
-            const forward = await waiter;
-
-            expect(forward).toEqual({ userId, ...message, type: undefined });
         });
     });
 });
@@ -475,7 +438,7 @@ describe('playback', () => {
     });
 });
 
-describe.only('media sources', () => {
+describe('media sources', () => {
     it('can play archive item', async () => {
         await zoneServer({}, async (server) => {
             const { path, media } = ARCHIVE_PATH_TO_MEDIA[0];
