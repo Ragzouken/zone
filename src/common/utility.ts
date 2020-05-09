@@ -1,4 +1,4 @@
-import { EventEmitter } from "events";
+import { EventEmitter } from 'events';
 
 export const objEqual = (a: any, b: any) => JSON.stringify(a) === JSON.stringify(b);
 export const randomInt = (min: number, max: number) => Math.floor(Math.random() * (max - min + 1)) + min;
@@ -25,8 +25,8 @@ export interface TypedEventEmitter<TEventMap extends EventMap> {
 }
 
 export function specifically<T extends any[]>(
-    emitter: EventEmitter, 
-    event: string, 
+    emitter: EventEmitter,
+    event: string,
     predicate: (...args: T) => boolean,
     callback: (...args: T) => void,
 ) {

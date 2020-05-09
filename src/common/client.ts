@@ -17,10 +17,10 @@ export type QueueMessage = { items: QueueItem[] };
 export type SearchMessage = { query: string };
 
 export type SendChat = { text: string };
-export type RecvChat = { text: string, userId: string };
+export type RecvChat = { text: string; userId: string };
 
 export type MoveMessage = { position: number[] };
-export type UserMovedMessage = MoveMessage & { userId: string }; 
+export type UserMovedMessage = MoveMessage & { userId: string };
 
 export type EmotesMessage = { emotes: string[] };
 export type AvatarMessage = { data: string };
@@ -64,10 +64,10 @@ export const DEFAULT_OPTIONS: ClientOptions = {
 };
 
 export interface ClientEventMap {
-    chat: (event: { user: UserState, text: string }) => void;
+    chat: (event: { user: UserState; text: string }) => void;
     join: (event: { user: UserState }) => void;
     leave: (event: { user: UserState }) => void;
-    rename: (event: { user: UserState, previous: string }) => void;
+    rename: (event: { user: UserState; previous: string }) => void;
     status: (event: { text: string }) => void;
 }
 
@@ -103,15 +103,15 @@ export class ZoneClient extends EventEmitter {
         return new Promise((resolve, reject) => {
             setTimeout(() => reject('timeout'), this.options.quickResponseTimeout);
             specifically(
-                this.messaging.messages, 
-                'name', 
+                this.messaging.messages,
+                'name',
                 (message: NameMessage) => message.userId === this.localUserId,
                 resolve,
             );
             this.messaging.send('name', { name });
         });
     }
-    
+
     async expect<K extends keyof MessageMap>(type: K, timeout?: number): Promise<MessageMap[K]> {
         return new Promise((resolve, reject) => {
             if (timeout) setTimeout(() => reject('timeout'), timeout);
@@ -119,7 +119,7 @@ export class ZoneClient extends EventEmitter {
         });
     }
 
-    async join(options: { name?: string, token?: string, password?: string } = {}) {
+    async join(options: { name?: string; token?: string; password?: string } = {}) {
         options.name = options.name || this.options.joinName || 'anonymous';
         options.token = options.token || this.assignation?.token;
 
@@ -200,10 +200,8 @@ export class ZoneClient extends EventEmitter {
             const previous = user.name;
             user.name = message.name;
 
-            if (previous)
-                this.emit('rename', { user, previous });
-            else
-                this.emit('join', { user });
+            if (previous) this.emit('rename', { user, previous });
+            else this.emit('join', { user });
         });
         this.messaging.messages.on('leave', (message: LeaveMessage) => {
             const user = this.zone.getUser(message.userId);
@@ -231,7 +229,7 @@ export class ZoneClient extends EventEmitter {
         });
         this.messaging.messages.on('move', (message: UserMovedMessage) => {
             const user = this.zone.getUser(message.userId);
-    
+
             if (user.userId !== this.localUserId || !user.position) {
                 user.position = message.position;
             }

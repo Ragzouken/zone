@@ -321,7 +321,7 @@ async function load() {
         const { user, text } = message;
         chat.log(`{clr=#FF0000}${user.name}:{-clr} ${text}`);
         if (user !== getLocalUser()) {
-            notify(user.name || "anonymous", text, 'chat');
+            notify(user.name || 'anonymous', text, 'chat');
         }
     });
     client.on('join', (event) => {
