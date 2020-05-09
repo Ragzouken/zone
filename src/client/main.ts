@@ -292,16 +292,14 @@ async function load() {
     client.on('leave', (event) => chat.status(`{clr=#FF0000}${event.user.name}{clr=#FF00FF} left`));
     client.on('status', (event) => chat.status(event.text));
 
-    client.messaging.messages.on('avatar', (message) => {
-        client.zone.getUser(message.userId).avatar = message.data;
+    client.on('avatar', ({ user, local, data }) => {
+        if (local) localStorage.setItem('avatar', data);
 
-        if (message.userId === client.localUserId) localStorage.setItem('avatar', message.data);
-
-        if (!avatarTiles.has(message.data)) {
+        if (!avatarTiles.has(data)) {
             try {
-                avatarTiles.set(message.data, decodeBase64(message.data));
+                avatarTiles.set(data, decodeBase64(data));
             } catch (e) {
-                console.log('fucked up avatar', getUsername(message.userId));
+                console.log('fucked up avatar', user.name);
             }
         }
     });
@@ -334,12 +332,12 @@ async function load() {
             user.position = [randomInt(0, 15), 15];
         }
 
-        client.messaging.send('move', { position: user.position });
+        client.move(user.position);
 
         if (!user.avatar) {
             // send saved avatar
             const data = localStorage.getItem('avatar');
-            if (data) client.messaging.send('avatar', { data });
+            if (data) client.avatar(data);
         }
     }
 
@@ -375,8 +373,7 @@ async function load() {
     });
 
     avatarUpdate.addEventListener('click', () => {
-        const data = blitsy.encodeTexture(avatarContext, 'M1').data;
-        client.messaging.send('avatar', { data });
+        client.avatar(blitsy.encodeTexture(avatarContext, 'M1').data);
     });
     avatarCancel.addEventListener('click', () => (avatarPanel.hidden = true));
 
@@ -404,14 +401,14 @@ async function load() {
         if (data.trim().length === 0) {
             openAvatarEditor();
         } else {
-            client.messaging.send('avatar', { data });
+            client.avatar(data);
         }
     });
     chatCommands.set('avatar2', (args) => {
         const ascii = args.replace(/\s+/g, '\n');
         const avatar = blitsy.decodeAsciiTexture(ascii, '1');
         const data = blitsy.encodeTexture(avatar, 'M1').data;
-        client.messaging.send('avatar', { data });
+        client.avatar(data);
     });
     chatCommands.set('volume', (args) => setVolume(parseInt(args.trim(), 10)));
     chatCommands.set('resync', () => client.resync());
@@ -424,9 +421,8 @@ async function load() {
 
     function toggleEmote(emote: string) {
         const emotes = getLocalUser()!.emotes;
-        if (emotes.includes(emote))
-            client.messaging.send('emotes', { emotes: emotes.filter((e: string) => e !== emote) });
-        else client.messaging.send('emotes', { emotes: emotes.concat([emote]) });
+        if (emotes.includes(emote)) client.emotes(emotes.filter((e: string) => e !== emote));
+        else client.emotes(emotes.concat([emote]));
     }
 
     const gameKeys = new Map<string, () => void>();

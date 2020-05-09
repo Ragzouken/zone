@@ -1020,12 +1020,7 @@ async function connect() {
     const joined = !!exports.client.localUserId;
     exports.client.messaging.setSocket(await socket());
     try {
-        if (joined) {
-            await exports.client.rejoin(joinPassword);
-        }
-        else {
-            await exports.client.join({ name: localName, password: joinPassword });
-        }
+        await exports.client.join({ name: localName, password: joinPassword });
     }
     catch (e) {
         chat.status('enter server password with /password)');
@@ -1123,16 +1118,15 @@ async function load() {
     exports.client.on('join', (event) => chat.status(`{clr=#FF0000}${event.user.name} {clr=#FF00FF}joined`));
     exports.client.on('leave', (event) => chat.status(`{clr=#FF0000}${event.user.name}{clr=#FF00FF} left`));
     exports.client.on('status', (event) => chat.status(event.text));
-    exports.client.messaging.messages.on('avatar', (message) => {
-        exports.client.zone.getUser(message.userId).avatar = message.data;
-        if (message.userId === exports.client.localUserId)
-            localStorage.setItem('avatar', message.data);
-        if (!avatarTiles.has(message.data)) {
+    exports.client.on('avatar', ({ user, local, data }) => {
+        if (local)
+            localStorage.setItem('avatar', data);
+        if (!avatarTiles.has(data)) {
             try {
-                avatarTiles.set(message.data, decodeBase64(message.data));
+                avatarTiles.set(data, decodeBase64(data));
             }
             catch (e) {
-                console.log('fucked up avatar', getUsername(message.userId));
+                console.log('fucked up avatar', user.name);
             }
         }
     });
@@ -1162,12 +1156,12 @@ async function load() {
         else {
             user.position = [utility_2.randomInt(0, 15), 15];
         }
-        exports.client.messaging.send('move', { position: user.position });
+        exports.client.move(user.position);
         if (!user.avatar) {
             // send saved avatar
             const data = localStorage.getItem('avatar');
             if (data)
-                exports.client.messaging.send('avatar', { data });
+                exports.client.avatar(data);
         }
     }
     function playFromSearchResult(args) {
@@ -1199,8 +1193,7 @@ async function load() {
         });
     });
     avatarUpdate.addEventListener('click', () => {
-        const data = blitsy.encodeTexture(avatarContext, 'M1').data;
-        exports.client.messaging.send('avatar', { data });
+        exports.client.avatar(blitsy.encodeTexture(avatarContext, 'M1').data);
     });
     avatarCancel.addEventListener('click', () => (avatarPanel.hidden = true));
     let lastSearchResults = [];
@@ -1227,14 +1220,14 @@ async function load() {
             openAvatarEditor();
         }
         else {
-            exports.client.messaging.send('avatar', { data });
+            exports.client.avatar(data);
         }
     });
     chatCommands.set('avatar2', (args) => {
         const ascii = args.replace(/\s+/g, '\n');
         const avatar = blitsy.decodeAsciiTexture(ascii, '1');
         const data = blitsy.encodeTexture(avatar, 'M1').data;
-        exports.client.messaging.send('avatar', { data });
+        exports.client.avatar(data);
     });
     chatCommands.set('volume', (args) => setVolume(parseInt(args.trim(), 10)));
     chatCommands.set('resync', () => exports.client.resync());
@@ -1247,9 +1240,9 @@ async function load() {
     function toggleEmote(emote) {
         const emotes = getLocalUser().emotes;
         if (emotes.includes(emote))
-            exports.client.messaging.send('emotes', { emotes: emotes.filter((e) => e !== emote) });
+            exports.client.emotes(emotes.filter((e) => e !== emote));
         else
-            exports.client.messaging.send('emotes', { emotes: emotes.concat([emote]) });
+            exports.client.emotes(emotes.concat([emote]));
     }
     const gameKeys = new Map();
     gameKeys.set('Tab', () => chatInput.focus());
@@ -1984,17 +1977,6 @@ class ZoneClient extends events_1.EventEmitter {
             return assign;
         });
     }
-    async rejoin(password) {
-        if (!this.assignation)
-            return this.join({ password });
-        const user = this.zone.getUser(this.assignation.userId);
-        this.clear();
-        await this.join({ name: user.name, token: this.assignation.token, password });
-        // if (user.position) this.messaging.send('move', { position: user.position });
-        // if (user.avatar) this.messaging.send('avatar', { data: user.avatar });
-        // this.messaging.send('emotes', { emotes: user.emotes });
-        return this.assignation;
-    }
     async heartbeat() {
         return new Promise((resolve, reject) => {
             this.expect('heartbeat', this.options.quickResponseTimeout).then(resolve, reject);
@@ -2009,6 +1991,15 @@ class ZoneClient extends events_1.EventEmitter {
     }
     async chat(text) {
         this.messaging.send('chat', { text });
+    }
+    async move(position) {
+        this.messaging.send('move', { position });
+    }
+    async avatar(data) {
+        this.messaging.send('avatar', { data });
+    }
+    async emotes(emotes) {
+        this.messaging.send('emotes', { emotes });
     }
     async search(query) {
         return new Promise((resolve, reject) => {
@@ -2095,12 +2086,23 @@ class ZoneClient extends events_1.EventEmitter {
         });
         this.messaging.messages.on('move', (message) => {
             const user = this.zone.getUser(message.userId);
-            if (user.userId !== this.localUserId || !user.position) {
+            const local = user.userId === this.localUserId;
+            if (!local || !user.position) {
                 user.position = message.position;
             }
+            this.emit('move', { user, local, position: message.position });
         });
         this.messaging.messages.on('emotes', (message) => {
-            this.zone.getUser(message.userId).emotes = message.emotes;
+            const user = this.zone.getUser(message.userId);
+            const local = user.userId === this.localUserId;
+            user.emotes = message.emotes;
+            this.emit('emotes', { user, local, emotes: message.emotes });
+        });
+        this.messaging.messages.on('avatar', (message) => {
+            const user = this.zone.getUser(message.userId);
+            const local = user.userId === this.localUserId;
+            user.avatar = message.data;
+            this.emit('avatar', { user, local, data: message.data });
         });
     }
 }

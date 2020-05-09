@@ -74,6 +74,10 @@ export interface ClientEventMap {
 
     play: (event: { message: PlayMessage }) => void;
     queue: (event: { item: QueueItem }) => void;
+
+    move: (event: { user: UserState; position: number[]; local: boolean }) => void;
+    emotes: (event: { user: UserState; emotes: string[]; local: boolean }) => void;
+    avatar: (event: { user: UserState; data: string; local: boolean }) => void;
 }
 
 export interface ZoneClient {
@@ -87,6 +91,8 @@ export class ZoneClient extends EventEmitter {
     readonly options: ClientOptions;
     readonly messaging = new Messaging();
     readonly zone = new ZoneState();
+
+    localUser?: UserState;
 
     private assignation?: AssignMessage;
 
@@ -135,6 +141,7 @@ export class ZoneClient extends EventEmitter {
             this.messaging.send('join', options);
         }).then((assign) => {
             this.assignation = assign;
+            this.localUser = this.zone.getUser(assign.userId);
             return assign;
         });
     }
@@ -155,6 +162,18 @@ export class ZoneClient extends EventEmitter {
 
     async chat(text: string) {
         this.messaging.send('chat', { text });
+    }
+
+    async move(position: number[]) {
+        this.messaging.send('move', { position });
+    }
+
+    async avatar(data: string) {
+        this.messaging.send('avatar', { data });
+    }
+
+    async emotes(emotes: string[]) {
+        this.messaging.send('emotes', { emotes });
     }
 
     async search(query: string) {
@@ -241,15 +260,28 @@ export class ZoneClient extends EventEmitter {
             if (message.items.length === 1) this.emit('queue', { item: message.items[0] });
             this.zone.queue.push(...message.items);
         });
+
         this.messaging.messages.on('move', (message: UserMovedMessage) => {
             const user = this.zone.getUser(message.userId);
+            const local = user.userId === this.localUserId;
 
-            if (user.userId !== this.localUserId || !user.position) {
+            if (!local || !user.position) {
                 user.position = message.position;
             }
+
+            this.emit('move', { user, local, position: message.position });
         });
         this.messaging.messages.on('emotes', (message) => {
-            this.zone.getUser(message.userId).emotes = message.emotes;
+            const user = this.zone.getUser(message.userId);
+            const local = user.userId === this.localUserId;
+            user.emotes = message.emotes;
+            this.emit('emotes', { user, local, emotes: message.emotes });
+        });
+        this.messaging.messages.on('avatar', (message) => {
+            const user = this.zone.getUser(message.userId);
+            const local = user.userId === this.localUserId;
+            user.avatar = message.data;
+            this.emit('avatar', { user, local, data: message.data });
         });
     }
 }

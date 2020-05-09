@@ -1,8 +1,9 @@
 import { once } from 'events';
-import { MessageMap } from '../client';
+import ZoneClient, { MessageMap } from '../client';
 import { copy, sleep } from '../utility';
 import { ARCHIVE_PATH_TO_MEDIA, YOUTUBE_VIDEOS, TINY_MEDIA, DAY_MEDIA } from './media.data';
 import { zoneServer } from './utilities';
+import { UserState } from '../zone';
 
 const IMMEDIATE_REPLY_TIMEOUT = 50;
 const NAME = 'baby yoda';
@@ -217,6 +218,42 @@ describe('user presence', () => {
             const { name, userId } = await client.rename(newName);
             expect(name).toEqual(newName);
             expect(userId).toEqual(client.localUserId);
+        });
+    });
+
+    test('client avatar', async () => {
+        const avatar = 'AGb/w+f/WmY=';
+        await zoneServer({}, async (server) => {
+            const client = await server.client();
+            await client.join();
+            const waiter = client.expect('avatar');
+            client.avatar(avatar);
+            await waiter;
+            expect(client.localUser?.avatar).toEqual(avatar);
+        });
+    });
+
+    test('client move', async () => {
+        const position = [6, 9];
+        await zoneServer({}, async (server) => {
+            const client = await server.client();
+            await client.join();
+            const waiter = client.expect('move');
+            client.move(position);
+            await waiter;
+            expect(client.localUser?.position).toEqual(position);
+        });
+    });
+
+    test('client emotes', async () => {
+        const emotes = ['shk', 'wvy'];
+        await zoneServer({}, async (server) => {
+            const client = await server.client();
+            await client.join();
+            const waiter = client.expect('emotes');
+            client.emotes(emotes);
+            await waiter;
+            expect(client.localUser?.emotes).toEqual(emotes);
         });
     });
 
