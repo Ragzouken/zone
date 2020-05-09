@@ -172,6 +172,7 @@ function socket(): Promise<WebSocket> {
     return new Promise((resolve, reject) => {
         const socket = new WebSocket('ws://' + zoneURL);
         socket.addEventListener('open', () => resolve(socket));
+        socket.addEventListener('error', reject);
     });
 }
 
@@ -190,7 +191,7 @@ async function connect() {
         if (!remember) listHelp();
         listUsers();
     } catch (e) {
-        chat.log('{clr=#FF00FF}! enter server password with /password)');
+        chat.status('enter server password with /password)');
         return;
     }
 
@@ -207,11 +208,11 @@ function listUsers() {
     const named = Array.from(client.zone.users.values()).filter((user) => !!user.name);
 
     if (named.length === 0) {
-        chat.log('{clr=#FF00FF}! no other users');
+        chat.status('no other users');
     } else {
         const names = named.map((user) => user.name);
         const line = names.join('{clr=#FF00FF}, {clr=#FF0000}');
-        chat.log(`{clr=#FF00FF}! ${names.length} users: {clr=#FF0000}${line}`);
+        chat.status(`${names.length} users: {clr=#FF0000}${line}`);
     }
 }
 
@@ -295,14 +296,16 @@ async function load() {
             httpvideo.play();
             // archive.src = ((source as any).src).replace('download', 'embed') + `?autoplay=1&start=${seconds}`;
         } else {
-            chat.log(`{clr=#FF00FF}! unsupported media type`);
+            chat.status(`unsupported media type`);
             client.unplayable();
         }
 
         currentPlayStart = performance.now() - time;
     });
-    client.on('leave', (event) => chat.log(`{clr=#FF00FF}! {clr=#FF0000}${event.user.name}{clr=#FF00FF} left`));
-    client.on('status', (event) => chat.log(`{clr=#FF00FF}! ${event.text}`));
+    
+    client.on('join', (event) => chat.status(`{clr=#FF0000}${event.user.name} {clr=#FF00FF}joined`));
+    client.on('leave', (event) => chat.status(`{clr=#FF0000}${event.user.name}{clr=#FF00FF} left`));
+    client.on('status', (event) => chat.status(event.text));
 
     client.messaging.messages.on('avatar', (message) => {
         client.zone.getUser(message.userId).avatar = message.data;
@@ -320,19 +323,15 @@ async function load() {
     client.on('chat', (message) => {
         const { user, text } = message;
         chat.log(`{clr=#FF0000}${user.name}:{-clr} ${text}`);
-        if (user !== getLocalUser()) {
+        if (!message.local) {
             notify(user.name || 'anonymous', text, 'chat');
         }
     });
-    client.on('join', (event) => {
-        chat.status(`{clr=#FF0000}${event.user.name} {clr=#FF00FF}joined`);
-    });
     client.on('rename', (message) => {
-        const name = message.user.name;
-        if (message.user.userId === client.localUserId) {
-            chat.status(`you are {clr=#FF0000}${name}`);
+        if (message.local) {
+            chat.status(`you are {clr=#FF0000}${message.user.name}`);
         } else {
-            chat.status(`{clr=#FF0000}${message.previous}{clr=#FF00FF} is now {clr=#FF0000}${name}`);
+            chat.status(`{clr=#FF0000}${message.previous}{clr=#FF00FF} is now {clr=#FF0000}${message.user.name}`);
         }
     });
 
@@ -362,9 +361,9 @@ async function load() {
     function playFromSearchResult(args: string) {
         const index = parseInt(args, 10) - 1;
 
-        if (isNaN(index)) chat.log(`{clr=#FF00FF}! did not understand '${args}' as a number`);
+        if (isNaN(index)) chat.status(`did not understand '${args}' as a number`);
         else if (!lastSearchResults || index < 0 || index >= lastSearchResults.length)
-            chat.log(`{clr=#FF00FF}! there is no #${index + 1} search result`);
+            chat.status(`there is no #${index + 1} search result`);
         else client.youtube((lastSearchResults[index].source as any).videoId);
     }
 
@@ -408,7 +407,7 @@ async function load() {
         chat.log('{clr=#FFFF00}? queue Search result with /result n\n{clr=#00FFFF}' + lines.join('\n'));
     });
     chatCommands.set('youtube', (videoId) => {
-        client.youtube(videoId).catch(() => chat.log("{clr=#FF00FF}! couldn't queue video :("));
+        client.youtube(videoId).catch(() => chat.status("couldn't queue video :("));
     });
     chatCommands.set('skip', (password) => client.skip(password));
     chatCommands.set('password', (args) => (joinPassword = args));
@@ -433,7 +432,7 @@ async function load() {
     chatCommands.set('resync', () => client.resync());
     chatCommands.set('notify', async () => {
         const permission = await Notification.requestPermission();
-        chat.log(`{clr=#FF00FF}! notifications ${permission}`);
+        chat.status(`notifications ${permission}`);
     });
     chatCommands.set('name', rename);
     chatCommands.set('archive', (path) => client.messaging.send('archive', { path }));
@@ -465,7 +464,7 @@ async function load() {
             if (command) {
                 command(slash[2].trim());
             } else {
-                chat.log(`{clr=#FF00FF}! no command /${slash[1]}`);
+                chat.status(`no command /${slash[1]}`);
                 listHelp();
             }
         } else if (line.length > 0) {

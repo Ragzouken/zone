@@ -64,10 +64,10 @@ export const DEFAULT_OPTIONS: ClientOptions = {
 };
 
 export interface ClientEventMap {
-    chat: (event: { user: UserState; text: string }) => void;
+    chat: (event: { user: UserState; text: string, local: boolean }) => void;
     join: (event: { user: UserState }) => void;
     leave: (event: { user: UserState }) => void;
-    rename: (event: { user: UserState; previous: string }) => void;
+    rename: (event: { user: UserState; previous: string, local: boolean }) => void;
     status: (event: { text: string }) => void;
 }
 
@@ -197,10 +197,11 @@ export class ZoneClient extends EventEmitter {
         });
         this.messaging.messages.on('name', (message: NameMessage) => {
             const user = this.zone.getUser(message.userId);
+            const local = (user.userId === this.localUserId);
             const previous = user.name;
             user.name = message.name;
 
-            if (previous) this.emit('rename', { user, previous });
+            if (previous) this.emit('rename', { user, previous, local });
             else this.emit('join', { user });
         });
         this.messaging.messages.on('leave', (message: LeaveMessage) => {
@@ -216,7 +217,8 @@ export class ZoneClient extends EventEmitter {
         });
         this.messaging.messages.on('chat', (message: RecvChat) => {
             const user = this.zone.getUser(message.userId);
-            this.emit('chat', { user, text: message.text });
+            const local = (user.userId === this.localUserId);
+            this.emit('chat', { user, text: message.text, local });
         });
         this.messaging.messages.on('play', (message: PlayMessage) => {
             this.zone.lastPlayedItem = message.item;
