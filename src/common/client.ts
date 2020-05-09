@@ -4,6 +4,7 @@ import { EventEmitter } from 'events';
 import { YoutubeVideo } from '../server/youtube';
 import { objEqual } from './utility';
 import { ZoneState, UserState } from './zone';
+import { specifically } from './__tests__/utilities';
 
 export type StatusMesage = { text: string };
 export type JoinMessage = { name: string; token?: string; password?: string };
@@ -55,6 +56,7 @@ export interface MessageMap {
 export interface ClientOptions {
     quickResponseTimeout: number;
     slowResponseTimeout: number;
+    joinName?: string;
 }
 
 export const DEFAULT_OPTIONS: ClientOptions = {
@@ -98,6 +100,19 @@ export class ZoneClient extends EventEmitter {
         this.zone.clear();
     }
 
+    async rename(name: string): Promise<NameMessage> {
+        return new Promise((resolve, reject) => {
+            setTimeout(() => reject('timeout'), this.options.quickResponseTimeout);
+            specifically(
+                this.messaging.messages, 
+                'name', 
+                (message: NameMessage) => message.userId === this.localUserId,
+                resolve,
+            );
+            this.messaging.send('name', { name });
+        });
+    }
+    
     async expect<K extends keyof MessageMap>(type: K, timeout?: number): Promise<MessageMap[K]> {
         return new Promise((resolve, reject) => {
             if (timeout) setTimeout(() => reject('timeout'), timeout);
@@ -105,7 +120,8 @@ export class ZoneClient extends EventEmitter {
         });
     }
 
-    async join(options: JoinMessage) {
+    async join(options: { name?: string, token?: string, password?: string } = {}) {
+        options.name = options.name || this.options.joinName || 'anonymous';
         options.token = options.token || this.assignation?.token;
 
         return new Promise<AssignMessage>((resolve, reject) => {

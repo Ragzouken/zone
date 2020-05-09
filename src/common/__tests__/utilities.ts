@@ -12,6 +12,7 @@ import Playback from '../../server/playback';
 export const TEST_CLIENT_OPTIONS: Partial<ClientOptions> = {
     quickResponseTimeout: 50,
     slowResponseTimeout: 2000,
+    joinName: 'baby yoda',
 };
 
 export function timeout(emitter: EventEmitter, event: string, ms: number) {
@@ -19,6 +20,22 @@ export function timeout(emitter: EventEmitter, event: string, ms: number) {
         setTimeout(resolve, ms);
         emitter.once(event, reject);
     });
+}
+
+export function specifically<T extends any[]>(
+    emitter: EventEmitter, 
+    event: string, 
+    predicate: (...args: T) => boolean,
+    callback: (...args: T) => void,
+) {
+    const handler = (...args: T) => {
+        if (predicate(...args)) {
+            emitter.off(event, handler as any);
+            callback(...args);
+        }
+    };
+
+    emitter.on(event, handler as any);
 }
 
 export async function echoServer(options: Partial<{}>, callback: (server: EchoServer) => Promise<void>) {
