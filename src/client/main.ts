@@ -336,7 +336,7 @@ async function load() {
         }
     });
 
-    setInterval(() => client.messaging.send('heartbeat', {}), 30 * 1000);
+    setInterval(() => client.heartbeat(), 30 * 1000);
 
     player!.on('error', () => client.unplayable({ type: 'youtube', videoId: player!.video } as PlayableSource));
 
@@ -415,8 +415,7 @@ async function load() {
     chatCommands.set('users', () => listUsers());
     chatCommands.set('help', () => listHelp());
     chatCommands.set('result', playFromSearchResult);
-    chatCommands.set('lucky', (query) => client.messaging.send('search', { query, lucky: true }));
-    chatCommands.set('reboot', (password) => client.messaging.send('reboot', { password }));
+    chatCommands.set('lucky', (query) => client.lucky(query));
     chatCommands.set('avatar', (data) => {
         if (data.trim().length === 0) {
             openAvatarEditor();

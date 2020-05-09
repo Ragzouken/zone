@@ -1,5 +1,5 @@
 import { once } from 'events';
-import { MessageMap, RecvChat } from '../client';
+import { MessageMap } from '../client';
 import { copy, sleep } from '../utility';
 import { ARCHIVE_PATH_TO_MEDIA, YOUTUBE_VIDEOS, TINY_MEDIA, DAY_MEDIA } from './media.data';
 import { zoneServer } from './utilities';
