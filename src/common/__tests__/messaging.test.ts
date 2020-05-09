@@ -1,9 +1,9 @@
-import { server, timeout } from './utilities';
+import { echoServer, timeout } from './utilities';
 import { once } from 'events';
 
 describe('messaging', () => {
     it('emits close event when closed', async () => {
-        await server({}, async (server) => {
+        await echoServer({}, async (server) => {
             const messaging = await server.messaging();
             const waiter = once(messaging, 'close');
             await messaging.close();
@@ -12,7 +12,7 @@ describe('messaging', () => {
     });
 
     it('emits only one close event', async () => {
-        await server({}, async (server) => {
+        await echoServer({}, async (server) => {
             const messaging = await server.messaging();
 
             const waiter1 = once(messaging, 'close');
@@ -26,7 +26,7 @@ describe('messaging', () => {
     });
 
     it('does not emit close when replacing open socket', async () => {
-        await server({}, async (server) => {
+        await echoServer({}, async (server) => {
             const socket = await server.socket();
             const messaging = await server.messaging();
 
@@ -37,7 +37,7 @@ describe('messaging', () => {
     });
 
     it('emits second close event when second socket closed', async () => {
-        await server({}, async (server) => {
+        await echoServer({}, async (server) => {
             const socket = await server.socket();
             const messaging = await server.messaging();
 
@@ -54,7 +54,7 @@ describe('messaging', () => {
     });
 
     it('emits error when sending after close', async () => {
-        await server({}, async (server) => {
+        await echoServer({}, async (server) => {
             const messaging = await server.messaging();
             await messaging.close(3000);
 
@@ -65,7 +65,7 @@ describe('messaging', () => {
     });
 
     it('echoes after reconnect', async () => {
-        await server({}, async (server) => {
+        await echoServer({}, async (server) => {
             const socket = await server.socket();
             const messaging = await server.messaging();
             messaging.on('close', () => messaging.setSocket(socket));

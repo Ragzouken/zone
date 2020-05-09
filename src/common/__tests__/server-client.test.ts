@@ -1,62 +1,16 @@
 import { once } from 'events';
-import * as Memory from 'lowdb/adapters/Memory';
-import { Server } from 'http';
-import * as WebSocket from 'ws';
-import { AddressInfo } from 'net';
-
-import { host, HostOptions } from '../server';
-
-import ZoneClient, { MessageMap } from '../../common/client';
-import Messaging from '../../common/messaging';
-
-import Playback, { QueueItem } from '../playback';
-import { copy, sleep } from '../../common/utility';
+import { MessageMap } from '../client';
+import { QueueItem } from '../../server/playback';
+import { copy, sleep } from '../utility';
 import { ARCHIVE_PATH_TO_MEDIA, YOUTUBE_VIDEOS, TINY_MEDIA, DAY_MEDIA } from './media.data';
+import { zoneServer } from './utilities';
 
 const IMMEDIATE_REPLY_TIMEOUT = 50;
 const NAME = 'baby yoda';
 
-async function server(options: Partial<HostOptions>, callback: (server: TestServer) => Promise<void>) {
-    const server = new TestServer(options);
-    try {
-        await once(server.hosting.server, 'listening');
-        await callback(server);
-    } finally {
-        server.dispose();
-    }
-}
-
-class TestServer {
-    public hosting: { server: Server; playback: Playback };
-    private readonly sockets: WebSocket[] = [];
-
-    constructor(options?: Partial<HostOptions>) {
-        this.hosting = host(new Memory(''), options);
-    }
-
-    public async socket() {
-        const address = this.hosting.server.address() as AddressInfo;
-        const socket = new WebSocket(`ws://localhost:${address.port}/zone`);
-        this.sockets.push(socket);
-        await once(socket, 'open');
-        return socket;
-    }
-
-    public async client() {
-        const client = new ZoneClient();
-        client.messaging.setSocket(await this.socket());
-        return client;
-    }
-
-    public dispose() {
-        this.sockets.forEach((socket) => socket.close());
-        this.hosting.server.close();
-    }
-}
-
 describe('connectivity', () => {
     test('heartbeat response', async () => {
-        await server({}, async (server) => {
+        await zoneServer({}, async (server) => {
             const client = await server.client();
             await client.join({ name: NAME });
 
@@ -67,14 +21,14 @@ describe('connectivity', () => {
     });
 
     test('server sends ping', async () => {
-        await server({ pingInterval: 50 }, async (server) => {
+        await zoneServer({ pingInterval: 50 }, async (server) => {
             const socket = await server.socket();
             await once(socket, 'ping');
         });
     }, 100);
 
     test('server responds with pong', async () => {
-        await server({ pingInterval: 50 }, async (server) => {
+        await zoneServer({ pingInterval: 50 }, async (server) => {
             const socket = await server.socket();
             const waiter = once(socket, 'pong');
             socket.ping();
@@ -85,14 +39,14 @@ describe('connectivity', () => {
 
 describe('join open server', () => {
     test('accepts no password', async () => {
-        await server({}, async (server) => {
+        await zoneServer({}, async (server) => {
             const client = await server.client();
             await client.join({ name: 'no pass' });
         });
     });
 
     test('accepts any password', async () => {
-        await server({}, async (server) => {
+        await zoneServer({}, async (server) => {
             const client = await server.client();
             await client.join({ name: 'any pass', password: 'old password' });
         });
@@ -104,7 +58,7 @@ describe('join closed server', () => {
 
     test('rejects absent password', async () => {
         const password = 'riverdale';
-        await server({ joinPassword: password }, async (server) => {
+        await zoneServer({ joinPassword: password }, async (server) => {
             const client = await server.client();
             const joining = client.join({ name: NAME });
             await expect(joining).rejects.toMatchObject(PASSWORD_REJECT);
@@ -113,7 +67,7 @@ describe('join closed server', () => {
 
     test('rejects incorrect password', async () => {
         const password = 'riverdale';
-        await server({ joinPassword: password }, async (server) => {
+        await zoneServer({ joinPassword: password }, async (server) => {
             const client = await server.client();
             const joining = client.join({ name: NAME, password: password + ' wrong' });
             await expect(joining).rejects.toMatchObject(PASSWORD_REJECT);
@@ -122,7 +76,7 @@ describe('join closed server', () => {
 
     test('accepts correct password', async () => {
         const password = 'riverdale';
-        await server({ joinPassword: password }, async (server) => {
+        await zoneServer({ joinPassword: password }, async (server) => {
             const client = await server.client();
             await client.join({ name: NAME, password });
         });
@@ -131,7 +85,7 @@ describe('join closed server', () => {
 
 describe('join server', () => {
     test('assigns id and token', async () => {
-        await server({}, async (server) => {
+        await zoneServer({}, async (server) => {
             const client = await server.client();
             const { userId, token } = await client.join({ name: NAME });
 
@@ -141,7 +95,7 @@ describe('join server', () => {
     });
 
     test('ignores second join', async () => {
-        await server({}, async (server) => {
+        await zoneServer({}, async (server) => {
             const client = await server.client();
             await client.join({ name: NAME });
             const repeat = client.join({ name: NAME });
@@ -150,7 +104,7 @@ describe('join server', () => {
     });
 
     it('sends user list', async () => {
-        await server({}, async (server) => {
+        await zoneServer({}, async (server) => {
             const name = 'user1';
             const client1 = await server.client();
             const client2 = await server.client();
@@ -165,7 +119,7 @@ describe('join server', () => {
     });
 
     test('server sends name on join', async () => {
-        await server({}, async (server) => {
+        await zoneServer({}, async (server) => {
             const name = 'baby yoda';
             const client1 = await server.client();
             const client2 = await server.client();
@@ -183,7 +137,7 @@ describe('join server', () => {
 
 describe('unclean disconnect', () => {
     test('can resume session with token', async () => {
-        await server({}, async (server) => {
+        await zoneServer({}, async (server) => {
             const client1 = await server.client();
             const client2 = await server.client();
 
@@ -197,7 +151,7 @@ describe('unclean disconnect', () => {
     });
 
     test('server assigns new user for expired token', async () => {
-        await server({ userTimeout: 0 }, async (server) => {
+        await zoneServer({ userTimeout: 0 }, async (server) => {
             const client1 = await server.client();
             const client2 = await server.client();
 
@@ -212,7 +166,7 @@ describe('unclean disconnect', () => {
     });
 
     test('client join reuses existing token', async () => {
-        await server({}, async (server) => {
+        await zoneServer({}, async (server) => {
             const socket = await server.socket();
             const client = await server.client();
             client.messaging.on('close', () => client.messaging.setSocket(socket));
@@ -224,7 +178,7 @@ describe('unclean disconnect', () => {
     });
 
     test('send leave message when token expires', async () => {
-        await server({ userTimeout: 50 }, async (server) => {
+        await zoneServer({ userTimeout: 50 }, async (server) => {
             const client1 = await server.client();
             const client2 = await server.client();
 
@@ -248,7 +202,7 @@ describe('user presence', () => {
     ];
 
     it.each(MESSAGES)('echoes own change', async ({ type, ...message }) => {
-        await server({}, async (server) => {
+        await zoneServer({}, async (server) => {
             const client = await server.client();
             const { userId } = await client.join({ name: NAME });
 
@@ -261,7 +215,7 @@ describe('user presence', () => {
     });
 
     it.each(MESSAGES)('forwards own change', async (message) => {
-        await server({}, async (server) => {
+        await zoneServer({}, async (server) => {
             const client1 = await server.client();
             const client2 = await server.client();
 
@@ -279,7 +233,7 @@ describe('user presence', () => {
 
 describe('playback', () => {
     it('sends currently playing on join', async () => {
-        await server({}, async (server) => {
+        await zoneServer({}, async (server) => {
             server.hosting.playback.queueMedia(DAY_MEDIA);
 
             const client = await server.client();
@@ -293,7 +247,7 @@ describe('playback', () => {
     });
 
     it('sends currently playing on resync', async () => {
-        await server({}, async (server) => {
+        await zoneServer({}, async (server) => {
             server.hosting.playback.queueMedia(DAY_MEDIA);
 
             const client = await server.client();
@@ -311,7 +265,7 @@ describe('playback', () => {
     });
 
     it('sends empty play when all playback ends', async () => {
-        await server({ playbackPaddingTime: 0 }, async (server) => {
+        await zoneServer({ playbackPaddingTime: 0 }, async (server) => {
             const client = await server.client();
             await client.join({ name: NAME });
 
@@ -325,7 +279,7 @@ describe('playback', () => {
     });
 
     it("doesn't queue duplicate media", async () => {
-        await server({}, async (server) => {
+        await zoneServer({}, async (server) => {
             const client = await server.client();
 
             const media = YOUTUBE_VIDEOS[0];
@@ -342,7 +296,7 @@ describe('playback', () => {
     });
 
     it("doesn't queue beyond limit", async () => {
-        await server({ perUserQueueLimit: 0 }, async (server) => {
+        await zoneServer({ perUserQueueLimit: 0 }, async (server) => {
             const client = await server.client();
 
             await client.join({ name: NAME });
@@ -354,7 +308,7 @@ describe('playback', () => {
     });
 
     it('skips with sufficient votes', async () => {
-        await server({ voteSkipThreshold: 1 }, async (server) => {
+        await zoneServer({ voteSkipThreshold: 1 }, async (server) => {
             const client1 = await server.client();
             const client2 = await server.client();
 
@@ -378,7 +332,7 @@ describe('playback', () => {
     });
 
     it('skips with sufficient errors', async () => {
-        await server({ voteSkipThreshold: 1 }, async (server) => {
+        await zoneServer({ voteSkipThreshold: 1 }, async (server) => {
             const client1 = await server.client();
             const client2 = await server.client();
 
@@ -403,7 +357,7 @@ describe('playback', () => {
 
     it('skips with password', async () => {
         const password = 'riverdale';
-        await server({ voteSkipThreshold: 2, skipPassword: password }, async (server) => {
+        await zoneServer({ voteSkipThreshold: 2, skipPassword: password }, async (server) => {
             const client = await server.client();
 
             server.hosting.playback.queueMedia(DAY_MEDIA);
@@ -420,7 +374,7 @@ describe('playback', () => {
     });
 
     it("doesn't skip with insufficient votes", async () => {
-        await server({ voteSkipThreshold: 2 }, async (server) => {
+        await zoneServer({ voteSkipThreshold: 2 }, async (server) => {
             const client = await server.client();
 
             server.hosting.playback.queueMedia(DAY_MEDIA);
@@ -437,7 +391,7 @@ describe('playback', () => {
     });
 
     it("doesn't skip with insufficient errors", async () => {
-        await server({ errorSkipThreshold: 2 }, async (server) => {
+        await zoneServer({ errorSkipThreshold: 2 }, async (server) => {
             const client = await server.client();
 
             server.hosting.playback.queueMedia(DAY_MEDIA);
@@ -454,7 +408,7 @@ describe('playback', () => {
     });
 
     it("doesn't skip incorrect video", async () => {
-        await server({}, async (server) => {
+        await zoneServer({}, async (server) => {
             const client = await server.client();
 
             server.hosting.playback.queueMedia(DAY_MEDIA);
@@ -476,7 +430,7 @@ describe('playback', () => {
 
 describe('media sources', () => {
     it('can play archive item', async () => {
-        await server({}, async (server) => {
+        await zoneServer({}, async (server) => {
             const { path, media } = ARCHIVE_PATH_TO_MEDIA[0];
 
             const client = await server.client();
@@ -491,7 +445,7 @@ describe('media sources', () => {
     });
 
     it('can play youtube video', async () => {
-        await server({}, async (server) => {
+        await zoneServer({}, async (server) => {
             const source = YOUTUBE_VIDEOS[0].source;
 
             const client = await server.client();
@@ -506,7 +460,7 @@ describe('media sources', () => {
     });
 
     test('can search youtube', async () => {
-        await server({}, async (server) => {
+        await zoneServer({}, async (server) => {
             const client = await server.client();
             await client.join({ name: NAME });
 
@@ -517,7 +471,7 @@ describe('media sources', () => {
     });
 
     test('can lucky search youtube', async () => {
-        await server({}, async (server) => {
+        await zoneServer({}, async (server) => {
             const client = await server.client();
             await client.join({ name: NAME });
 
@@ -529,7 +483,7 @@ describe('media sources', () => {
 });
 
 test('server sends leave on clean quit', async () => {
-    await server({}, async (server) => {
+    await zoneServer({}, async (server) => {
         const client1 = await server.client();
         const client2 = await server.client();
 

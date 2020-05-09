@@ -116,8 +116,6 @@ export class ZoneClient extends EventEmitter {
     }
 
     private addStandardListeners() {
-        this.messaging.on('error', (error) => console.log('hmm', error));
-
         this.messaging.messages.on('play', (message: PlayMessage) => {
             this.lastPlayedItem = message.item;
 
