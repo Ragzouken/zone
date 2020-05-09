@@ -1,8 +1,9 @@
 import { once } from 'events';
-import { MessageMap } from '../client';
+import ZoneClient, { MessageMap } from '../client';
 import { copy, sleep } from '../utility';
 import { ARCHIVE_PATH_TO_MEDIA, YOUTUBE_VIDEOS, TINY_MEDIA, DAY_MEDIA } from './media.data';
 import { zoneServer } from './utilities';
+import { UserState } from '../zone';
 
 const IMMEDIATE_REPLY_TIMEOUT = 50;
 const NAME = 'baby yoda';
@@ -11,13 +12,13 @@ describe('connectivity', () => {
     test('heartbeat response', async () => {
         await zoneServer({}, async (server) => {
             const client = await server.client();
-            await client.join({ name: NAME });
+            await client.join();
             await client.heartbeat();
         });
     });
 
     test('server sends ping', async () => {
-        await zoneServer({ pingInterval: 50 }, async (server) => {
+        await zoneServer({ pingInterval: 10 }, async (server) => {
             const socket = await server.socket();
             await once(socket, 'ping');
         });
@@ -56,7 +57,7 @@ describe('join closed server', () => {
         const password = 'riverdale';
         await zoneServer({ joinPassword: password }, async (server) => {
             const client = await server.client();
-            const joining = client.join({ name: NAME });
+            const joining = client.join();
             await expect(joining).rejects.toMatchObject(PASSWORD_REJECT);
         });
     });
@@ -65,7 +66,7 @@ describe('join closed server', () => {
         const password = 'riverdale';
         await zoneServer({ joinPassword: password }, async (server) => {
             const client = await server.client();
-            const joining = client.join({ name: NAME, password: password + ' wrong' });
+            const joining = client.join({ password: password + ' wrong' });
             await expect(joining).rejects.toMatchObject(PASSWORD_REJECT);
         });
     });
@@ -74,7 +75,7 @@ describe('join closed server', () => {
         const password = 'riverdale';
         await zoneServer({ joinPassword: password }, async (server) => {
             const client = await server.client();
-            await client.join({ name: NAME, password });
+            await client.join({ password });
         });
     });
 });
@@ -83,7 +84,7 @@ describe('join server', () => {
     test('assigns id and token', async () => {
         await zoneServer({}, async (server) => {
             const client = await server.client();
-            const { userId, token } = await client.join({ name: NAME });
+            const { userId, token } = await client.join();
 
             expect(userId).not.toBeUndefined();
             expect(token).not.toBeUndefined();
@@ -93,8 +94,8 @@ describe('join server', () => {
     test('ignores second join', async () => {
         await zoneServer({}, async (server) => {
             const client = await server.client();
-            await client.join({ name: NAME });
-            const repeat = client.join({ name: NAME });
+            await client.join();
+            const repeat = client.join();
             await expect(repeat).rejects.toEqual('timeout');
         });
     });
@@ -107,7 +108,7 @@ describe('join server', () => {
             const { userId } = await client1.join({ name });
 
             const waitUsers = client2.expect('users');
-            await client2.join({ name: NAME });
+            await client2.join();
             const { users } = await waitUsers;
 
             expect(users[0]).toMatchObject({ userId, name });
@@ -116,11 +117,11 @@ describe('join server', () => {
 
     test('server sends name on join', async () => {
         await zoneServer({}, async (server) => {
-            const name = 'baby yoda';
+            const name = 'baby yoda 2';
             const client1 = await server.client();
             const client2 = await server.client();
 
-            await client1.join({ name: NAME });
+            await client1.join();
             const waiter = client1.expect('name');
             const { userId } = await client2.join({ name });
             const message = await waiter;
@@ -137,9 +138,9 @@ describe('unclean disconnect', () => {
             const client1 = await server.client();
             const client2 = await server.client();
 
-            const assign1 = await client1.join({ name: NAME });
+            const assign1 = await client1.join();
             await client1.messaging.close(3000);
-            const assign2 = await client2.join({ name: NAME, token: assign1.token });
+            const assign2 = await client2.join({ token: assign1.token });
 
             expect(assign2.userId).toEqual(assign1.userId);
             expect(assign2.token).toEqual(assign1.token);
@@ -151,10 +152,10 @@ describe('unclean disconnect', () => {
             const client1 = await server.client();
             const client2 = await server.client();
 
-            const assign1 = await client1.join({ name: NAME });
+            const assign1 = await client1.join();
             await client1.messaging.close(3000);
             await sleep(10); // TODO: server should check expiry at time of join
-            const assign2 = await client2.join({ name: NAME, token: assign1.token });
+            const assign2 = await client2.join({ token: assign1.token });
 
             expect(assign2.userId).not.toEqual(assign1.userId);
             expect(assign2.token).not.toEqual(assign1.token);
@@ -167,9 +168,9 @@ describe('unclean disconnect', () => {
             const client = await server.client();
             client.messaging.on('close', () => client.messaging.setSocket(socket));
 
-            await client.join({ name: NAME });
+            await client.join();
             await client.messaging.close(3000);
-            await client.join({ name: NAME });
+            await client.join();
         });
     });
 
@@ -178,8 +179,8 @@ describe('unclean disconnect', () => {
             const client1 = await server.client();
             const client2 = await server.client();
 
-            const { userId } = await client1.join({ name: NAME });
-            await client2.join({ name: NAME });
+            const { userId } = await client1.join();
+            await client2.join();
 
             const leaveWaiter = client2.expect('leave');
             await client1.messaging.close(3000);
@@ -197,10 +198,69 @@ describe('user presence', () => {
         { type: 'avatar', data: 'AGb/w+f/WmY=' },
     ];
 
+    test('client chat', async () => {
+        const message = 'hello baby yoda';
+        await zoneServer({}, async (server) => {
+            const client = await server.client();
+            await client.join();
+            const waiter = once(client, 'chat');
+            client.chat(message);
+            const chat = (await waiter)[0];
+            expect(chat.text).toEqual(message);
+        });
+    });
+
+    test('client rename', async () => {
+        const newName = 'adult yoda';
+        await zoneServer({}, async (server) => {
+            const client = await server.client();
+            await client.join();
+            const { name, userId } = await client.rename(newName);
+            expect(name).toEqual(newName);
+            expect(userId).toEqual(client.localUserId);
+        });
+    });
+
+    test('client avatar', async () => {
+        const avatar = 'AGb/w+f/WmY=';
+        await zoneServer({}, async (server) => {
+            const client = await server.client();
+            await client.join();
+            const waiter = client.expect('avatar');
+            client.avatar(avatar);
+            await waiter;
+            expect(client.localUser?.avatar).toEqual(avatar);
+        });
+    });
+
+    test('client move', async () => {
+        const position = [6, 9];
+        await zoneServer({}, async (server) => {
+            const client = await server.client();
+            await client.join();
+            const waiter = client.expect('move');
+            client.move(position);
+            await waiter;
+            expect(client.localUser?.position).toEqual(position);
+        });
+    });
+
+    test('client emotes', async () => {
+        const emotes = ['shk', 'wvy'];
+        await zoneServer({}, async (server) => {
+            const client = await server.client();
+            await client.join();
+            const waiter = client.expect('emotes');
+            client.emotes(emotes);
+            await waiter;
+            expect(client.localUser?.emotes).toEqual(emotes);
+        });
+    });
+
     it.each(MESSAGES)('echoes own change', async ({ type, ...message }) => {
         await zoneServer({}, async (server) => {
             const client = await server.client();
-            const { userId } = await client.join({ name: NAME });
+            const { userId } = await client.join();
 
             const waiter = client.expect(type);
             client.messaging.send(type, message);
@@ -215,8 +275,8 @@ describe('user presence', () => {
             const client1 = await server.client();
             const client2 = await server.client();
 
-            const { userId } = await client1.join({ name: NAME });
-            await client2.join({ name: NAME });
+            const { userId } = await client1.join();
+            await client2.join();
 
             const waiter = client2.expect(message.type);
             client1.messaging.send(message.type, message);
@@ -234,7 +294,7 @@ describe('playback', () => {
 
             const client = await server.client();
             const waiter = client.expect('play');
-            await client.join({ name: NAME });
+            await client.join();
             const play = await waiter;
 
             expect(play.time).toBeGreaterThan(0);
@@ -248,7 +308,7 @@ describe('playback', () => {
 
             const client = await server.client();
             const waiter = client.expect('play');
-            await client.join({ name: NAME });
+            await client.join();
             await waiter;
 
             const play = await client.resync();
@@ -261,7 +321,7 @@ describe('playback', () => {
     it('sends empty play when all playback ends', async () => {
         await zoneServer({ playbackPaddingTime: 0 }, async (server) => {
             const client = await server.client();
-            await client.join({ name: NAME });
+            await client.join();
 
             const waiter = client.expect('play');
             server.hosting.playback.queueMedia(TINY_MEDIA);
@@ -281,7 +341,7 @@ describe('playback', () => {
             server.hosting.playback.queueMedia(media);
             server.hosting.playback.queueMedia(media);
 
-            await client.join({ name: NAME });
+            await client.join();
             const queued = client.youtube(media.source.videoId);
 
             await expect(queued).rejects.toEqual('timeout');
@@ -292,7 +352,7 @@ describe('playback', () => {
         await zoneServer({ perUserQueueLimit: 0 }, async (server) => {
             const client = await server.client();
 
-            await client.join({ name: NAME });
+            await client.join();
             const queued = client.youtube('2GjyNgQ4Dos');
 
             await expect(queued).rejects.toEqual('timeout');
@@ -309,8 +369,8 @@ describe('playback', () => {
             const waiter1 = client1.expect('play');
             const waiter2 = client2.expect('play');
 
-            await client1.join({ name: NAME });
-            await client2.join({ name: NAME });
+            await client1.join();
+            await client2.join();
 
             await waiter1;
             await waiter2;
@@ -332,8 +392,8 @@ describe('playback', () => {
             const waiter1 = client1.expect('play');
             const waiter2 = client2.expect('play');
 
-            await client1.join({ name: NAME });
-            await client2.join({ name: NAME });
+            await client1.join();
+            await client2.join();
 
             await waiter1;
             await waiter2;
@@ -353,7 +413,7 @@ describe('playback', () => {
             server.hosting.playback.queueMedia(DAY_MEDIA);
 
             const played = client.expect('play');
-            await client.join({ name: NAME });
+            await client.join();
             await played;
 
             const skipped = client.expect('play');
@@ -369,7 +429,7 @@ describe('playback', () => {
             server.hosting.playback.queueMedia(DAY_MEDIA);
 
             const played = client.expect('play');
-            await client.join({ name: NAME });
+            await client.join();
             await played;
 
             const skipped = client.expect('play', IMMEDIATE_REPLY_TIMEOUT);
@@ -385,7 +445,7 @@ describe('playback', () => {
             server.hosting.playback.queueMedia(DAY_MEDIA);
 
             const played = client.expect('play');
-            await client.join({ name: NAME });
+            await client.join();
             await played;
 
             const skipped = client.expect('play', IMMEDIATE_REPLY_TIMEOUT);
@@ -401,7 +461,7 @@ describe('playback', () => {
             server.hosting.playback.queueMedia(DAY_MEDIA);
 
             const playWaiter = client.expect('play');
-            await client.join({ name: NAME });
+            await client.join();
             const { item } = await playWaiter;
 
             const source = copy(item.media.source);
@@ -415,13 +475,13 @@ describe('playback', () => {
     });
 });
 
-describe('media sources', () => {
+describe.only('media sources', () => {
     it('can play archive item', async () => {
         await zoneServer({}, async (server) => {
             const { path, media } = ARCHIVE_PATH_TO_MEDIA[0];
 
             const client = await server.client();
-            await client.join({ name: NAME });
+            await client.join();
 
             const waiter = client.expect('play');
             client.messaging.send('archive', { path });
@@ -436,17 +496,17 @@ describe('media sources', () => {
             const source = YOUTUBE_VIDEOS[0].source;
 
             const client = await server.client();
-            await client.join({ name: NAME });
+            await client.join();
 
-            const { items } = await client.youtube(source.videoId);
-            expect(items[0].media.source).toEqual(source);
+            const item = await client.youtube(source.videoId);
+            expect(item.media.source).toEqual(source);
         });
     });
 
     test('can search youtube', async () => {
         await zoneServer({}, async (server) => {
             const client = await server.client();
-            await client.join({ name: NAME });
+            await client.join();
             await client.search('hello');
         });
     });
@@ -454,7 +514,7 @@ describe('media sources', () => {
     test('can lucky search youtube', async () => {
         await zoneServer({}, async (server) => {
             const client = await server.client();
-            await client.join({ name: NAME });
+            await client.join();
             await client.lucky('hello');
         });
     });
@@ -465,8 +525,8 @@ test('server sends leave on clean quit', async () => {
         const client1 = await server.client();
         const client2 = await server.client();
 
-        const { userId: joinedId } = await client1.join({ name: NAME });
-        await client2.join({ name: NAME });
+        const { userId: joinedId } = await client1.join();
+        await client2.join();
 
         const waiter = client2.expect('leave');
         await client1.messaging.close();

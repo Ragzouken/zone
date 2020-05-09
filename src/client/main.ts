@@ -9,14 +9,14 @@ import {
     eventToElementPixel,
     withPixels,
 } from './utility';
-import { sleep, objEqual, randomInt, clamp } from '../common/utility';
+import { sleep, randomInt, clamp } from '../common/utility';
 import { scriptToPages, PageRenderer, getPageHeight } from './text';
 import { loadYoutube, YoutubePlayer } from './youtube';
 import { ChatPanel, animatePage } from './chat';
-import { UserId, UserState, ZoneState } from '../common/zone';
+import { UserId } from '../common/zone';
 
-import { QueueItem, PlayableMedia } from '../server/playback';
-import ZoneClient, { PlayMessage, QueueMessage, SearchResult } from '../common/client';
+import { PlayableMedia, PlayableSource } from '../server/playback';
+import ZoneClient from '../common/client';
 
 export const client = new ZoneClient();
 
@@ -150,10 +150,9 @@ function parseFakedown(text: string) {
 }
 
 const chat = new ChatPanel();
-const zoneState = new ZoneState();
 
 function getLocalUser() {
-    return client.localUserId ? zoneState.getUser(client.localUserId) : undefined;
+    return client.localUserId ? client.zone.getUser(client.localUserId) : undefined;
 }
 
 function setVolume(volume: number) {
@@ -166,38 +165,65 @@ let localName = localStorage.getItem('name') || '';
 function rename(name: string) {
     localStorage.setItem('name', name);
     localName = name;
-    client.messaging.send('name', { name });
+    client.rename(name);
 }
 
 function socket(): Promise<WebSocket> {
     return new Promise((resolve, reject) => {
         const socket = new WebSocket('ws://' + zoneURL);
         socket.addEventListener('open', () => resolve(socket));
+        socket.addEventListener('error', reject);
     });
 }
 
 let joinPassword: string | undefined;
 
 async function connect() {
-    const user = getLocalUser();
-
-    client.clear();
+    const joined = !!client.localUserId;
     client.messaging.setSocket(await socket());
 
     try {
         await client.join({ name: localName, password: joinPassword });
     } catch (e) {
-        chat.log('{clr=#FF00FF}! enter server password with /password)');
+        chat.status('enter server password with /password)');
         return;
     }
 
-    if (user) {
-        if (user.position) client.messaging.send('move', { position: user.position });
-        if (user.avatar) {
-            client.messaging.send('avatar', { data: user.avatar });
-            client.messaging.send('emotes', { emotes: user.emotes });
-        }
+    chat.log('{clr=#00FF00}*** connected ***');
+    if (!joined) listHelp();
+    listUsers();
+}
+
+function listUsers() {
+    const named = Array.from(client.zone.users.values()).filter((user) => !!user.name);
+
+    if (named.length === 0) {
+        chat.status('no other users');
+    } else {
+        const names = named.map((user) => user.name);
+        const line = names.join('{clr=#FF00FF}, {clr=#FF0000}');
+        chat.status(`${names.length} users: {clr=#FF0000}${line}`);
     }
+}
+
+const help = [
+    'press tab: toggle typing/controls',
+    'press q: toggle queue',
+    'press 1/2/3: toggle emotes',
+    '/youtube videoId',
+    '/search query terms',
+    '/lucky search terms',
+    '/skip',
+    '/avatar',
+    '/users',
+    '/name',
+    '/notify',
+    '/volume 100',
+    '/resync',
+].join('\n');
+
+function listHelp() {
+    chat.log('{clr=#FFFF00}? /help\n' + help);
 }
 
 async function load() {
@@ -214,35 +240,24 @@ async function load() {
     let currentPlayStart: number | undefined;
 
     function getUsername(userId: UserId) {
-        return zoneState.getUser(userId).name || userId;
+        return client.zone.getUser(userId).name || userId;
     }
 
     let showQueue = false;
-    let remember: UserState | undefined;
 
-    function reset() {
-        zoneState.reset();
-    }
-
-    client.messaging.on('close', async (code) => {
-        console.log(code);
-        remember = getLocalUser();
-        if (code <= 1001) return;
+    client.on('disconnect', async ({ clean }) => {
+        if (clean) return;
         await sleep(100);
-        reset();
         await connect();
     });
 
-    client.messaging.messages.on('queue', (message: QueueMessage) => {
-        if (message.items.length === 1) {
-            const item = message.items[0];
-            const { title, duration } = item.media.details;
-            const username = getUsername(item.info.userId ?? 'server');
-            const time = secondsToTime(duration / 1000);
-            chat.log(`{clr=#00FFFF}+ ${title} (${time}) added by {clr=#FF0000}${username}`);
-        }
+    client.on('queue', ({ item }) => {
+        const { title, duration } = item.media.details;
+        const username = getUsername(item.info.userId ?? 'server');
+        const time = secondsToTime(duration / 1000);
+        chat.log(`{clr=#00FFFF}+ ${title} (${time}) added by {clr=#FF0000}${username}`);
     });
-    client.messaging.messages.on('play', (message: PlayMessage) => {
+    client.on('play', ({ message }) => {
         if (!message.item) {
             archive.src = '';
             player?.stop();
@@ -266,76 +281,46 @@ async function load() {
             httpvideo.play();
             // archive.src = ((source as any).src).replace('download', 'embed') + `?autoplay=1&start=${seconds}`;
         } else {
-            chat.log(`{clr=#FF00FF}! unsupported media type`);
+            chat.status(`unsupported media type`);
             client.unplayable();
         }
 
         currentPlayStart = performance.now() - time;
     });
 
-    client.messaging.messages.on('users', (message) => {
-        chat.log('{clr=#00FF00}*** connected ***');
-        if (!remember) listHelp();
+    client.on('join', (event) => chat.status(`{clr=#FF0000}${event.user.name} {clr=#FF00FF}joined`));
+    client.on('leave', (event) => chat.status(`{clr=#FF0000}${event.user.name}{clr=#FF00FF} left`));
+    client.on('status', (event) => chat.status(event.text));
 
-        zoneState.users.clear();
-        message.users.forEach((user: UserState) => {
-            zoneState.users.set(user.userId, user);
-        });
-        listUsers();
-    });
-    client.messaging.messages.on('leave', (message) => {
-        const username = getUsername(message.userId);
-        chat.log(`{clr=#FF00FF}! {clr=#FF0000}${username}{clr=#FF00FF} left`);
-        zoneState.users.delete(message.userId);
-    });
-    client.messaging.messages.on('move', (message) => {
-        const user = zoneState.getUser(message.userId);
+    client.on('avatar', ({ user, local, data }) => {
+        if (local) localStorage.setItem('avatar', data);
 
-        if (user !== getLocalUser() || !user.position) user.position = message.position;
-    });
-    client.messaging.messages.on('avatar', (message) => {
-        zoneState.getUser(message.userId).avatar = message.data;
-
-        if (message.userId === client.localUserId) localStorage.setItem('avatar', message.data);
-
-        if (!avatarTiles.has(message.data)) {
+        if (!avatarTiles.has(data)) {
             try {
-                avatarTiles.set(message.data, decodeBase64(message.data));
+                avatarTiles.set(data, decodeBase64(data));
             } catch (e) {
-                console.log('fucked up avatar', getUsername(message.userId));
+                console.log('fucked up avatar', user.name);
             }
         }
     });
-    client.messaging.messages.on('emotes', (message) => {
-        zoneState.getUser(message.userId).emotes = message.emotes;
-    });
-    client.messaging.messages.on('chat', (message) => {
-        const name = getUsername(message.userId);
-        chat.log(`{clr=#FF0000}${name}:{-clr} ${message.text}`);
-        if (message.userId !== getLocalUser()) {
-            notify(name, message.text, 'chat');
+    client.on('chat', (message) => {
+        const { user, text } = message;
+        chat.log(`{clr=#FF0000}${user.name}:{-clr} ${text}`);
+        if (!message.local) {
+            notify(user.name || 'anonymous', text, 'chat');
         }
     });
-    client.messaging.messages.on('status', (message) => chat.log(`{clr=#FF00FF}! ${message.text}`));
-    client.messaging.messages.on('name', (message) => {
-        const next = message.name;
-        if (message.userId === client.localUserId) {
-            chat.log(`{clr=#FF00FF}! you are {clr=#FF0000}${next}`);
-        } else if (!zoneState.users.has(message.userId)) {
-            chat.log(`{clr=#FF00FF}! {clr=#FF0000}${next} {clr=#FF00FF}joined`);
+    client.on('rename', (message) => {
+        if (message.local) {
+            chat.status(`you are {clr=#FF0000}${message.user.name}`);
         } else {
-            const prev = getUsername(message.userId);
-            chat.log(`{clr=#FF00FF}! {clr=#FF0000}${prev}{clr=#FF00FF} is now {clr=#FF0000}${next}`);
+            chat.status(`{clr=#FF0000}${message.previous}{clr=#FF00FF} is now {clr=#FF0000}${message.user.name}`);
         }
-
-        zoneState.getUser(message.userId).name = message.name;
     });
 
-    setInterval(() => client.messaging.send('heartbeat', {}), 30 * 1000);
+    setInterval(() => client.heartbeat(), 30 * 1000);
 
-    window.onbeforeunload = () => client.messaging.close();
-
-    player!.on('error', () => client.messaging.send('error', { source: { type: 'youtube', videoId: player!.video } }));
+    player!.on('error', () => client.unplayable({ type: 'youtube', videoId: player!.video } as PlayableSource));
 
     function move(dx: number, dy: number) {
         const user = getLocalUser()!;
@@ -347,54 +332,22 @@ async function load() {
             user.position = [randomInt(0, 15), 15];
         }
 
-        client.messaging.send('move', { position: user.position });
+        client.move(user.position);
 
         if (!user.avatar) {
             // send saved avatar
             const data = localStorage.getItem('avatar');
-            if (data) client.messaging.send('avatar', { data });
+            if (data) client.avatar(data);
         }
-    }
-
-    function listUsers() {
-        const named = Array.from(zoneState.users.values()).filter((user) => !!user.name);
-
-        if (named.length === 0) {
-            chat.log('{clr=#FF00FF}! no other users');
-        } else {
-            const names = named.map((user) => user.name);
-            const line = names.join('{clr=#FF00FF}, {clr=#FF0000}');
-            chat.log(`{clr=#FF00FF}! ${names.length} users: {clr=#FF0000}${line}`);
-        }
-    }
-
-    const help = [
-        'press tab: toggle typing/controls',
-        'press q: toggle queue',
-        'press 1/2/3: toggle emotes',
-        '/youtube videoId',
-        '/search query terms',
-        '/lucky search terms',
-        '/skip',
-        '/avatar',
-        '/users',
-        '/name',
-        '/notify',
-        '/volume 100',
-        '/resync',
-    ].join('\n');
-
-    function listHelp() {
-        chat.log('{clr=#FFFF00}? /help\n' + help);
     }
 
     function playFromSearchResult(args: string) {
         const index = parseInt(args, 10) - 1;
 
-        if (isNaN(index)) chat.log(`{clr=#FF00FF}! did not understand '${args}' as a number`);
+        if (isNaN(index)) chat.status(`did not understand '${args}' as a number`);
         else if (!lastSearchResults || index < 0 || index >= lastSearchResults.length)
-            chat.log(`{clr=#FF00FF}! there is no #${index + 1} search result`);
-        else client.messaging.send('youtube', { videoId: (lastSearchResults[index].source as any).videoId });
+            chat.status(`there is no #${index + 1} search result`);
+        else client.youtube((lastSearchResults[index].source as any).videoId);
     }
 
     const avatarPanel = document.querySelector('#avatar-panel') as HTMLElement;
@@ -420,8 +373,7 @@ async function load() {
     });
 
     avatarUpdate.addEventListener('click', () => {
-        const data = blitsy.encodeTexture(avatarContext, 'M1').data;
-        client.messaging.send('avatar', { data });
+        client.avatar(blitsy.encodeTexture(avatarContext, 'M1').data);
     });
     avatarCancel.addEventListener('click', () => (avatarPanel.hidden = true));
 
@@ -437,42 +389,40 @@ async function load() {
         chat.log('{clr=#FFFF00}? queue Search result with /result n\n{clr=#00FFFF}' + lines.join('\n'));
     });
     chatCommands.set('youtube', (videoId) => {
-        client.youtube(videoId).catch(() => chat.log("{clr=#FF00FF}! couldn't queue video :("));
+        client.youtube(videoId).catch(() => chat.status("couldn't queue video :("));
     });
     chatCommands.set('skip', (password) => client.skip(password));
     chatCommands.set('password', (args) => (joinPassword = args));
     chatCommands.set('users', () => listUsers());
     chatCommands.set('help', () => listHelp());
     chatCommands.set('result', playFromSearchResult);
-    chatCommands.set('lucky', (query) => client.messaging.send('search', { query, lucky: true }));
-    chatCommands.set('reboot', (password) => client.messaging.send('reboot', { password }));
+    chatCommands.set('lucky', (query) => client.lucky(query));
     chatCommands.set('avatar', (data) => {
         if (data.trim().length === 0) {
             openAvatarEditor();
         } else {
-            client.messaging.send('avatar', { data });
+            client.avatar(data);
         }
     });
     chatCommands.set('avatar2', (args) => {
         const ascii = args.replace(/\s+/g, '\n');
         const avatar = blitsy.decodeAsciiTexture(ascii, '1');
         const data = blitsy.encodeTexture(avatar, 'M1').data;
-        client.messaging.send('avatar', { data });
+        client.avatar(data);
     });
     chatCommands.set('volume', (args) => setVolume(parseInt(args.trim(), 10)));
     chatCommands.set('resync', () => client.resync());
     chatCommands.set('notify', async () => {
         const permission = await Notification.requestPermission();
-        chat.log(`{clr=#FF00FF}! notifications ${permission}`);
+        chat.status(`notifications ${permission}`);
     });
     chatCommands.set('name', rename);
     chatCommands.set('archive', (path) => client.messaging.send('archive', { path }));
 
     function toggleEmote(emote: string) {
         const emotes = getLocalUser()!.emotes;
-        if (emotes.includes(emote))
-            client.messaging.send('emotes', { emotes: emotes.filter((e: string) => e !== emote) });
-        else client.messaging.send('emotes', { emotes: emotes.concat([emote]) });
+        if (emotes.includes(emote)) client.emotes(emotes.filter((e: string) => e !== emote));
+        else client.emotes(emotes.concat([emote]));
     }
 
     const gameKeys = new Map<string, () => void>();
@@ -495,11 +445,11 @@ async function load() {
             if (command) {
                 command(slash[2].trim());
             } else {
-                chat.log(`{clr=#FF00FF}! no command /${slash[1]}`);
+                chat.status(`no command /${slash[1]}`);
                 listHelp();
             }
         } else if (line.length > 0) {
-            client.messaging.send('chat', { text: parseFakedown(line) });
+            client.chat(parseFakedown(line));
         }
 
         chatInput.value = '';
@@ -538,7 +488,7 @@ async function load() {
         sceneContext.clearRect(0, 0, 512, 512);
         sceneContext.drawImage(roomBackground.canvas, 0, 0, 512, 512);
 
-        zoneState.users.forEach((user) => {
+        client.zone.users.forEach((user) => {
             const { position, emotes, avatar } = user;
             if (!position) return;
 
@@ -593,24 +543,25 @@ async function load() {
 
         let remaining = 0;
 
-        if (client.lastPlayedItem) {
-            if (client.lastPlayedItem.media.source.type === 'youtube') {
+        if (client.zone.lastPlayedItem) {
+            if (client.zone.lastPlayedItem.media.source.type === 'youtube') {
                 remaining = Math.round(player!.duration - player!.time);
-            } else if (client.lastPlayedItem.media.source.type === 'archive') {
+            } else if (client.zone.lastPlayedItem.media.source.type === 'archive') {
                 remaining = httpvideo.duration - httpvideo.currentTime;
             } else {
-                const duration = client.lastPlayedItem.media.details.duration;
+                const duration = client.zone.lastPlayedItem.media.details.duration;
                 const elapsed = performance.now() - currentPlayStart!;
                 remaining = Math.max(0, duration - elapsed) / 1000;
             }
         }
 
-        if (client.lastPlayedItem && remaining > 0) line(client.lastPlayedItem.media.details.title, remaining);
+        if (client.zone.lastPlayedItem && remaining > 0)
+            line(client.zone.lastPlayedItem.media.details.title, remaining);
 
         let total = remaining;
 
         if (showQueue) {
-            client.queue.forEach((item) => {
+            client.zone.queue.forEach((item) => {
                 line(item.media.details.title, item.media.details.duration / 1000);
                 total += item.media.details.duration / 1000;
             });
@@ -628,9 +579,9 @@ async function load() {
     }
 
     function redraw() {
-        const playing = !!client.lastPlayedItem;
+        const playing = !!client.zone.lastPlayedItem;
         youtube.hidden = !player!.playing;
-        httpvideo.hidden = !playing || client.lastPlayedItem?.media.source.type !== 'archive';
+        httpvideo.hidden = !playing || client.zone.lastPlayedItem?.media.source.type !== 'archive';
         archive.hidden = true; // !playing || currentPlayMessage?.item.media.source.type !== "archive";
         zoneLogo.hidden = playing;
 

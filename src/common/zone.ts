@@ -1,4 +1,5 @@
 import { getDefault } from './utility';
+import { QueueItem } from '../server/playback';
 
 export type UserId = string;
 
@@ -12,9 +13,13 @@ export type UserState = {
 
 export class ZoneState {
     public readonly users = new Map<UserId, UserState>();
+    readonly queue: QueueItem[] = [];
+    lastPlayedItem?: QueueItem;
 
-    public reset() {
+    public clear() {
         this.users.clear();
+        this.queue.length = 0;
+        this.lastPlayedItem = undefined;
     }
 
     public getUser(userId: UserId): UserState {
