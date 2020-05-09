@@ -3,6 +3,7 @@ import { QueueItem, PlayableMedia, PlayableSource } from '../server/playback';
 import { EventEmitter } from 'events';
 import { YoutubeVideo } from '../server/youtube';
 import { objEqual } from './utility';
+import { ZoneState } from './zone';
 
 export type JoinMessage = { name: string; token?: string; password?: string };
 export type AssignMessage = { userId: string; token: string };
@@ -22,6 +23,10 @@ export type SearchResult = { results: YoutubeVideo[] };
 
 function isYoutube(item: PlayableMedia): item is YoutubeVideo {
     return item.source.type === 'youtube';
+}
+
+function mediaEquals(a: PlayableMedia, b: PlayableMedia) {
+    return objEqual(a.source, b.source);
 }
 
 export interface MessageMap {
@@ -49,14 +54,12 @@ export interface ClientOptions {
 export const DEFAULT_OPTIONS: ClientOptions = {
     quickResponseTimeout: 1000,
     slowResponseTimeout: 5000,
-}
+};
 
 export class ZoneClient extends EventEmitter {
     readonly options: ClientOptions;
     readonly messaging = new Messaging();
-    readonly queue: QueueItem[] = [];
-
-    lastPlayedItem?: QueueItem;
+    readonly zone = new ZoneState();
 
     private assignation?: AssignMessage;
 
@@ -71,7 +74,7 @@ export class ZoneClient extends EventEmitter {
     }
 
     clear() {
-        this.queue.length = 0;
+        this.zone.clear();
     }
 
     async expect<K extends keyof MessageMap>(type: K, timeout?: number): Promise<MessageMap[K]> {
@@ -98,7 +101,7 @@ export class ZoneClient extends EventEmitter {
         return new Promise<{}>((resolve, reject) => {
             this.expect('heartbeat', this.options.quickResponseTimeout).then(resolve, reject);
             this.messaging.send('heartbeat', {});
-        })
+        });
     }
 
     async resync() {
@@ -134,29 +137,29 @@ export class ZoneClient extends EventEmitter {
     }
 
     async skip(password?: string) {
-        if (!this.lastPlayedItem) return;
+        if (!this.zone.lastPlayedItem) return;
 
         this.messaging.send('skip', {
             password,
-            source: this.lastPlayedItem.media.source,
+            source: this.zone.lastPlayedItem.media.source,
         });
     }
 
     async unplayable(source?: PlayableSource) {
-        source = source || this.lastPlayedItem?.media.source;
+        source = source || this.zone.lastPlayedItem?.media.source;
         if (!source) return;
         this.messaging.send('error', { source });
     }
 
     private addStandardListeners() {
         this.messaging.messages.on('play', (message: PlayMessage) => {
-            this.lastPlayedItem = message.item;
+            this.zone.lastPlayedItem = message.item;
 
-            const index = this.queue.findIndex((item) => objEqual(item.media.source, message.item.media.source));
-            if (index >= 0) this.queue.splice(index, 1);
+            const index = this.zone.queue.findIndex((item) => mediaEquals(item.media, message.item.media));
+            if (index >= 0) this.zone.queue.splice(index, 1);
         });
         this.messaging.messages.on('queue', (message: QueueMessage) => {
-            this.queue.push(...message.items);
+            this.zone.queue.push(...message.items);
         });
     }
 }

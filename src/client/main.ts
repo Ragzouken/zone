@@ -9,14 +9,14 @@ import {
     eventToElementPixel,
     withPixels,
 } from './utility';
-import { sleep, objEqual, randomInt, clamp } from '../common/utility';
+import { sleep, randomInt, clamp } from '../common/utility';
 import { scriptToPages, PageRenderer, getPageHeight } from './text';
 import { loadYoutube, YoutubePlayer } from './youtube';
 import { ChatPanel, animatePage } from './chat';
-import { UserId, UserState, ZoneState } from '../common/zone';
+import { UserId, UserState } from '../common/zone';
 
-import { QueueItem, PlayableMedia } from '../server/playback';
-import ZoneClient, { PlayMessage, QueueMessage, SearchResult } from '../common/client';
+import { PlayableMedia } from '../server/playback';
+import ZoneClient, { PlayMessage, QueueMessage } from '../common/client';
 
 export const client = new ZoneClient();
 
@@ -150,10 +150,9 @@ function parseFakedown(text: string) {
 }
 
 const chat = new ChatPanel();
-const zoneState = new ZoneState();
 
 function getLocalUser() {
-    return client.localUserId ? zoneState.getUser(client.localUserId) : undefined;
+    return client.localUserId ? client.zone.getUser(client.localUserId) : undefined;
 }
 
 function setVolume(volume: number) {
@@ -214,22 +213,17 @@ async function load() {
     let currentPlayStart: number | undefined;
 
     function getUsername(userId: UserId) {
-        return zoneState.getUser(userId).name || userId;
+        return client.zone.getUser(userId).name || userId;
     }
 
     let showQueue = false;
     let remember: UserState | undefined;
-
-    function reset() {
-        zoneState.reset();
-    }
 
     client.messaging.on('close', async (code) => {
         console.log(code);
         remember = getLocalUser();
         if (code <= 1001) return;
         await sleep(100);
-        reset();
         await connect();
     });
 
@@ -277,24 +271,24 @@ async function load() {
         chat.log('{clr=#00FF00}*** connected ***');
         if (!remember) listHelp();
 
-        zoneState.users.clear();
+        client.zone.users.clear();
         message.users.forEach((user: UserState) => {
-            zoneState.users.set(user.userId, user);
+            client.zone.users.set(user.userId, user);
         });
         listUsers();
     });
     client.messaging.messages.on('leave', (message) => {
         const username = getUsername(message.userId);
         chat.log(`{clr=#FF00FF}! {clr=#FF0000}${username}{clr=#FF00FF} left`);
-        zoneState.users.delete(message.userId);
+        client.zone.users.delete(message.userId);
     });
     client.messaging.messages.on('move', (message) => {
-        const user = zoneState.getUser(message.userId);
+        const user = client.zone.getUser(message.userId);
 
         if (user !== getLocalUser() || !user.position) user.position = message.position;
     });
     client.messaging.messages.on('avatar', (message) => {
-        zoneState.getUser(message.userId).avatar = message.data;
+        client.zone.getUser(message.userId).avatar = message.data;
 
         if (message.userId === client.localUserId) localStorage.setItem('avatar', message.data);
 
@@ -307,7 +301,7 @@ async function load() {
         }
     });
     client.messaging.messages.on('emotes', (message) => {
-        zoneState.getUser(message.userId).emotes = message.emotes;
+        client.zone.getUser(message.userId).emotes = message.emotes;
     });
     client.messaging.messages.on('chat', (message) => {
         const name = getUsername(message.userId);
@@ -321,14 +315,14 @@ async function load() {
         const next = message.name;
         if (message.userId === client.localUserId) {
             chat.log(`{clr=#FF00FF}! you are {clr=#FF0000}${next}`);
-        } else if (!zoneState.users.has(message.userId)) {
+        } else if (!client.zone.users.has(message.userId)) {
             chat.log(`{clr=#FF00FF}! {clr=#FF0000}${next} {clr=#FF00FF}joined`);
         } else {
             const prev = getUsername(message.userId);
             chat.log(`{clr=#FF00FF}! {clr=#FF0000}${prev}{clr=#FF00FF} is now {clr=#FF0000}${next}`);
         }
 
-        zoneState.getUser(message.userId).name = message.name;
+        client.zone.getUser(message.userId).name = message.name;
     });
 
     setInterval(() => client.messaging.send('heartbeat', {}), 30 * 1000);
@@ -357,7 +351,7 @@ async function load() {
     }
 
     function listUsers() {
-        const named = Array.from(zoneState.users.values()).filter((user) => !!user.name);
+        const named = Array.from(client.zone.users.values()).filter((user) => !!user.name);
 
         if (named.length === 0) {
             chat.log('{clr=#FF00FF}! no other users');
@@ -538,7 +532,7 @@ async function load() {
         sceneContext.clearRect(0, 0, 512, 512);
         sceneContext.drawImage(roomBackground.canvas, 0, 0, 512, 512);
 
-        zoneState.users.forEach((user) => {
+        client.zone.users.forEach((user) => {
             const { position, emotes, avatar } = user;
             if (!position) return;
 
@@ -593,24 +587,25 @@ async function load() {
 
         let remaining = 0;
 
-        if (client.lastPlayedItem) {
-            if (client.lastPlayedItem.media.source.type === 'youtube') {
+        if (client.zone.lastPlayedItem) {
+            if (client.zone.lastPlayedItem.media.source.type === 'youtube') {
                 remaining = Math.round(player!.duration - player!.time);
-            } else if (client.lastPlayedItem.media.source.type === 'archive') {
+            } else if (client.zone.lastPlayedItem.media.source.type === 'archive') {
                 remaining = httpvideo.duration - httpvideo.currentTime;
             } else {
-                const duration = client.lastPlayedItem.media.details.duration;
+                const duration = client.zone.lastPlayedItem.media.details.duration;
                 const elapsed = performance.now() - currentPlayStart!;
                 remaining = Math.max(0, duration - elapsed) / 1000;
             }
         }
 
-        if (client.lastPlayedItem && remaining > 0) line(client.lastPlayedItem.media.details.title, remaining);
+        if (client.zone.lastPlayedItem && remaining > 0)
+            line(client.zone.lastPlayedItem.media.details.title, remaining);
 
         let total = remaining;
 
         if (showQueue) {
-            client.queue.forEach((item) => {
+            client.zone.queue.forEach((item) => {
                 line(item.media.details.title, item.media.details.duration / 1000);
                 total += item.media.details.duration / 1000;
             });
@@ -628,9 +623,9 @@ async function load() {
     }
 
     function redraw() {
-        const playing = !!client.lastPlayedItem;
+        const playing = !!client.zone.lastPlayedItem;
         youtube.hidden = !player!.playing;
-        httpvideo.hidden = !playing || client.lastPlayedItem?.media.source.type !== 'archive';
+        httpvideo.hidden = !playing || client.zone.lastPlayedItem?.media.source.type !== 'archive';
         archive.hidden = true; // !playing || currentPlayMessage?.item.media.source.type !== "archive";
         zoneLogo.hidden = playing;
 

@@ -884,7 +884,6 @@ const utility_2 = require("../common/utility");
 const text_1 = require("./text");
 const youtube_1 = require("./youtube");
 const chat_1 = require("./chat");
-const zone_1 = require("../common/zone");
 const client_1 = require("../common/client");
 exports.client = new client_1.default();
 let player;
@@ -993,9 +992,8 @@ function parseFakedown(text) {
     return text;
 }
 const chat = new chat_1.ChatPanel();
-const zoneState = new zone_1.ZoneState();
 function getLocalUser() {
-    return exports.client.localUserId ? zoneState.getUser(exports.client.localUserId) : undefined;
+    return exports.client.localUserId ? exports.client.zone.getUser(exports.client.localUserId) : undefined;
 }
 function setVolume(volume) {
     player.volume = volume;
@@ -1042,23 +1040,18 @@ async function load() {
     const joinName = document.querySelector('#join-name');
     const chatInput = document.querySelector('#chat-input');
     joinName.value = localName;
-    let currentPlayMessage;
     let currentPlayStart;
     function getUsername(userId) {
-        return zoneState.getUser(userId).name || userId;
+        return exports.client.zone.getUser(userId).name || userId;
     }
     let showQueue = false;
     let remember;
-    function reset() {
-        zoneState.reset();
-    }
     exports.client.messaging.on('close', async (code) => {
         console.log(code);
         remember = getLocalUser();
         if (code <= 1001)
             return;
         await utility_2.sleep(100);
-        reset();
         await connect();
     });
     exports.client.messaging.messages.on('queue', (message) => {
@@ -1077,14 +1070,10 @@ async function load() {
             player === null || player === void 0 ? void 0 : player.stop();
             httpvideo.pause();
             httpvideo.src = '';
-            currentPlayMessage = undefined;
             return;
         }
         const { source, details } = message.item.media;
         chat.log(`{clr=#00FFFF}> ${details.title} (${utility_1.secondsToTime(details.duration / 1000)})`);
-        const index = exports.client.queue.findIndex((item) => utility_2.objEqual(item.media.source, source));
-        if (index >= 0)
-            exports.client.queue.splice(index, 1);
         const time = message.time || 0;
         const seconds = time / 1000;
         if (source.type === 'youtube') {
@@ -1100,33 +1089,32 @@ async function load() {
         }
         else {
             chat.log(`{clr=#FF00FF}! unsupported media type`);
-            exports.client.messaging.send('error', { source });
+            exports.client.unplayable();
         }
-        currentPlayMessage = message;
         currentPlayStart = performance.now() - time;
     });
     exports.client.messaging.messages.on('users', (message) => {
         chat.log('{clr=#00FF00}*** connected ***');
         if (!remember)
             listHelp();
-        zoneState.users.clear();
+        exports.client.zone.users.clear();
         message.users.forEach((user) => {
-            zoneState.users.set(user.userId, user);
+            exports.client.zone.users.set(user.userId, user);
         });
         listUsers();
     });
     exports.client.messaging.messages.on('leave', (message) => {
         const username = getUsername(message.userId);
         chat.log(`{clr=#FF00FF}! {clr=#FF0000}${username}{clr=#FF00FF} left`);
-        zoneState.users.delete(message.userId);
+        exports.client.zone.users.delete(message.userId);
     });
     exports.client.messaging.messages.on('move', (message) => {
-        const user = zoneState.getUser(message.userId);
+        const user = exports.client.zone.getUser(message.userId);
         if (user !== getLocalUser() || !user.position)
             user.position = message.position;
     });
     exports.client.messaging.messages.on('avatar', (message) => {
-        zoneState.getUser(message.userId).avatar = message.data;
+        exports.client.zone.getUser(message.userId).avatar = message.data;
         if (message.userId === exports.client.localUserId)
             localStorage.setItem('avatar', message.data);
         if (!avatarTiles.has(message.data)) {
@@ -1139,7 +1127,7 @@ async function load() {
         }
     });
     exports.client.messaging.messages.on('emotes', (message) => {
-        zoneState.getUser(message.userId).emotes = message.emotes;
+        exports.client.zone.getUser(message.userId).emotes = message.emotes;
     });
     exports.client.messaging.messages.on('chat', (message) => {
         const name = getUsername(message.userId);
@@ -1154,14 +1142,14 @@ async function load() {
         if (message.userId === exports.client.localUserId) {
             chat.log(`{clr=#FF00FF}! you are {clr=#FF0000}${next}`);
         }
-        else if (!zoneState.users.has(message.userId)) {
+        else if (!exports.client.zone.users.has(message.userId)) {
             chat.log(`{clr=#FF00FF}! {clr=#FF0000}${next} {clr=#FF00FF}joined`);
         }
         else {
             const prev = getUsername(message.userId);
             chat.log(`{clr=#FF00FF}! {clr=#FF0000}${prev}{clr=#FF00FF} is now {clr=#FF0000}${next}`);
         }
-        zoneState.getUser(message.userId).name = message.name;
+        exports.client.zone.getUser(message.userId).name = message.name;
     });
     setInterval(() => exports.client.messaging.send('heartbeat', {}), 30 * 1000);
     window.onbeforeunload = () => exports.client.messaging.close();
@@ -1184,7 +1172,7 @@ async function load() {
         }
     }
     function listUsers() {
-        const named = Array.from(zoneState.users.values()).filter((user) => !!user.name);
+        const named = Array.from(exports.client.zone.users.values()).filter((user) => !!user.name);
         if (named.length === 0) {
             chat.log('{clr=#FF00FF}! no other users');
         }
@@ -1255,11 +1243,10 @@ async function load() {
             .map(({ title, duration }, i) => `${i + 1}. ${title} (${utility_1.secondsToTime(duration / 1000)})`);
         chat.log('{clr=#FFFF00}? queue Search result with /result n\n{clr=#00FFFF}' + lines.join('\n'));
     });
-    chatCommands.set('youtube', (videoId) => exports.client.messaging.send('youtube', { videoId }));
-    chatCommands.set('skip', (password) => {
-        if (currentPlayMessage)
-            exports.client.messaging.send('skip', { password, source: currentPlayMessage.item.media.source });
+    chatCommands.set('youtube', (videoId) => {
+        exports.client.youtube(videoId).catch(() => chat.log("{clr=#FF00FF}! couldn't queue video :("));
     });
+    chatCommands.set('skip', (password) => exports.client.skip(password));
     chatCommands.set('password', (args) => (joinPassword = args));
     chatCommands.set('users', () => listUsers());
     chatCommands.set('help', () => listHelp());
@@ -1281,7 +1268,7 @@ async function load() {
         exports.client.messaging.send('avatar', { data });
     });
     chatCommands.set('volume', (args) => setVolume(parseInt(args.trim(), 10)));
-    chatCommands.set('resync', () => exports.client.messaging.send('resync', {}));
+    chatCommands.set('resync', () => exports.client.resync());
     chatCommands.set('notify', async () => {
         const permission = await Notification.requestPermission();
         chat.log(`{clr=#FF00FF}! notifications ${permission}`);
@@ -1352,7 +1339,7 @@ async function load() {
     function drawZone() {
         sceneContext.clearRect(0, 0, 512, 512);
         sceneContext.drawImage(roomBackground.canvas, 0, 0, 512, 512);
-        zoneState.users.forEach((user) => {
+        exports.client.zone.users.forEach((user) => {
             const { position, emotes, avatar } = user;
             if (!position)
                 return;
@@ -1395,24 +1382,24 @@ async function load() {
             lines.push(cut + time);
         }
         let remaining = 0;
-        if (currentPlayMessage) {
-            if (currentPlayMessage.item.media.source.type === 'youtube') {
+        if (exports.client.zone.lastPlayedItem) {
+            if (exports.client.zone.lastPlayedItem.media.source.type === 'youtube') {
                 remaining = Math.round(player.duration - player.time);
             }
-            else if (currentPlayMessage.item.media.source.type === 'archive') {
+            else if (exports.client.zone.lastPlayedItem.media.source.type === 'archive') {
                 remaining = httpvideo.duration - httpvideo.currentTime;
             }
             else {
-                const duration = currentPlayMessage.item.media.details.duration;
+                const duration = exports.client.zone.lastPlayedItem.media.details.duration;
                 const elapsed = performance.now() - currentPlayStart;
                 remaining = Math.max(0, duration - elapsed) / 1000;
             }
         }
-        if (currentPlayMessage && remaining > 0)
-            line(currentPlayMessage.item.media.details.title, remaining);
+        if (exports.client.zone.lastPlayedItem && remaining > 0)
+            line(exports.client.zone.lastPlayedItem.media.details.title, remaining);
         let total = remaining;
         if (showQueue) {
-            exports.client.queue.forEach((item) => {
+            exports.client.zone.queue.forEach((item) => {
                 line(item.media.details.title, item.media.details.duration / 1000);
                 total += item.media.details.duration / 1000;
             });
@@ -1427,9 +1414,10 @@ async function load() {
         chatContext.drawImage(pageRenderer.pageImage, 16, 16, 512, 512);
     }
     function redraw() {
-        const playing = !!currentPlayMessage;
+        var _a;
+        const playing = !!exports.client.zone.lastPlayedItem;
         youtube.hidden = !player.playing;
-        httpvideo.hidden = !playing || (currentPlayMessage === null || currentPlayMessage === void 0 ? void 0 : currentPlayMessage.item.media.source.type) !== 'archive';
+        httpvideo.hidden = !playing || ((_a = exports.client.zone.lastPlayedItem) === null || _a === void 0 ? void 0 : _a.media.source.type) !== 'archive';
         archive.hidden = true; // !playing || currentPlayMessage?.item.media.source.type !== "archive";
         zoneLogo.hidden = playing;
         drawZone();
@@ -1461,7 +1449,7 @@ async function enter() {
     await connect();
 }
 
-},{"../common/client":16,"../common/utility":18,"../common/zone":19,"./chat":11,"./text":13,"./utility":14,"./youtube":15,"blitsy":7}],13:[function(require,module,exports){
+},{"../common/client":16,"../common/utility":18,"./chat":11,"./text":13,"./utility":14,"./youtube":15,"blitsy":7}],13:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 const blitsy_1 = require("blitsy");
@@ -1972,11 +1960,24 @@ function errorEventToYoutubeError(event) {
 Object.defineProperty(exports, "__esModule", { value: true });
 const messaging_1 = require("./messaging");
 const events_1 = require("events");
+const utility_1 = require("./utility");
+const zone_1 = require("./zone");
+function isYoutube(item) {
+    return item.source.type === 'youtube';
+}
+function mediaEquals(a, b) {
+    return utility_1.objEqual(a.source, b.source);
+}
+exports.DEFAULT_OPTIONS = {
+    quickResponseTimeout: 1000,
+    slowResponseTimeout: 5000,
+};
 class ZoneClient extends events_1.EventEmitter {
-    constructor() {
+    constructor(options = {}) {
         super();
         this.messaging = new messaging_1.default();
-        this.queue = [];
+        this.zone = new zone_1.ZoneState();
+        this.options = Object.assign({}, exports.DEFAULT_OPTIONS, options);
         this.addStandardListeners();
     }
     get localUserId() {
@@ -1984,7 +1985,7 @@ class ZoneClient extends events_1.EventEmitter {
         return (_a = this.assignation) === null || _a === void 0 ? void 0 : _a.userId;
     }
     clear() {
-        this.queue.length = 0;
+        this.zone.clear();
     }
     async expect(type, timeout) {
         return new Promise((resolve, reject) => {
@@ -1997,7 +1998,7 @@ class ZoneClient extends events_1.EventEmitter {
         var _a;
         options.token = options.token || ((_a = this.assignation) === null || _a === void 0 ? void 0 : _a.token);
         return new Promise((resolve, reject) => {
-            this.expect('assign', 500).then(resolve, reject);
+            this.expect('assign', this.options.quickResponseTimeout).then(resolve, reject);
             this.expect('reject').then(reject);
             this.messaging.send('join', options);
         }).then((assign) => {
@@ -2005,23 +2006,72 @@ class ZoneClient extends events_1.EventEmitter {
             return assign;
         });
     }
-    async search(query, lucky = false) {
+    async heartbeat() {
         return new Promise((resolve, reject) => {
-            this.expect('search', 2000).then(resolve, reject);
-            this.messaging.send('search', { query, lucky });
+            this.expect('heartbeat', this.options.quickResponseTimeout).then(resolve, reject);
+            this.messaging.send('heartbeat', {});
         });
     }
+    async resync() {
+        return new Promise((resolve, reject) => {
+            this.expect('play', this.options.quickResponseTimeout).then(resolve, reject);
+            this.messaging.send('resync');
+        });
+    }
+    async search(query) {
+        return new Promise((resolve, reject) => {
+            this.expect('search', this.options.slowResponseTimeout).then(resolve, reject);
+            this.messaging.send('search', { query });
+        });
+    }
+    async lucky(query) {
+        return new Promise((resolve, reject) => {
+            this.expect('queue', this.options.slowResponseTimeout).then(resolve, reject);
+            this.messaging.send('search', { query, lucky: true });
+        });
+    }
+    async youtube(videoId) {
+        return new Promise((resolve, reject) => {
+            setTimeout(() => reject('timeout'), this.options.slowResponseTimeout);
+            this.messaging.messages.on('queue', (queue) => {
+                const media = queue.items[0].media;
+                if (isYoutube(media) && media.source.videoId === videoId)
+                    resolve(queue);
+            });
+            this.messaging.send('youtube', { videoId });
+        });
+    }
+    async skip(password) {
+        if (!this.zone.lastPlayedItem)
+            return;
+        this.messaging.send('skip', {
+            password,
+            source: this.zone.lastPlayedItem.media.source,
+        });
+    }
+    async unplayable(source) {
+        var _a;
+        source = source || ((_a = this.zone.lastPlayedItem) === null || _a === void 0 ? void 0 : _a.media.source);
+        if (!source)
+            return;
+        this.messaging.send('error', { source });
+    }
     addStandardListeners() {
-        this.messaging.on('error', (error) => console.log('hmm', error));
+        this.messaging.messages.on('play', (message) => {
+            this.zone.lastPlayedItem = message.item;
+            const index = this.zone.queue.findIndex((item) => mediaEquals(item.media, message.item.media));
+            if (index >= 0)
+                this.zone.queue.splice(index, 1);
+        });
         this.messaging.messages.on('queue', (message) => {
-            this.queue.push(...message.items);
+            this.zone.queue.push(...message.items);
         });
     }
 }
 exports.ZoneClient = ZoneClient;
 exports.default = ZoneClient;
 
-},{"./messaging":17,"events":10}],17:[function(require,module,exports){
+},{"./messaging":17,"./utility":18,"./zone":19,"events":10}],17:[function(require,module,exports){
 "use strict";
 var __rest = (this && this.__rest) || function (s, e) {
     var t = {};
@@ -2061,7 +2111,7 @@ class Messaging extends events_1.EventEmitter {
         this.socket.close(code);
         await waiter;
     }
-    send(type, message) {
+    send(type, message = {}) {
         if (!this.socket) {
             this.emit('error', new Error('no socket'));
             return;
@@ -2107,9 +2157,12 @@ const utility_1 = require("./utility");
 class ZoneState {
     constructor() {
         this.users = new Map();
+        this.queue = [];
     }
-    reset() {
+    clear() {
         this.users.clear();
+        this.queue.length = 0;
+        this.lastPlayedItem = undefined;
     }
     getUser(userId) {
         return utility_1.getDefault(this.users, userId, () => ({ userId, emotes: [] }));
