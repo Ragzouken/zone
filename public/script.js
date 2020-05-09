@@ -1012,12 +1012,17 @@ function socket() {
     });
 }
 let joinPassword;
+let remember;
 async function connect() {
     const user = getLocalUser();
     exports.client.clear();
     exports.client.messaging.setSocket(await socket());
     try {
         await exports.client.join({ name: localName, password: joinPassword });
+        chat.log('{clr=#00FF00}*** connected ***');
+        if (!remember)
+            listHelp();
+        listUsers();
     }
     catch (e) {
         chat.log('{clr=#FF00FF}! enter server password with /password)');
@@ -1032,6 +1037,35 @@ async function connect() {
         }
     }
 }
+function listUsers() {
+    const named = Array.from(exports.client.zone.users.values()).filter((user) => !!user.name);
+    if (named.length === 0) {
+        chat.log('{clr=#FF00FF}! no other users');
+    }
+    else {
+        const names = named.map((user) => user.name);
+        const line = names.join('{clr=#FF00FF}, {clr=#FF0000}');
+        chat.log(`{clr=#FF00FF}! ${names.length} users: {clr=#FF0000}${line}`);
+    }
+}
+const help = [
+    'press tab: toggle typing/controls',
+    'press q: toggle queue',
+    'press 1/2/3: toggle emotes',
+    '/youtube videoId',
+    '/search query terms',
+    '/lucky search terms',
+    '/skip',
+    '/avatar',
+    '/users',
+    '/name',
+    '/notify',
+    '/volume 100',
+    '/resync',
+].join('\n');
+function listHelp() {
+    chat.log('{clr=#FFFF00}? /help\n' + help);
+}
 async function load() {
     setVolume(parseInt(localStorage.getItem('volume') || '100', 10));
     const youtube = document.querySelector('#youtube');
@@ -1045,7 +1079,6 @@ async function load() {
         return exports.client.zone.getUser(userId).name || userId;
     }
     let showQueue = false;
-    let remember;
     exports.client.messaging.on('close', async (code) => {
         console.log(code);
         remember = getLocalUser();
@@ -1093,26 +1126,8 @@ async function load() {
         }
         currentPlayStart = performance.now() - time;
     });
-    exports.client.messaging.messages.on('users', (message) => {
-        chat.log('{clr=#00FF00}*** connected ***');
-        if (!remember)
-            listHelp();
-        exports.client.zone.users.clear();
-        message.users.forEach((user) => {
-            exports.client.zone.users.set(user.userId, user);
-        });
-        listUsers();
-    });
-    exports.client.messaging.messages.on('leave', (message) => {
-        const username = getUsername(message.userId);
-        chat.log(`{clr=#FF00FF}! {clr=#FF0000}${username}{clr=#FF00FF} left`);
-        exports.client.zone.users.delete(message.userId);
-    });
-    exports.client.messaging.messages.on('move', (message) => {
-        const user = exports.client.zone.getUser(message.userId);
-        if (user !== getLocalUser() || !user.position)
-            user.position = message.position;
-    });
+    exports.client.on('leave', (event) => chat.log(`{clr=#FF00FF}! {clr=#FF0000}${event.user.name}{clr=#FF00FF} left`));
+    exports.client.on('status', (event) => chat.log(`{clr=#FF00FF}! ${event.text}`));
     exports.client.messaging.messages.on('avatar', (message) => {
         exports.client.zone.getUser(message.userId).avatar = message.data;
         if (message.userId === exports.client.localUserId)
@@ -1126,9 +1141,6 @@ async function load() {
             }
         }
     });
-    exports.client.messaging.messages.on('emotes', (message) => {
-        exports.client.zone.getUser(message.userId).emotes = message.emotes;
-    });
     exports.client.messaging.messages.on('chat', (message) => {
         const name = getUsername(message.userId);
         chat.log(`{clr=#FF0000}${name}:{-clr} ${message.text}`);
@@ -1136,7 +1148,6 @@ async function load() {
             notify(name, message.text, 'chat');
         }
     });
-    exports.client.messaging.messages.on('status', (message) => chat.log(`{clr=#FF00FF}! ${message.text}`));
     exports.client.messaging.messages.on('name', (message) => {
         const next = message.name;
         if (message.userId === exports.client.localUserId) {
@@ -1170,35 +1181,6 @@ async function load() {
             if (data)
                 exports.client.messaging.send('avatar', { data });
         }
-    }
-    function listUsers() {
-        const named = Array.from(exports.client.zone.users.values()).filter((user) => !!user.name);
-        if (named.length === 0) {
-            chat.log('{clr=#FF00FF}! no other users');
-        }
-        else {
-            const names = named.map((user) => user.name);
-            const line = names.join('{clr=#FF00FF}, {clr=#FF0000}');
-            chat.log(`{clr=#FF00FF}! ${names.length} users: {clr=#FF0000}${line}`);
-        }
-    }
-    const help = [
-        'press tab: toggle typing/controls',
-        'press q: toggle queue',
-        'press 1/2/3: toggle emotes',
-        '/youtube videoId',
-        '/search query terms',
-        '/lucky search terms',
-        '/skip',
-        '/avatar',
-        '/users',
-        '/name',
-        '/notify',
-        '/volume 100',
-        '/resync',
-    ].join('\n');
-    function listHelp() {
-        chat.log('{clr=#FFFF00}? /help\n' + help);
     }
     function playFromSearchResult(args) {
         const index = parseInt(args, 10) - 1;
@@ -2057,6 +2039,20 @@ class ZoneClient extends events_1.EventEmitter {
         this.messaging.send('error', { source });
     }
     addStandardListeners() {
+        this.messaging.messages.on('status', (message) => {
+            this.emit('status', { text: message.text });
+        });
+        this.messaging.messages.on('leave', (message) => {
+            const user = this.zone.getUser(message.userId);
+            this.zone.users.delete(message.userId);
+            this.emit('leave', { user });
+        });
+        this.messaging.messages.on('users', (message) => {
+            this.zone.users.clear();
+            message.users.forEach((user) => {
+                this.zone.users.set(user.userId, user);
+            });
+        });
         this.messaging.messages.on('play', (message) => {
             this.zone.lastPlayedItem = message.item;
             const index = this.zone.queue.findIndex((item) => mediaEquals(item.media, message.item.media));
@@ -2065,6 +2061,15 @@ class ZoneClient extends events_1.EventEmitter {
         });
         this.messaging.messages.on('queue', (message) => {
             this.zone.queue.push(...message.items);
+        });
+        this.messaging.messages.on('move', (message) => {
+            const user = this.zone.getUser(message.userId);
+            if (user.userId !== this.localUserId || !user.position) {
+                user.position = message.position;
+            }
+        });
+        this.messaging.messages.on('emotes', (message) => {
+            this.zone.getUser(message.userId).emotes = message.emotes;
         });
     }
 }

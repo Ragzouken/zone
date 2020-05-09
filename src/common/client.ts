@@ -3,19 +3,23 @@ import { QueueItem, PlayableMedia, PlayableSource } from '../server/playback';
 import { EventEmitter } from 'events';
 import { YoutubeVideo } from '../server/youtube';
 import { objEqual } from './utility';
-import { ZoneState } from './zone';
+import { ZoneState, UserState } from './zone';
 
+export type StatusMesage = { text: string };
 export type JoinMessage = { name: string; token?: string; password?: string };
 export type AssignMessage = { userId: string; token: string };
 export type RejectMessage = { text: string };
-export type UsersMessage = { users: any[] };
+export type UsersMessage = { users: UserState[] };
 export type NameMessage = { userId: string; name: string };
 export type LeaveMessage = { userId: string };
 export type PlayMessage = { item: QueueItem; time: number };
 export type QueueMessage = { items: QueueItem[] };
 export type SearchMessage = { query: string };
 export type ChatMessage = { text: string };
+
 export type MoveMessage = { position: number[] };
+export type UserMovedMessage = MoveMessage & { userId: string }; 
+
 export type EmotesMessage = { emotes: string[] };
 export type AvatarMessage = { data: string };
 
@@ -55,6 +59,11 @@ export const DEFAULT_OPTIONS: ClientOptions = {
     quickResponseTimeout: 1000,
     slowResponseTimeout: 5000,
 };
+
+export interface ZoneClient {
+    on(event: 'leave', callback: (event: { user: UserState }) => void): this;
+    on(event: 'status', callback: (event: { text: string }) => void): this;
+}
 
 export class ZoneClient extends EventEmitter {
     readonly options: ClientOptions;
@@ -152,6 +161,20 @@ export class ZoneClient extends EventEmitter {
     }
 
     private addStandardListeners() {
+        this.messaging.messages.on('status', (message: StatusMesage) => {
+            this.emit('status', { text: message.text });
+        });
+        this.messaging.messages.on('leave', (message: LeaveMessage) => {
+            const user = this.zone.getUser(message.userId);
+            this.zone.users.delete(message.userId);
+            this.emit('leave', { user });
+        });
+        this.messaging.messages.on('users', (message: UsersMessage) => {
+            this.zone.users.clear();
+            message.users.forEach((user: UserState) => {
+                this.zone.users.set(user.userId, user);
+            });
+        });
         this.messaging.messages.on('play', (message: PlayMessage) => {
             this.zone.lastPlayedItem = message.item;
 
@@ -160,6 +183,16 @@ export class ZoneClient extends EventEmitter {
         });
         this.messaging.messages.on('queue', (message: QueueMessage) => {
             this.zone.queue.push(...message.items);
+        });
+        this.messaging.messages.on('move', (message: UserMovedMessage) => {
+            const user = this.zone.getUser(message.userId);
+    
+            if (user.userId !== this.localUserId || !user.position) {
+                user.position = message.position;
+            }
+        });
+        this.messaging.messages.on('emotes', (message) => {
+            this.zone.getUser(message.userId).emotes = message.emotes;
         });
     }
 }

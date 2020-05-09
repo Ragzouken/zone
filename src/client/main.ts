@@ -176,6 +176,7 @@ function socket(): Promise<WebSocket> {
 }
 
 let joinPassword: string | undefined;
+let remember: UserState | undefined;
 
 async function connect() {
     const user = getLocalUser();
@@ -185,6 +186,9 @@ async function connect() {
 
     try {
         await client.join({ name: localName, password: joinPassword });
+        chat.log('{clr=#00FF00}*** connected ***');
+        if (!remember) listHelp();
+        listUsers();
     } catch (e) {
         chat.log('{clr=#FF00FF}! enter server password with /password)');
         return;
@@ -197,6 +201,38 @@ async function connect() {
             client.messaging.send('emotes', { emotes: user.emotes });
         }
     }
+}
+
+function listUsers() {
+    const named = Array.from(client.zone.users.values()).filter((user) => !!user.name);
+
+    if (named.length === 0) {
+        chat.log('{clr=#FF00FF}! no other users');
+    } else {
+        const names = named.map((user) => user.name);
+        const line = names.join('{clr=#FF00FF}, {clr=#FF0000}');
+        chat.log(`{clr=#FF00FF}! ${names.length} users: {clr=#FF0000}${line}`);
+    }
+}
+
+const help = [
+    'press tab: toggle typing/controls',
+    'press q: toggle queue',
+    'press 1/2/3: toggle emotes',
+    '/youtube videoId',
+    '/search query terms',
+    '/lucky search terms',
+    '/skip',
+    '/avatar',
+    '/users',
+    '/name',
+    '/notify',
+    '/volume 100',
+    '/resync',
+].join('\n');
+
+function listHelp() {
+    chat.log('{clr=#FFFF00}? /help\n' + help);
 }
 
 async function load() {
@@ -217,7 +253,6 @@ async function load() {
     }
 
     let showQueue = false;
-    let remember: UserState | undefined;
 
     client.messaging.on('close', async (code) => {
         console.log(code);
@@ -266,27 +301,9 @@ async function load() {
 
         currentPlayStart = performance.now() - time;
     });
+    client.on('leave', (event) => chat.log(`{clr=#FF00FF}! {clr=#FF0000}${event.user.name}{clr=#FF00FF} left`));
+    client.on('status', (event) => chat.log(`{clr=#FF00FF}! ${event.text}`));
 
-    client.messaging.messages.on('users', (message) => {
-        chat.log('{clr=#00FF00}*** connected ***');
-        if (!remember) listHelp();
-
-        client.zone.users.clear();
-        message.users.forEach((user: UserState) => {
-            client.zone.users.set(user.userId, user);
-        });
-        listUsers();
-    });
-    client.messaging.messages.on('leave', (message) => {
-        const username = getUsername(message.userId);
-        chat.log(`{clr=#FF00FF}! {clr=#FF0000}${username}{clr=#FF00FF} left`);
-        client.zone.users.delete(message.userId);
-    });
-    client.messaging.messages.on('move', (message) => {
-        const user = client.zone.getUser(message.userId);
-
-        if (user !== getLocalUser() || !user.position) user.position = message.position;
-    });
     client.messaging.messages.on('avatar', (message) => {
         client.zone.getUser(message.userId).avatar = message.data;
 
@@ -300,9 +317,6 @@ async function load() {
             }
         }
     });
-    client.messaging.messages.on('emotes', (message) => {
-        client.zone.getUser(message.userId).emotes = message.emotes;
-    });
     client.messaging.messages.on('chat', (message) => {
         const name = getUsername(message.userId);
         chat.log(`{clr=#FF0000}${name}:{-clr} ${message.text}`);
@@ -310,7 +324,6 @@ async function load() {
             notify(name, message.text, 'chat');
         }
     });
-    client.messaging.messages.on('status', (message) => chat.log(`{clr=#FF00FF}! ${message.text}`));
     client.messaging.messages.on('name', (message) => {
         const next = message.name;
         if (message.userId === client.localUserId) {
@@ -348,38 +361,6 @@ async function load() {
             const data = localStorage.getItem('avatar');
             if (data) client.messaging.send('avatar', { data });
         }
-    }
-
-    function listUsers() {
-        const named = Array.from(client.zone.users.values()).filter((user) => !!user.name);
-
-        if (named.length === 0) {
-            chat.log('{clr=#FF00FF}! no other users');
-        } else {
-            const names = named.map((user) => user.name);
-            const line = names.join('{clr=#FF00FF}, {clr=#FF0000}');
-            chat.log(`{clr=#FF00FF}! ${names.length} users: {clr=#FF0000}${line}`);
-        }
-    }
-
-    const help = [
-        'press tab: toggle typing/controls',
-        'press q: toggle queue',
-        'press 1/2/3: toggle emotes',
-        '/youtube videoId',
-        '/search query terms',
-        '/lucky search terms',
-        '/skip',
-        '/avatar',
-        '/users',
-        '/name',
-        '/notify',
-        '/volume 100',
-        '/resync',
-    ].join('\n');
-
-    function listHelp() {
-        chat.log('{clr=#FFFF00}? /help\n' + help);
     }
 
     function playFromSearchResult(args: string) {
