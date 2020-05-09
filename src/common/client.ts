@@ -64,12 +64,15 @@ export const DEFAULT_OPTIONS: ClientOptions = {
 };
 
 export interface ClientEventMap {
+    disconnect: (event: { clean: boolean }) => void;
+
     chat: (event: { user: UserState; text: string, local: boolean }) => void;
     join: (event: { user: UserState }) => void;
     leave: (event: { user: UserState }) => void;
     rename: (event: { user: UserState; previous: string, local: boolean }) => void;
     status: (event: { text: string }) => void;
 
+    play: (event: { message: PlayMessage }) => void;
     queue: (event: {item: QueueItem}) => void;
 }
 
@@ -193,6 +196,10 @@ export class ZoneClient extends EventEmitter {
     }
 
     private addStandardListeners() {
+        this.messaging.on('close', (code) => {
+            const clean = (code <= 1001);
+            this.emit('disconnect', { clean });
+        }); 
         this.messaging.messages.on('status', (message: StatusMesage) => {
             this.emit('status', { text: message.text });
         });
@@ -226,6 +233,8 @@ export class ZoneClient extends EventEmitter {
 
             const index = this.zone.queue.findIndex((item) => mediaEquals(item.media, message.item.media));
             if (index >= 0) this.zone.queue.splice(index, 1);
+
+            this.emit('play', { message });
         });
         this.messaging.messages.on('queue', (message: QueueMessage) => {
             if (message.items.length === 1) this.emit('queue', { item: message.items[0] });

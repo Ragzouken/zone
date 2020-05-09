@@ -255,10 +255,9 @@ async function load() {
 
     let showQueue = false;
 
-    client.messaging.on('close', async (code) => {
-        console.log(code);
+    client.on('disconnect', async ({ clean }) => {
+        if (clean) return;
         remember = getLocalUser();
-        if (code <= 1001) return;
         await sleep(100);
         await connect();
     });
@@ -269,7 +268,7 @@ async function load() {
         const time = secondsToTime(duration / 1000);
         chat.log(`{clr=#00FFFF}+ ${title} (${time}) added by {clr=#FF0000}${username}`);
     });
-    client.messaging.messages.on('play', (message: PlayMessage) => {
+    client.on('play', ({ message }) => {
         if (!message.item) {
             archive.src = '';
             player?.stop();
