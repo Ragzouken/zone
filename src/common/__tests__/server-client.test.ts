@@ -1,5 +1,5 @@
 import { once } from 'events';
-import { MessageMap } from '../client';
+import { MessageMap, RecvChat } from '../client';
 import { copy, sleep } from '../utility';
 import { ARCHIVE_PATH_TO_MEDIA, YOUTUBE_VIDEOS, TINY_MEDIA, DAY_MEDIA } from './media.data';
 import { zoneServer } from './utilities';
@@ -196,6 +196,18 @@ describe('user presence', () => {
         { type: 'emotes', emotes: ['shk', 'wvy'] },
         { type: 'avatar', data: 'AGb/w+f/WmY=' },
     ];
+
+    test('client chat', async () => {
+        const message = 'hello baby yoda';
+        await zoneServer({}, async (server) => {
+            const client = await server.client();
+            await client.join({ name: NAME });
+            const waiter = once(client, 'chat');
+            client.chat(message);
+            const chat = (await waiter)[0];
+            expect(chat.text).toEqual(message);
+        });
+    });
 
     it.each(MESSAGES)('echoes own change', async ({ type, ...message }) => {
         await zoneServer({}, async (server) => {
