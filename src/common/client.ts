@@ -101,10 +101,17 @@ export class ZoneClient extends EventEmitter {
         });
     }
 
-    async search(query: string, lucky = false) {
+    async search(query: string) {
         return new Promise<SearchResult>((resolve, reject) => {
             this.expect('search', this.options.slowResponseTimeout).then(resolve as any, reject);
-            this.messaging.send('search', { query, lucky });
+            this.messaging.send('search', { query });
+        });
+    }
+
+    async lucky(query: string) {
+        return new Promise<QueueMessage>((resolve, reject) => {
+            this.expect('queue', this.options.slowResponseTimeout).then(resolve, reject);
+            this.messaging.send('search', { query, lucky: true });
         });
     }
 

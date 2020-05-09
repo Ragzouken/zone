@@ -11,7 +11,7 @@ import Playback from '../../server/playback';
 
 export const TEST_CLIENT_OPTIONS: Partial<ClientOptions> = {
     quickResponseTimeout: 50,
-    slowResponseTimeout: 1000,
+    slowResponseTimeout: 2000,
 }
 
 export function timeout(emitter: EventEmitter, event: string, ms: number) {

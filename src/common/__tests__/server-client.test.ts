@@ -1,6 +1,5 @@
 import { once } from 'events';
 import { MessageMap } from '../client';
-import { QueueItem } from '../../server/playback';
 import { copy, sleep } from '../utility';
 import { ARCHIVE_PATH_TO_MEDIA, YOUTUBE_VIDEOS, TINY_MEDIA, DAY_MEDIA } from './media.data';
 import { zoneServer } from './utilities';
@@ -435,18 +434,15 @@ describe('media sources', () => {
         });
     });
 
-    it('can play youtube video', async () => {
+    it('can queue youtube video', async () => {
         await zoneServer({}, async (server) => {
             const source = YOUTUBE_VIDEOS[0].source;
 
             const client = await server.client();
             await client.join({ name: NAME });
 
-            const waiter = client.expect('play');
-            client.messaging.send('youtube', { videoId: source.videoId });
-            const message = await waiter;
-
-            expect(message.item.media.source).toEqual(source);
+            const { items } = await client.youtube(source.videoId);
+            expect(items[0].media.source).toEqual(source);
         });
     });
 
@@ -454,10 +450,7 @@ describe('media sources', () => {
         await zoneServer({}, async (server) => {
             const client = await server.client();
             await client.join({ name: NAME });
-
-            const waiter = client.expect('search');
-            client.messaging.send('search', { query: 'hello' });
-            await waiter;
+            await client.search('hello');
         });
     });
 
@@ -465,10 +458,7 @@ describe('media sources', () => {
         await zoneServer({}, async (server) => {
             const client = await server.client();
             await client.join({ name: NAME });
-
-            const waiter = client.expect('play');
-            client.messaging.send('search', { query: 'hello', lucky: true });
-            await waiter;
+            await client.lucky('hello');
         });
     });
 });
