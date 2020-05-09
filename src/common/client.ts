@@ -94,6 +94,13 @@ export class ZoneClient extends EventEmitter {
         });
     }
 
+    async heartbeat() {
+        return new Promise<{}>((resolve, reject) => {
+            this.expect('heartbeat', this.options.quickResponseTimeout).then(resolve, reject);
+            this.messaging.send('heartbeat', {});
+        })
+    }
+
     async resync() {
         return new Promise<PlayMessage>((resolve, reject) => {
             this.expect('play', this.options.quickResponseTimeout).then(resolve, reject);

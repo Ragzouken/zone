@@ -12,10 +12,7 @@ describe('connectivity', () => {
         await zoneServer({}, async (server) => {
             const client = await server.client();
             await client.join({ name: NAME });
-
-            const waiter = client.expect('heartbeat');
-            client.messaging.send('heartbeat', {});
-            await waiter;
+            await client.heartbeat();
         });
     });
 
