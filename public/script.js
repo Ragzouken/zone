@@ -1919,6 +1919,17 @@ function errorEventToYoutubeError(event) {
 
 },{"../common/utility":18,"events":10}],16:[function(require,module,exports){
 "use strict";
+var __rest = (this && this.__rest) || function (s, e) {
+    var t = {};
+    for (var p in s) if (Object.prototype.hasOwnProperty.call(s, p) && e.indexOf(p) < 0)
+        t[p] = s[p];
+    if (s != null && typeof Object.getOwnPropertySymbols === "function")
+        for (var i = 0, p = Object.getOwnPropertySymbols(s); i < p.length; i++) {
+            if (e.indexOf(p[i]) < 0 && Object.prototype.propertyIsEnumerable.call(s, p[i]))
+                t[p[i]] = s[p[i]];
+        }
+    return t;
+};
 Object.defineProperty(exports, "__esModule", { value: true });
 const messaging_1 = require("./messaging");
 const events_1 = require("events");
@@ -1952,8 +1963,8 @@ class ZoneClient extends events_1.EventEmitter {
     async rename(name) {
         return new Promise((resolve, reject) => {
             setTimeout(() => reject('timeout'), this.options.quickResponseTimeout);
-            utility_1.specifically(this.messaging.messages, 'name', (message) => message.userId === this.localUserId, resolve);
-            this.messaging.send('name', { name });
+            utility_1.specifically(this.messaging.messages, 'user', (message) => message.userId === this.localUserId && message.name === name, resolve);
+            this.messaging.send('user', { name });
         });
     }
     async expect(type, timeout) {
@@ -1994,13 +2005,13 @@ class ZoneClient extends events_1.EventEmitter {
         this.messaging.send('chat', { text });
     }
     async move(position) {
-        this.messaging.send('move', { position });
+        this.messaging.send('user', { position });
     }
-    async avatar(data) {
-        this.messaging.send('avatar', { data });
+    async avatar(avatar) {
+        this.messaging.send('user', { avatar });
     }
     async emotes(emotes) {
-        this.messaging.send('emotes', { emotes });
+        this.messaging.send('user', { emotes });
     }
     async search(query) {
         return new Promise((resolve, reject) => {
@@ -2047,16 +2058,6 @@ class ZoneClient extends events_1.EventEmitter {
         this.messaging.messages.on('status', (message) => {
             this.emit('status', { text: message.text });
         });
-        this.messaging.messages.on('name', (message) => {
-            const user = this.zone.getUser(message.userId);
-            const local = user.userId === this.localUserId;
-            const previous = user.name;
-            user.name = message.name;
-            if (previous)
-                this.emit('rename', { user, previous, local });
-            else
-                this.emit('join', { user });
-        });
         this.messaging.messages.on('leave', (message) => {
             const user = this.zone.getUser(message.userId);
             this.zone.users.delete(message.userId);
@@ -2085,25 +2086,26 @@ class ZoneClient extends events_1.EventEmitter {
                 this.emit('queue', { item: message.items[0] });
             this.zone.queue.push(...message.items);
         });
-        this.messaging.messages.on('move', (message) => {
+        this.messaging.messages.on('user', (message) => {
             const user = this.zone.getUser(message.userId);
             const local = user.userId === this.localUserId;
-            if (!local || !user.position) {
-                user.position = message.position;
+            const prev = Object.assign({}, user);
+            const { userId } = message, changes = __rest(message, ["userId"]);
+            if (local && prev.position)
+                delete changes.position;
+            Object.assign(user, changes);
+            if (!prev.name) {
+                this.emit('join', { user });
             }
-            this.emit('move', { user, local, position: message.position });
-        });
-        this.messaging.messages.on('emotes', (message) => {
-            const user = this.zone.getUser(message.userId);
-            const local = user.userId === this.localUserId;
-            user.emotes = message.emotes;
-            this.emit('emotes', { user, local, emotes: message.emotes });
-        });
-        this.messaging.messages.on('avatar', (message) => {
-            const user = this.zone.getUser(message.userId);
-            const local = user.userId === this.localUserId;
-            user.avatar = message.data;
-            this.emit('avatar', { user, local, data: message.data });
+            else if (prev.name !== user.name) {
+                this.emit('rename', { user, local, previous: prev.name });
+            }
+            if (changes.position) {
+                this.emit('move', { user, local, position: changes.position });
+            }
+            if (changes.emotes) {
+                this.emit('emotes', { user, local, emotes: changes.emotes });
+            }
         });
     }
 }

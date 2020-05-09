@@ -302,7 +302,7 @@ export function host(adapter: low.AdapterSync, options: Partial<HostOptions> = {
 
         messaging.messages.on('user', (changes: Partial<UserState>) => {
             const { value, error } = MESSAGE_SCHEMAS.get('user')!.validate(changes);
-            
+
             if (error) {
                 sendOnly('reject', { text: error.details[0].message }, user.userId);
             } else {
