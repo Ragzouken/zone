@@ -608,10 +608,12 @@ async function load() {
 }
 
 function setupEntrySplash() {
-    const entrySplash = document.querySelector('#entry-splash') as HTMLElement;
-    const entryButton = document.querySelector('#entry-button') as HTMLButtonElement;
+    const entrySplash = document.getElementById('entry-splash') as HTMLElement;
+    const entryButton = document.getElementById('entry-button') as HTMLInputElement;
+    const entryForm   = document.getElementById('entry'       ) as HTMLFormElement;
     entryButton.disabled = false;
-    entryButton.addEventListener('click', () => {
+    entryForm.addEventListener('submit', (e) => {
+        e.preventDefault();
         entrySplash.hidden = true;
         enter();
     });

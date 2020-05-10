@@ -1398,10 +1398,12 @@ async function load() {
     setupEntrySplash();
 }
 function setupEntrySplash() {
-    const entrySplash = document.querySelector('#entry-splash');
-    const entryButton = document.querySelector('#entry-button');
+    const entrySplash = document.getElementById('entry-splash');
+    const entryButton = document.getElementById('entry-button');
+    const entryForm = document.getElementById('entry');
     entryButton.disabled = false;
-    entryButton.addEventListener('click', () => {
+    entryForm.addEventListener('submit', (e) => {
+        e.preventDefault();
         entrySplash.hidden = true;
         enter();
     });
