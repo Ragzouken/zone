@@ -201,13 +201,10 @@ export class ZoneClient extends EventEmitter {
         });
     }
 
-    async skip(password?: string) {
-        if (!this.zone.lastPlayedItem) return;
-
-        this.messaging.send('skip', {
-            password,
-            source: this.zone.lastPlayedItem.media.source,
-        });
+    async skip() {
+        const source = this.zone.lastPlayedItem?.media.source;
+        if (!source) return;
+        this.messaging.send('skip', { source });
     }
 
     async unplayable(source?: PlayableSource) {

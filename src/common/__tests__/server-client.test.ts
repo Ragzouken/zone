@@ -368,23 +368,6 @@ describe('playback', () => {
         });
     });
 
-    it('skips with password', async () => {
-        const password = 'riverdale';
-        await zoneServer({ voteSkipThreshold: 2, skipPassword: password }, async (server) => {
-            const client = await server.client();
-
-            server.hosting.playback.queueMedia(DAY_MEDIA);
-
-            const played = client.expect('play');
-            await client.join();
-            await played;
-
-            const skipped = client.expect('play');
-            client.skip(password);
-            await skipped;
-        });
-    });
-
     it("doesn't skip with insufficient votes", async () => {
         await zoneServer({ voteSkipThreshold: 2 }, async (server) => {
             const client = await server.client();

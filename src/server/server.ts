@@ -27,7 +27,7 @@ export type HostOptions = {
     errorSkipThreshold: number;
 
     joinPassword?: string;
-    skipPassword?: string;
+    authPassword?: string;
 
     playbackPaddingTime: number;
 };
@@ -156,20 +156,16 @@ export function host(xws: expressWs.Instance, adapter: low.AdapterSync, options:
         }
     }
 
-    function voteSkip(source: PlayableSource, user: UserState, password?: string) {
+    function voteSkip(source: PlayableSource, user: UserState) {
         if (!playback.currentItem || !objEqual(source, playback.currentItem.media.source)) return;
 
-        if (opts.skipPassword && password === opts.skipPassword) {
-            playback.skip();
+        skips.add(user.userId);
+        const current = skips.size;
+        const target = Math.ceil(zone.users.size * opts.voteSkipThreshold);
+        if (current >= target) {
+            skip(`voted to skip ${playback.currentItem.media.details.title}`);
         } else {
-            skips.add(user.userId);
-            const current = skips.size;
-            const target = Math.ceil(zone.users.size * opts.voteSkipThreshold);
-            if (current >= target) {
-                skip(`voted to skip ${playback.currentItem.media.details.title}`);
-            } else {
-                sendAll('status', { text: `${current} of ${target} votes to skip` });
-            }
+            sendAll('status', { text: `${current} of ${target} votes to skip` });
         }
     }
 
@@ -300,7 +296,7 @@ export function host(xws: expressWs.Instance, adapter: low.AdapterSync, options:
         });
 
         messaging.messages.on('error', (message: any) => voteError(message.source, user));
-        messaging.messages.on('skip', (message: any) => voteSkip(message.source, user, message.password));
+        messaging.messages.on('skip', (message: any) => voteSkip(message.source, user));
 
         messaging.messages.on('user', (changes: Partial<UserState>) => {
             const { value, error } = MESSAGE_SCHEMAS.get('user')!.validate(changes);
@@ -314,7 +310,7 @@ export function host(xws: expressWs.Instance, adapter: low.AdapterSync, options:
         });
 
         messaging.messages.on('auth', (message: SendAuth) => {
-            if ((message.password || {}) !== message.password) return;
+            if ((message.password || {}) !== opts.authPassword) return;
             
             authorised.add(user);
             sendUser('status', { text: 'you are now authorised' });
