@@ -20,6 +20,9 @@ export type RecvChat = { text: string; userId: string };
 
 export type SearchResult = { results: YoutubeVideo[] };
 
+export type SendAuth = { password: string };
+export type SendCommand = { name: string; args: any[] };
+
 function isYoutube(item: PlayableMedia): item is YoutubeVideo {
     return item.source.type === 'youtube';
 }
@@ -100,19 +103,6 @@ export class ZoneClient extends EventEmitter {
         this.zone.clear();
     }
 
-    async rename(name: string): Promise<UserState> {
-        return new Promise((resolve, reject) => {
-            setTimeout(() => reject('timeout'), this.options.quickResponseTimeout);
-            specifically(
-                this.messaging.messages,
-                'user',
-                (message: UserState) => message.userId === this.localUserId && message.name === name,
-                resolve,
-            );
-            this.messaging.send('user', { name });
-        });
-    }
-
     async expect<K extends keyof MessageMap>(type: K, timeout?: number): Promise<MessageMap[K]> {
         return new Promise((resolve, reject) => {
             if (timeout) setTimeout(() => reject('timeout'), timeout);
@@ -143,10 +133,31 @@ export class ZoneClient extends EventEmitter {
         });
     }
 
+    async auth(password: string) {
+        this.messaging.send('auth', { password });
+    }
+
+    async command(name: string, args: any[] = []) {
+        this.messaging.send('command', { name, args });
+    }
+
     async resync() {
         return new Promise<PlayMessage>((resolve, reject) => {
             this.expect('play', this.options.quickResponseTimeout).then(resolve, reject);
             this.messaging.send('resync');
+        });
+    }
+
+    async rename(name: string): Promise<UserState> {
+        return new Promise((resolve, reject) => {
+            setTimeout(() => reject('timeout'), this.options.quickResponseTimeout);
+            specifically(
+                this.messaging.messages,
+                'user',
+                (message: UserState) => message.userId === this.localUserId && message.name === name,
+                resolve,
+            );
+            this.messaging.send('user', { name });
         });
     }
 
@@ -190,13 +201,10 @@ export class ZoneClient extends EventEmitter {
         });
     }
 
-    async skip(password?: string) {
-        if (!this.zone.lastPlayedItem) return;
-
-        this.messaging.send('skip', {
-            password,
-            source: this.zone.lastPlayedItem.media.source,
-        });
+    async skip() {
+        const source = this.zone.lastPlayedItem?.media.source;
+        if (!source) return;
+        this.messaging.send('skip', { source });
     }
 
     async unplayable(source?: PlayableSource) {

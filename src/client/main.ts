@@ -393,7 +393,7 @@ async function load() {
     chatCommands.set('youtube', (videoId) => {
         client.youtube(videoId).catch(() => chat.status("couldn't queue video :("));
     });
-    chatCommands.set('skip', (password) => client.skip(password));
+    chatCommands.set('skip', () => client.skip());
     chatCommands.set('password', (args) => (joinPassword = args));
     chatCommands.set('users', () => listUsers());
     chatCommands.set('help', () => listHelp());
@@ -420,6 +420,9 @@ async function load() {
     });
     chatCommands.set('name', rename);
     chatCommands.set('archive', (path) => client.messaging.send('archive', { path }));
+
+    chatCommands.set('auth', (password) => client.auth(password));
+    chatCommands.set('admin', (args) => client.command(args.split(',')[0], args.split(',').slice(1)));
 
     function toggleEmote(emote: string) {
         const emotes = getLocalUser()!.emotes;

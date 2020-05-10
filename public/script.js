@@ -1211,7 +1211,7 @@ async function load() {
     chatCommands.set('youtube', (videoId) => {
         exports.client.youtube(videoId).catch(() => chat.status("couldn't queue video :("));
     });
-    chatCommands.set('skip', (password) => exports.client.skip(password));
+    chatCommands.set('skip', () => exports.client.skip());
     chatCommands.set('password', (args) => (joinPassword = args));
     chatCommands.set('users', () => listUsers());
     chatCommands.set('help', () => listHelp());
@@ -1239,6 +1239,8 @@ async function load() {
     });
     chatCommands.set('name', rename);
     chatCommands.set('archive', (path) => exports.client.messaging.send('archive', { path }));
+    chatCommands.set('auth', (password) => exports.client.auth(password));
+    chatCommands.set('admin', (args) => exports.client.command(args.split(',')[0], args.split(',').slice(1)));
     function toggleEmote(emote) {
         const emotes = getLocalUser().emotes;
         if (emotes.includes(emote))
@@ -1962,13 +1964,6 @@ class ZoneClient extends events_1.EventEmitter {
     clear() {
         this.zone.clear();
     }
-    async rename(name) {
-        return new Promise((resolve, reject) => {
-            setTimeout(() => reject('timeout'), this.options.quickResponseTimeout);
-            utility_1.specifically(this.messaging.messages, 'user', (message) => message.userId === this.localUserId && message.name === name, resolve);
-            this.messaging.send('user', { name });
-        });
-    }
     async expect(type, timeout) {
         return new Promise((resolve, reject) => {
             if (timeout)
@@ -1997,10 +1992,23 @@ class ZoneClient extends events_1.EventEmitter {
             this.messaging.send('heartbeat', {});
         });
     }
+    async auth(password) {
+        this.messaging.send('auth', { password });
+    }
+    async command(name, args) {
+        this.messaging.send('command', { name, args });
+    }
     async resync() {
         return new Promise((resolve, reject) => {
             this.expect('play', this.options.quickResponseTimeout).then(resolve, reject);
             this.messaging.send('resync');
+        });
+    }
+    async rename(name) {
+        return new Promise((resolve, reject) => {
+            setTimeout(() => reject('timeout'), this.options.quickResponseTimeout);
+            utility_1.specifically(this.messaging.messages, 'user', (message) => message.userId === this.localUserId && message.name === name, resolve);
+            this.messaging.send('user', { name });
         });
     }
     async chat(text) {
@@ -2037,13 +2045,12 @@ class ZoneClient extends events_1.EventEmitter {
             this.messaging.send('youtube', { videoId });
         });
     }
-    async skip(password) {
-        if (!this.zone.lastPlayedItem)
+    async skip() {
+        var _a;
+        const source = (_a = this.zone.lastPlayedItem) === null || _a === void 0 ? void 0 : _a.media.source;
+        if (!source)
             return;
-        this.messaging.send('skip', {
-            password,
-            source: this.zone.lastPlayedItem.media.source,
-        });
+        this.messaging.send('skip', { source });
     }
     async unplayable(source) {
         var _a;
