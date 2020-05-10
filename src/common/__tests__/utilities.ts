@@ -4,6 +4,9 @@ import * as WebSocket from 'ws';
 import Messaging from '../messaging';
 import { Server } from 'http';
 
+import * as express from 'express';
+import * as expressWs from 'express-ws';
+
 import * as Memory from 'lowdb/adapters/Memory';
 import { host, HostOptions } from '../../server/server';
 import ZoneClient, { ClientOptions } from '../../common/client';
@@ -47,7 +50,9 @@ export class ZoneServer {
     private readonly sockets: WebSocket[] = [];
 
     constructor(options?: Partial<HostOptions>) {
-        this.hosting = host(new Memory(''), options);
+        const xws = expressWs(express());
+        const server = xws.app.listen(0);
+        this.hosting = { ...host(xws,new Memory(''), options), server };
     }
 
     public async socket() {
