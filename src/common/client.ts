@@ -137,7 +137,7 @@ export class ZoneClient extends EventEmitter {
         this.messaging.send('auth', { password });
     }
 
-    async command(name: string, args: any[]) {
+    async command(name: string, args: any[] = []) {
         this.messaging.send('command', { name, args });
     }
 
