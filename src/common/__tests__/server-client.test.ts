@@ -433,6 +433,49 @@ describe('playback', () => {
     });
 });
 
+describe('event mode', () => {
+    it("prevents non-dj queueing", async () => {
+        const authPassword = 'riverdale';
+        await zoneServer({ authPassword }, async (server) => {
+            const client = await server.client();
+            await client.join();
+            client.auth(authPassword);
+            client.command('mode', ['event']);
+
+            const queued = client.youtube(YOUTUBE_VIDEOS[0].source.videoId);
+            await expect(queued).rejects.toEqual('timeout');
+        });
+    });
+
+    it("allows dj to queue", async () => {
+        const authPassword = 'riverdale';
+        await zoneServer({ authPassword }, async (server) => {
+            const client = await server.client();
+            await client.join();
+            client.auth(authPassword);
+            client.command('mode', ['event']);
+            client.command('dj-add', [client.localUser!.name]);
+
+            await client.youtube(YOUTUBE_VIDEOS[0].source.videoId);
+        });
+    });
+
+    it("prevents former dj queueing", async () => {
+        const authPassword = 'riverdale';
+        await zoneServer({ authPassword }, async (server) => {
+            const client = await server.client();
+            await client.join();
+            client.auth(authPassword);
+            client.command('mode', ['event']);
+            client.command('dj-add', [client.localUser!.name]);
+            client.command('dj-del', [client.localUser!.name]);
+
+            const queued = client.youtube(YOUTUBE_VIDEOS[0].source.videoId);
+            await expect(queued).rejects.toEqual('timeout');
+        });
+    });
+});
+
 describe('media sources', () => {
     it('can play archive item', async () => {
         await zoneServer({}, async (server) => {
