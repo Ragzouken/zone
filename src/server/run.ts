@@ -9,12 +9,21 @@ import FileSync = require('lowdb/adapters/FileSync');
 
 const app = express();
 let server: http.Server | https.Server;
+let redirectServer: http.Server;
+
 const secure = process.env.CERT_PATH && process.env.KEY_PATH;
 
 if (secure) {
-    const key = fs.readFileSync(process.env.KEY_PATH!);
+    const key  = fs.readFileSync(process.env.KEY_PATH!);
     const cert = fs.readFileSync(process.env.CERT_PATH!);
     server = https.createServer({ key, cert }, app);
+
+    const redirectApp = express();
+    redirectServer = http.createServer(redirectApp);
+    redirectServer.listen(80, () => console.log('listening for http...'));
+    redirectApp.get('*', (req, res) => {
+        res.redirect(`https://${req.headers.host}${req.url}`);
+    });
 } else {
     server = http.createServer(app);
 }
