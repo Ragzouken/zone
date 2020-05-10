@@ -1995,7 +1995,7 @@ class ZoneClient extends events_1.EventEmitter {
     async auth(password) {
         this.messaging.send('auth', { password });
     }
-    async command(name, args) {
+    async command(name, args = []) {
         this.messaging.send('command', { name, args });
     }
     async resync() {

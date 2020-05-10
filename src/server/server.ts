@@ -94,6 +94,8 @@ export function host(xws: expressWs.Instance, adapter: low.AdapterSync, options:
     playback.paddingTime = opts.playbackPaddingTime;
 
     const youtube = new Youtube();
+    let eventMode = false;
+    const djs = new Set<UserState>();
 
     load();
 
@@ -165,12 +167,12 @@ export function host(xws: expressWs.Instance, adapter: low.AdapterSync, options:
         if (current >= target) {
             skip(`voted to skip ${playback.currentItem.media.details.title}`);
         } else {
-            sendAll('status', { text: `${current} of ${target} votes to skip` });
+            status(`${current} of ${target} votes to skip`);
         }
     }
 
     function skip(message?: string) {
-        if (message) sendAll('status', { text: message });
+        if (message) status(message);
         playback.skip();
     }
 
@@ -245,8 +247,38 @@ export function host(xws: expressWs.Instance, adapter: low.AdapterSync, options:
         sendCurrent(user);
     }
 
+    function ifUser(name: string, action: (user: UserState) => void) {
+        const user = userByName(name);
+        if (user) action(user);
+    }
+
+    function userByName(name: string) {
+        return Array.from(zone.users.values()).find((user) => user.name === name);
+    }
+
+    function status(text: string, user?: UserState) {
+        if (user) sendOnly('status', { text }, user.userId);
+        else sendAll('status', { text });
+    }
+
     const authCommands = new Map<string, (...args: any[]) => void>();
     authCommands.set('skip', () => skip(`admin skipped ${playback.currentItem!.media.details.title}`));
+    authCommands.set('mode', (mode: string) => {
+        eventMode = mode === 'event';
+        status(`event mode: ${eventMode}`);
+    });
+    authCommands.set('+dj', (name: string) =>
+        ifUser(name, (user) => {
+            djs.add(user);
+            status('you are a dj', user);
+        }),
+    );
+    authCommands.set('-dj', (name: string) =>
+        ifUser(name, (user) => {
+            djs.delete(user);
+            status('no longer a dj', user);
+        }),
+    );
 
     function bindMessagingToUser(user: UserState, messaging: Messaging, userIp: unknown) {
         function sendUser(type: string, message: any = {}) {
@@ -264,13 +296,18 @@ export function host(xws: expressWs.Instance, adapter: low.AdapterSync, options:
         messaging.messages.on('resync', () => sendCurrent(user));
 
         async function tryQueueMedia(media: PlayableMedia) {
+            if (eventMode && !djs.has(user)) {
+                status('zone is currently in event mode, only djs may queue', user);
+                return;
+            }
+
             const existing = playback.queue.find((queued) => objEqual(queued.media.source, media.source))?.media;
             const count = playback.queue.filter((item) => item.info.ip === userIp).length;
 
             if (existing) {
-                sendUser('status', { text: `'${existing.details.title}' is already queued` });
+                status(`'${existing.details.title}' is already queued`, user);
             } else if (count >= opts.perUserQueueLimit) {
-                sendUser('status', { text: `you already have ${count} videos in the queue` });
+                status(`you already have ${count} videos in the queue`, user);
             } else {
                 playback.queueMedia(media, { userId: user.userId, ip: userIp });
             }
@@ -312,7 +349,7 @@ export function host(xws: expressWs.Instance, adapter: low.AdapterSync, options:
             if ((message.password || {}) !== opts.authPassword) return;
 
             authorised.add(user);
-            sendUser('status', { text: 'you are now authorised' });
+            status('you are now authorised', user);
         });
 
         messaging.messages.on('command', (message: SendCommand) => {
@@ -323,7 +360,7 @@ export function host(xws: expressWs.Instance, adapter: low.AdapterSync, options:
             if (command) {
                 command(...args);
             } else {
-                sendUser('status', { text: `no command "${name}"` });
+                status(`no command "${name}"`, user);
             }
         });
     }
