@@ -1,12 +1,9 @@
 import { once } from 'events';
-import ZoneClient, { MessageMap } from '../client';
 import { copy, sleep } from '../utility';
 import { ARCHIVE_PATH_TO_MEDIA, YOUTUBE_VIDEOS, TINY_MEDIA, DAY_MEDIA } from './media.data';
 import { zoneServer } from './utilities';
-import { UserState } from '../zone';
 
 const IMMEDIATE_REPLY_TIMEOUT = 50;
-const NAME = 'baby yoda';
 
 describe('connectivity', () => {
     test('heartbeat response', async () => {
@@ -372,7 +369,7 @@ describe('playback', () => {
         const password = 'riverdale';
         await zoneServer({ authPassword: 'riverdale' }, async (server) => {
             server.hosting.playback.queueMedia(DAY_MEDIA);
-            
+
             const client = await server.client();
             await client.join();
 
@@ -432,6 +429,49 @@ describe('playback', () => {
             client.messaging.send('skip', { source });
 
             await expect(skip).rejects.toEqual('timeout');
+        });
+    });
+});
+
+describe('event mode', () => {
+    it("prevents non-dj queueing", async () => {
+        const authPassword = 'riverdale';
+        await zoneServer({ authPassword }, async (server) => {
+            const client = await server.client();
+            await client.join();
+            client.auth(authPassword);
+            client.command('mode', ['event']);
+
+            const queued = client.youtube(YOUTUBE_VIDEOS[0].source.videoId);
+            await expect(queued).rejects.toEqual('timeout');
+        });
+    });
+
+    it("allows dj to queue", async () => {
+        const authPassword = 'riverdale';
+        await zoneServer({ authPassword }, async (server) => {
+            const client = await server.client();
+            await client.join();
+            client.auth(authPassword);
+            client.command('mode', ['event']);
+            client.command('dj-add', [client.localUser!.name]);
+
+            await client.youtube(YOUTUBE_VIDEOS[0].source.videoId);
+        });
+    });
+
+    it("prevents former dj queueing", async () => {
+        const authPassword = 'riverdale';
+        await zoneServer({ authPassword }, async (server) => {
+            const client = await server.client();
+            await client.join();
+            client.auth(authPassword);
+            client.command('mode', ['event']);
+            client.command('dj-add', [client.localUser!.name]);
+            client.command('dj-del', [client.localUser!.name]);
+
+            const queued = client.youtube(YOUTUBE_VIDEOS[0].source.videoId);
+            await expect(queued).rejects.toEqual('timeout');
         });
     });
 });

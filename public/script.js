@@ -1240,7 +1240,17 @@ async function load() {
     chatCommands.set('name', rename);
     chatCommands.set('archive', (path) => exports.client.messaging.send('archive', { path }));
     chatCommands.set('auth', (password) => exports.client.auth(password));
-    chatCommands.set('admin', (args) => exports.client.command(args.split(',')[0], args.split(',').slice(1)));
+    chatCommands.set('admin', (args) => {
+        const i = args.indexOf(' ');
+        if (i >= 0) {
+            const name = args.substring(0, i);
+            const json = `[${args.substring(i + 1)}]`;
+            exports.client.command(name, JSON.parse(json));
+        }
+        else {
+            exports.client.command(args);
+        }
+    });
     function toggleEmote(emote) {
         const emotes = getLocalUser().emotes;
         if (emotes.includes(emote))
