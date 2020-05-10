@@ -26,6 +26,7 @@ html
             input#chat-input(type="text", placeholder="chat message...", maxlength="160")
         #entry-splash
             #entry-panel
-                h1 you are about to enter a zone
-                input#join-name(type="text", placeholder="your name...", maxlength="16")
-                button#entry-button(disabled) enter
+                form#entry
+                    h1 you are about to enter a zone
+                    input#join-name(type="text", placeholder="your name...", maxlength="16")
+                    input#entry-button(type="submit" value="enter" disabled)
