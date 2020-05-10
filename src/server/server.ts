@@ -63,8 +63,6 @@ export function host(adapter: low.AdapterSync, options: Partial<HostOptions> = {
     // this zone's websocket endpoint
     app.ws('/zone', (websocket, req) => waitJoin(websocket, req.ip));
 
-    const server = app.listen(opts.listenHandle);
-
     function ping() {
         xws.getWss().clients.forEach((websocket) => {
             try {
@@ -320,5 +318,5 @@ export function host(adapter: low.AdapterSync, options: Partial<HostOptions> = {
         connections.get(userId)!.send(type, message);
     }
 
-    return { server, zone, playback, app, save, sendAll };
+    return { zone, playback, app, save, sendAll };
 }
