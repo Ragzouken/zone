@@ -47,11 +47,7 @@ export const DEFAULT_OPTIONS: HostOptions = {
     playbackPaddingTime: 1 * SECONDS,
 };
 
-export function host(
-    xws: expressWs.Instance,
-    adapter: low.AdapterSync, 
-    options: Partial<HostOptions> = {},
-) {
+export function host(xws: expressWs.Instance, adapter: low.AdapterSync, options: Partial<HostOptions> = {}) {
     const opts = Object.assign({}, DEFAULT_OPTIONS, options);
 
     const db = low(adapter);

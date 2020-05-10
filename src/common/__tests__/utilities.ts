@@ -52,7 +52,7 @@ export class ZoneServer {
     constructor(options?: Partial<HostOptions>) {
         const xws = expressWs(express());
         const server = xws.app.listen(0);
-        this.hosting = { ...host(xws,new Memory(''), options), server };
+        this.hosting = { ...host(xws, new Memory(''), options), server };
     }
 
     public async socket() {
