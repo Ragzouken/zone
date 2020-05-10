@@ -1,4 +1,5 @@
 import * as express from 'express';
+import * as expressWs from 'express-ws';
 import * as http from 'http';
 import * as https from 'https';
 import * as fs from 'fs';
@@ -49,4 +50,5 @@ if (secure) {
     server = http.createServer(app);
 }
 
+const wss = expressWs(app, server);
 server.listen(process.env.PORT || 4000, () => console.log('listening...'));
