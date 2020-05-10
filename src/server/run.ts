@@ -27,7 +27,7 @@ const adapter = new FileSync(dataPath);
 
 const { save, sendAll, authCommands } = host(xws, adapter, {
     joinPassword: process.env.JOIN_PASSWORD,
-    skipPassword: process.env.SKIP_PASSWORD,
+    authPassword: process.env.AUTH_PASSWORD,
 });
 
 function update() {

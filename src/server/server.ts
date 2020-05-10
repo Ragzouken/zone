@@ -245,7 +245,6 @@ export function host(xws: expressWs.Instance, adapter: low.AdapterSync, options:
         sendCurrent(user);
     }
 
-
     const authCommands = new Map<string, (...args: any[]) => void>();
     authCommands.set('skip', () => skip(`admin skipped ${playback.currentItem!.media.details.title}`));
 
@@ -311,7 +310,7 @@ export function host(xws: expressWs.Instance, adapter: low.AdapterSync, options:
 
         messaging.messages.on('auth', (message: SendAuth) => {
             if ((message.password || {}) !== opts.authPassword) return;
-            
+
             authorised.add(user);
             sendUser('status', { text: 'you are now authorised' });
         });

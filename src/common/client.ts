@@ -21,7 +21,7 @@ export type RecvChat = { text: string; userId: string };
 export type SearchResult = { results: YoutubeVideo[] };
 
 export type SendAuth = { password: string };
-export type SendCommand = { name: string, args: any[] };
+export type SendCommand = { name: string; args: any[] };
 
 function isYoutube(item: PlayableMedia): item is YoutubeVideo {
     return item.source.type === 'youtube';
@@ -139,7 +139,7 @@ export class ZoneClient extends EventEmitter {
 
     async command(name: string, args: any[]) {
         this.messaging.send('command', { name, args });
-    } 
+    }
 
     async resync() {
         return new Promise<PlayMessage>((resolve, reject) => {
