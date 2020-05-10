@@ -261,6 +261,10 @@ export function host(xws: expressWs.Instance, adapter: low.AdapterSync, options:
         else sendAll('status', { text });
     }
 
+    function statusAuthed(text: string) {
+        authorised.forEach(user => status(text, user));
+    }
+
     const authCommands = new Map<string, (...args: any[]) => void>();
     authCommands.set('skip', () => skip(`admin skipped ${playback.currentItem!.media.details.title}`));
     authCommands.set('mode', (mode: string) => {
@@ -271,12 +275,14 @@ export function host(xws: expressWs.Instance, adapter: low.AdapterSync, options:
         ifUser(name, (user) => {
             djs.add(user);
             status('you are a dj', user);
+            statusAuthed(`${user.name} is a dj`);
         }),
     );
     authCommands.set('-dj', (name: string) =>
         ifUser(name, (user) => {
             djs.delete(user);
             status('no longer a dj', user);
+            statusAuthed(`${user.name} no longer a dj`);
         }),
     );
 
