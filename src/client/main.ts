@@ -422,7 +422,17 @@ async function load() {
     chatCommands.set('archive', (path) => client.messaging.send('archive', { path }));
 
     chatCommands.set('auth', (password) => client.auth(password));
-    chatCommands.set('admin', (args) => client.command(args.split(',')[0], args.split(',').slice(1)));
+    chatCommands.set('admin', (args) => {
+        const i = args.indexOf(' ');
+
+        if (i >= 0) {
+            const name = args.substring(0, i);
+            const json = `[${args.substring(i + 1)}]`;
+            client.command(name, JSON.parse(json));
+        } else {
+            client.command(args);
+        }
+    });
 
     function toggleEmote(emote: string) {
         const emotes = getLocalUser()!.emotes;

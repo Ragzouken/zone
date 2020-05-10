@@ -271,14 +271,14 @@ export function host(xws: expressWs.Instance, adapter: low.AdapterSync, options:
         eventMode = mode === 'event';
         status(`event mode: ${eventMode}`);
     });
-    authCommands.set('+dj', (name: string) =>
+    authCommands.set('dj-add', (name: string) =>
         ifUser(name, (user) => {
             djs.add(user);
             status('you are a dj', user);
             statusAuthed(`${user.name} is a dj`);
         }),
     );
-    authCommands.set('-dj', (name: string) =>
+    authCommands.set('dj-del', (name: string) =>
         ifUser(name, (user) => {
             djs.delete(user);
             status('no longer a dj', user);
