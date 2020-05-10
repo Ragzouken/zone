@@ -1239,6 +1239,8 @@ async function load() {
     });
     chatCommands.set('name', rename);
     chatCommands.set('archive', (path) => exports.client.messaging.send('archive', { path }));
+    chatCommands.set('auth', (password) => exports.client.auth(password));
+    chatCommands.set('run', (args) => exports.client.command(args.split(',')[0], args.split(',').slice(1)));
     function toggleEmote(emote) {
         const emotes = getLocalUser().emotes;
         if (emotes.includes(emote))
@@ -1962,13 +1964,6 @@ class ZoneClient extends events_1.EventEmitter {
     clear() {
         this.zone.clear();
     }
-    async rename(name) {
-        return new Promise((resolve, reject) => {
-            setTimeout(() => reject('timeout'), this.options.quickResponseTimeout);
-            utility_1.specifically(this.messaging.messages, 'user', (message) => message.userId === this.localUserId && message.name === name, resolve);
-            this.messaging.send('user', { name });
-        });
-    }
     async expect(type, timeout) {
         return new Promise((resolve, reject) => {
             if (timeout)
@@ -1997,10 +1992,23 @@ class ZoneClient extends events_1.EventEmitter {
             this.messaging.send('heartbeat', {});
         });
     }
+    async auth(password) {
+        this.messaging.send('auth', { password });
+    }
+    async command(name, args) {
+        this.messaging.send('command', { name, args });
+    }
     async resync() {
         return new Promise((resolve, reject) => {
             this.expect('play', this.options.quickResponseTimeout).then(resolve, reject);
             this.messaging.send('resync');
+        });
+    }
+    async rename(name) {
+        return new Promise((resolve, reject) => {
+            setTimeout(() => reject('timeout'), this.options.quickResponseTimeout);
+            utility_1.specifically(this.messaging.messages, 'user', (message) => message.userId === this.localUserId && message.name === name, resolve);
+            this.messaging.send('user', { name });
         });
     }
     async chat(text) {

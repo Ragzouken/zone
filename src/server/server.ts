@@ -10,7 +10,7 @@ import { nanoid } from 'nanoid';
 import { archiveOrgToPlayable } from './archiveorg';
 import { objEqual, copy } from '../common/utility';
 import { MESSAGE_SCHEMAS } from './protocol';
-import { JoinMessage } from '../common/client';
+import { JoinMessage, SendAuth, SendCommand } from '../common/client';
 
 const SECONDS = 1000;
 
@@ -87,6 +87,7 @@ export function host(xws: expressWs.Instance, adapter: low.AdapterSync, options:
     const tokenToUser = new Map<string, UserState>();
     const userToToken = new Map<UserState, string>();
     const connections = new Map<UserId, Messaging>();
+    const authorised = new Set<UserState>();
 
     const zone = new ZoneState();
     const playback = new Playback();
@@ -142,6 +143,7 @@ export function host(xws: expressWs.Instance, adapter: low.AdapterSync, options:
         zone.users.delete(user.userId);
         connections.delete(user.userId);
         userToConnections.delete(user);
+        authorised.delete(user);
         revokeUserToken(user);
     }
 
@@ -247,10 +249,16 @@ export function host(xws: expressWs.Instance, adapter: low.AdapterSync, options:
         sendCurrent(user);
     }
 
+
+    const authCommands = new Map<string, (...args: any[]) => void>();
+    authCommands.set('skip', () => skip(`admin skipped ${playback.currentItem!.media.details.title}`));
+
     function bindMessagingToUser(user: UserState, messaging: Messaging, userIp: unknown) {
-        messaging.messages.on('heartbeat', () => {
-            sendOnly('heartbeat', {}, user.userId);
-        });
+        function sendUser(type: string, message: any = {}) {
+            sendOnly(type, message, user.userId);
+        }
+
+        messaging.messages.on('heartbeat', () => sendUser('heartbeat'));
 
         messaging.messages.on('chat', (message: any) => {
             let { text } = message;
@@ -265,9 +273,9 @@ export function host(xws: expressWs.Instance, adapter: low.AdapterSync, options:
             const count = playback.queue.filter((item) => item.info.ip === userIp).length;
 
             if (existing) {
-                sendOnly('status', { text: `'${existing.details.title}' is already queued` }, user.userId);
+                sendUser('status', { text: `'${existing.details.title}' is already queued` });
             } else if (count >= opts.perUserQueueLimit) {
-                sendOnly('status', { text: `you already have ${count} videos in the queue` }, user.userId);
+                sendUser('status', { text: `you already have ${count} videos in the queue` });
             } else {
                 playback.queueMedia(media, { userId: user.userId, ip: userIp });
             }
@@ -287,7 +295,7 @@ export function host(xws: expressWs.Instance, adapter: low.AdapterSync, options:
         messaging.messages.on('search', (message: any) => {
             youtube.search(message.query).then((results) => {
                 if (message.lucky) tryQueueMedia(results[0]);
-                else sendOnly('search', { results }, user.userId);
+                else sendUser('search', { results });
             });
         });
 
@@ -298,10 +306,29 @@ export function host(xws: expressWs.Instance, adapter: low.AdapterSync, options:
             const { value, error } = MESSAGE_SCHEMAS.get('user')!.validate(changes);
 
             if (error) {
-                sendOnly('reject', { text: error.details[0].message }, user.userId);
+                sendUser('reject', { text: error.details[0].message });
             } else {
                 Object.assign(user, value);
                 sendAll('user', { ...value, userId: user.userId });
+            }
+        });
+
+        messaging.messages.on('auth', (message: SendAuth) => {
+            if ((message.password || {}) !== message.password) return;
+            
+            authorised.add(user);
+            sendUser('status', { text: 'you are now authorised' });
+        });
+
+        messaging.messages.on('command', (message: SendCommand) => {
+            if (!authorised.has(user)) return;
+
+            const { name, args } = message;
+            const command = authCommands.get(name);
+            if (command) {
+                command(...args);
+            } else {
+                sendUser('status', { text: `no command "${name}"` });
             }
         });
     }
@@ -314,5 +341,5 @@ export function host(xws: expressWs.Instance, adapter: low.AdapterSync, options:
         connections.get(userId)!.send(type, message);
     }
 
-    return { zone, playback, save, sendAll };
+    return { zone, playback, save, sendAll, authCommands };
 }

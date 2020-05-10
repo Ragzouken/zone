@@ -25,10 +25,20 @@ server.listen(process.env.PORT || 4000, () => console.log('listening...'));
 const dataPath = process.env.ZONE_DATA_PATH || '.data/db.json';
 const adapter = new FileSync(dataPath);
 
-const { save, sendAll } = host(xws, adapter, {
+const { save, sendAll, authCommands } = host(xws, adapter, {
     joinPassword: process.env.JOIN_PASSWORD,
     skipPassword: process.env.SKIP_PASSWORD,
 });
+
+function update() {
+    exec('update-zone', () => {
+        save();
+        sendAll('status', { text: 'restarting server' });
+        exec('restart-zone');
+    });
+}
+
+authCommands.set('update', update);
 
 // trust glitch's proxy to give us socket ips
 app.set('trust proxy', true);
@@ -36,11 +46,7 @@ app.use('/', express.static('public'));
 app.get('/update/:password', (req, res) => {
     if ((req.params.password || '') === process.env.UPDATE_PASSWORD) {
         res.sendStatus(200);
-        exec('update-zone', () => {
-            save();
-            sendAll('status', { text: 'restarting server' });
-            exec('restart-zone');
-        });
+        update();
     } else {
         res.sendStatus(401);
     }

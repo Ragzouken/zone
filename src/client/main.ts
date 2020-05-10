@@ -421,6 +421,9 @@ async function load() {
     chatCommands.set('name', rename);
     chatCommands.set('archive', (path) => client.messaging.send('archive', { path }));
 
+    chatCommands.set('auth', (password) => client.auth(password));
+    chatCommands.set('admin', (args) => client.command(args.split(',')[0], args.split(',').slice(1)));
+
     function toggleEmote(emote: string) {
         const emotes = getLocalUser()!.emotes;
         if (emotes.includes(emote)) client.emotes(emotes.filter((e: string) => e !== emote));
