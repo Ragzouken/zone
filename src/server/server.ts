@@ -1,6 +1,5 @@
-import * as express from 'express';
-import * as expressWs from 'express-ws';
 import * as WebSocket from 'ws';
+import * as expressWs from 'express-ws';
 import * as low from 'lowdb';
 
 import Youtube from './youtube';
@@ -48,7 +47,11 @@ export const DEFAULT_OPTIONS: HostOptions = {
     playbackPaddingTime: 1 * SECONDS,
 };
 
-export function host(adapter: low.AdapterSync, options: Partial<HostOptions> = {}) {
+export function host(
+    xws: expressWs.Instance,
+    adapter: low.AdapterSync, 
+    options: Partial<HostOptions> = {},
+) {
     const opts = Object.assign({}, DEFAULT_OPTIONS, options);
 
     const db = low(adapter);
@@ -57,11 +60,8 @@ export function host(adapter: low.AdapterSync, options: Partial<HostOptions> = {
         youtube: { videos: [] },
     }).write();
 
-    const xws = expressWs(express());
-    const app = xws.app;
-
     // this zone's websocket endpoint
-    app.ws('/zone', (websocket, req) => waitJoin(websocket, req.ip));
+    xws.app.ws('/zone', (websocket, req) => waitJoin(websocket, req.ip));
 
     function ping() {
         xws.getWss().clients.forEach((websocket) => {
@@ -318,5 +318,5 @@ export function host(adapter: low.AdapterSync, options: Partial<HostOptions> = {
         connections.get(userId)!.send(type, message);
     }
 
-    return { zone, playback, app, save, sendAll };
+    return { zone, playback, save, sendAll };
 }
