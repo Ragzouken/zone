@@ -1,14 +1,31 @@
 import * as express from 'express';
+import * as expressWs from 'express-ws';
+import * as http from 'http';
+import * as https from 'https';
+import * as fs from 'fs';
 import { host } from './server';
 import { exec } from 'child_process';
-
 import FileSync = require('lowdb/adapters/FileSync');
+
+const app = express();
+let server: http.Server | https.Server;
+const secure = process.env.CERT_PATH && process.env.KEY_PATH;
+
+if (secure) {
+    const key = fs.readFileSync(process.env.KEY_PATH!);
+    const cert = fs.readFileSync(process.env.CERT_PATH!);
+    server = https.createServer({ key, cert }, app);
+} else {
+    server = http.createServer(app);
+}
+
+const xws = expressWs(app, server);
+server.listen(process.env.PORT || 4000, () => console.log('listening...'));
 
 const dataPath = process.env.ZONE_DATA_PATH || '.data/db.json';
 const adapter = new FileSync(dataPath);
 
-const { server, app, save, sendAll } = host(adapter, {
-    listenHandle: process.env.PORT || 4000,
+const { save, sendAll } = host(xws, adapter, {
     joinPassword: process.env.JOIN_PASSWORD,
     skipPassword: process.env.SKIP_PASSWORD,
 });
@@ -35,5 +52,3 @@ process.on('SIGINT', () => {
     sendAll('status', { text: 'manual shutdown' });
     process.exit();
 });
-
-server.on('listening', () => console.log('listening...'));

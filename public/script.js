@@ -1010,7 +1010,9 @@ function rename(name) {
 }
 function socket() {
     return new Promise((resolve, reject) => {
-        const socket = new WebSocket('ws://' + zoneURL);
+        const secure = window.location.protocol.startsWith('https');
+        const protocol = secure ? 'wss://' : 'ws://';
+        const socket = new WebSocket(protocol + zoneURL);
         socket.addEventListener('open', () => resolve(socket));
         socket.addEventListener('error', reject);
     });
