@@ -266,13 +266,9 @@ export class ZoneClient extends EventEmitter {
                 this.emit('rename', { user, local, previous: prev.name });
             }
 
-            if (changes.position) {
-                this.emit('move', { user, local, position: changes.position });
-            }
-
-            if (changes.emotes) {
-                this.emit('emotes', { user, local, emotes: changes.emotes });
-            }
+            if (changes.position) this.emit('move', { user, local, position: changes.position });
+            if (changes.emotes) this.emit('emotes', { user, local, emotes: changes.emotes });
+            if (changes.avatar) this.emit('avatar', { user, local, data: changes.avatar });
         });
     }
 }

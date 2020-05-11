@@ -14,7 +14,7 @@ let redirectServer: http.Server;
 const secure = process.env.CERT_PATH && process.env.KEY_PATH;
 
 if (secure) {
-    const key  = fs.readFileSync(process.env.KEY_PATH!);
+    const key = fs.readFileSync(process.env.KEY_PATH!);
     const cert = fs.readFileSync(process.env.CERT_PATH!);
     server = https.createServer({ key, cert }, app);
 
