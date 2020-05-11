@@ -3,12 +3,12 @@ import * as expressWs from 'express-ws';
 import * as low from 'lowdb';
 
 import Youtube from './youtube';
-import Playback, { PlayableMedia, QueueItem, PlayableSource } from './playback';
+import Playback, { QueueItem } from './playback';
 import Messaging from '../common/messaging';
-import { ZoneState, UserId, UserState } from '../common/zone';
+import { ZoneState, UserId, UserState, mediaHasSource, mediaEquals, Media } from '../common/zone';
 import { nanoid } from 'nanoid';
-import { archiveOrgToPlayable } from './archiveorg';
-import { objEqual, copy } from '../common/utility';
+import { archiveOrgToMedia } from './archiveorg';
+import { copy } from '../common/utility';
 import { MESSAGE_SCHEMAS } from './protocol';
 import { JoinMessage, SendAuth, SendCommand } from '../common/client';
 
@@ -149,23 +149,23 @@ export function host(xws: expressWs.Instance, adapter: low.AdapterSync, options:
         revokeUserToken(user);
     }
 
-    function voteError(source: PlayableSource, user: UserState) {
-        if (!playback.currentItem || !objEqual(source, playback.currentItem.media.source)) return;
+    function voteError(source: string, user: UserState) {
+        if (!playback.currentItem || !mediaHasSource(playback.currentItem.media, source)) return;
 
         errors.add(user.userId);
         if (errors.size >= Math.floor(zone.users.size * opts.errorSkipThreshold)) {
-            skip(`skipping unplayable video ${playback.currentItem.media.details.title}`);
+            skip(`skipping unplayable video ${playback.currentItem.media.title}`);
         }
     }
 
-    function voteSkip(source: PlayableSource, user: UserState) {
-        if (!playback.currentItem || !objEqual(source, playback.currentItem.media.source)) return;
+    function voteSkip(source: string, user: UserState) {
+        if (!playback.currentItem || !mediaHasSource(playback.currentItem.media, source)) return;
 
         skips.add(user.userId);
         const current = skips.size;
         const target = Math.ceil(zone.users.size * opts.voteSkipThreshold);
         if (current >= target) {
-            skip(`voted to skip ${playback.currentItem.media.details.title}`);
+            skip(`voted to skip ${playback.currentItem.media.title}`);
         } else {
             status(`${current} of ${target} votes to skip`);
         }
@@ -266,7 +266,7 @@ export function host(xws: expressWs.Instance, adapter: low.AdapterSync, options:
     }
 
     const authCommands = new Map<string, (...args: any[]) => void>();
-    authCommands.set('skip', () => skip(`admin skipped ${playback.currentItem!.media.details.title}`));
+    authCommands.set('skip', () => skip(`admin skipped ${playback.currentItem!.media.title}`));
     authCommands.set('mode', (mode: string) => {
         eventMode = mode === 'event';
         status(`event mode: ${eventMode}`);
@@ -301,17 +301,17 @@ export function host(xws: expressWs.Instance, adapter: low.AdapterSync, options:
 
         messaging.messages.on('resync', () => sendCurrent(user));
 
-        async function tryQueueMedia(media: PlayableMedia) {
+        async function tryQueueMedia(media: Media) {
             if (eventMode && !djs.has(user)) {
                 status('zone is currently in event mode, only djs may queue', user);
                 return;
             }
 
-            const existing = playback.queue.find((queued) => objEqual(queued.media.source, media.source))?.media;
+            const existing = playback.queue.find((queued) => mediaEquals(queued.media, media))?.media;
             const count = playback.queue.filter((item) => item.info.ip === userIp).length;
 
             if (existing) {
-                status(`'${existing.details.title}' is already queued`, user);
+                status(`'${existing.title}' is already queued`, user);
             } else if (count >= opts.perUserQueueLimit) {
                 status(`you already have ${count} videos in the queue`, user);
             } else {
@@ -320,19 +320,21 @@ export function host(xws: expressWs.Instance, adapter: low.AdapterSync, options:
         }
 
         async function tryQueueArchiveByPath(path: string) {
-            tryQueueMedia(await archiveOrgToPlayable(path));
+            tryQueueMedia(await archiveOrgToMedia(path));
         }
 
         async function tryQueueYoutubeById(videoId: string) {
-            tryQueueMedia(await youtube.details(videoId));
+            const yt = await youtube.details(videoId);
+            const media = { ...yt, sources: ['youtube:' + yt.videoId], videoId: undefined };
+            tryQueueMedia(media);
         }
 
         messaging.messages.on('youtube', (message: any) => tryQueueYoutubeById(message.videoId));
         messaging.messages.on('archive', (message: any) => tryQueueArchiveByPath(message.path));
 
         messaging.messages.on('search', (message: any) => {
-            youtube.search(message.query).then((results) => {
-                if (message.lucky) tryQueueMedia(results[0]);
+            youtube.search(message.query).then(async (results) => {
+                if (message.lucky) tryQueueMedia(await youtube.media(results[0].videoId));
                 else sendUser('search', { results });
             });
         });

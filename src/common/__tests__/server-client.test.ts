@@ -1,6 +1,6 @@
 import { once } from 'events';
 import { copy, sleep } from '../utility';
-import { ARCHIVE_PATH_TO_MEDIA, YOUTUBE_VIDEOS, TINY_MEDIA, DAY_MEDIA } from './media.data';
+import { ARCHIVE_PATH_TO_MEDIA, YOUTUBE_MEDIA, TINY_MEDIA, DAY_MEDIA } from './media.data';
 import { zoneServer } from './utilities';
 
 const IMMEDIATE_REPLY_TIMEOUT = 50;
@@ -296,13 +296,13 @@ describe('playback', () => {
         await zoneServer({}, async (server) => {
             const client = await server.client();
 
-            const media = YOUTUBE_VIDEOS[0];
+            const youtube = await YOUTUBE_MEDIA[0];
             // queue twice because currently playing doesn't count
-            server.hosting.playback.queueMedia(media);
-            server.hosting.playback.queueMedia(media);
+            server.hosting.playback.queueMedia(youtube);
+            server.hosting.playback.queueMedia(youtube);
 
             await client.join();
-            const queued = client.youtube(media.source.videoId);
+            const queued = client.youtube(youtube.videoId);
 
             await expect(queued).rejects.toEqual('timeout');
         });
@@ -420,10 +420,8 @@ describe('playback', () => {
 
             const playWaiter = client.expect('play');
             await client.join();
-            const { item } = await playWaiter;
-
-            const source = copy(item.media.source);
-            source.type = 'fake';
+            await playWaiter;
+            const source = 'fake';
 
             const skip = client.expect('play', IMMEDIATE_REPLY_TIMEOUT);
             client.messaging.send('skip', { source });
@@ -442,7 +440,7 @@ describe('event mode', () => {
             client.auth(authPassword);
             client.command('mode', ['event']);
 
-            const queued = client.youtube(YOUTUBE_VIDEOS[0].source.videoId);
+            const queued = client.youtube(YOUTUBE_MEDIA[0].videoId);
             await expect(queued).rejects.toEqual('timeout');
         });
     });
@@ -456,7 +454,7 @@ describe('event mode', () => {
             client.command('mode', ['event']);
             client.command('dj-add', [client.localUser!.name]);
 
-            await client.youtube(YOUTUBE_VIDEOS[0].source.videoId);
+            await client.youtube(YOUTUBE_MEDIA[0].videoId);
         });
     });
 
@@ -470,7 +468,7 @@ describe('event mode', () => {
             client.command('dj-add', [client.localUser!.name]);
             client.command('dj-del', [client.localUser!.name]);
 
-            const queued = client.youtube(YOUTUBE_VIDEOS[0].source.videoId);
+            const queued = client.youtube(YOUTUBE_MEDIA[0].videoId);
             await expect(queued).rejects.toEqual('timeout');
         });
     });
@@ -494,13 +492,13 @@ describe('media sources', () => {
 
     it('can queue youtube video', async () => {
         await zoneServer({}, async (server) => {
-            const source = YOUTUBE_VIDEOS[0].source;
+            const youtube = YOUTUBE_MEDIA[0];
 
             const client = await server.client();
             await client.join();
 
-            const item = await client.youtube(source.videoId);
-            expect(item.media.source).toEqual(source);
+            const item = await client.youtube(youtube.videoId);
+            expect(item.media.sources).toEqual(youtube.sources);
         });
     });
 

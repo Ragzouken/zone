@@ -11,6 +11,29 @@ export type UserState = {
     emotes: string[];
 };
 
+export type Media = {
+    title: string;
+    duration: number;
+    sources: string[];
+    image?: string;
+};
+
+export type MediaMeta = Omit<Media, 'sources'>;
+
+export function mediaHasSource(a: Media, source: string) {
+    return a.sources.includes(source);
+}
+
+export function mediaEquals(a: Media, b: Media) {
+    for (const source of a.sources) {
+        if (mediaHasSource(b, source)) {
+            return true;
+        }
+    }
+
+    return false;
+}
+
 export class ZoneState {
     public readonly users = new Map<UserId, UserState>();
     readonly queue: QueueItem[] = [];

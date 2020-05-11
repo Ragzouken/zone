@@ -1,8 +1,7 @@
 import { fetchDom, timeToSeconds } from './utility';
-import { PlayableMedia } from './playback';
+import { Media, MediaMeta } from '../common/zone';
 
-export type YoutubeSource = { type: 'youtube'; videoId: string };
-export type YoutubeVideo = PlayableMedia<YoutubeSource>;
+export type YoutubeVideo = MediaMeta & { videoId: string };
 
 export type YoutubeState = {
     videos: YoutubeVideo[];
@@ -23,7 +22,7 @@ export default class Youtube {
     }
 
     public addVideo(video: YoutubeVideo) {
-        this.cache.set(video.source.videoId, video);
+        this.cache.set(video.videoId, video);
     }
 
     public async search(query: string): Promise<YoutubeVideo[]> {
@@ -51,6 +50,11 @@ export default class Youtube {
 
         this.addVideo(details);
         return details;
+    }
+
+    public async media(videoId: string): Promise<Media> {
+        const details = await this.details(videoId);
+        return { ...details, sources: ['youtube:' + videoId] };
     }
 }
 
@@ -86,10 +90,7 @@ export async function search(query: string): Promise<YoutubeVideo[]> {
 
         const videoId = url.split('?v=')[1];
 
-        results.push({
-            source: { type: 'youtube', videoId },
-            details: { title, duration },
-        });
+        results.push({ videoId, title, duration });
     });
 
     return results;

@@ -1,9 +1,9 @@
 import Messaging from './messaging';
-import { QueueItem, PlayableMedia, PlayableSource } from '../server/playback';
+import { QueueItem } from '../server/playback';
 import { EventEmitter } from 'events';
 import { YoutubeVideo } from '../server/youtube';
-import { objEqual, specifically } from './utility';
-import { ZoneState, UserState } from './zone';
+import { specifically } from './utility';
+import { ZoneState, UserState, Media, mediaHasSource, mediaEquals } from './zone';
 
 export type StatusMesage = { text: string };
 export type JoinMessage = { name: string; token?: string; password?: string };
@@ -22,14 +22,6 @@ export type SearchResult = { results: YoutubeVideo[] };
 
 export type SendAuth = { password: string };
 export type SendCommand = { name: string; args: any[] };
-
-function isYoutube(item: PlayableMedia): item is YoutubeVideo {
-    return item.source.type === 'youtube';
-}
-
-function mediaEquals(a: PlayableMedia, b: PlayableMedia) {
-    return objEqual(a.source, b.source);
-}
 
 export interface MessageMap {
     heartbeat: {};
@@ -195,20 +187,20 @@ export class ZoneClient extends EventEmitter {
         return new Promise<QueueItem>((resolve, reject) => {
             setTimeout(() => reject('timeout'), this.options.slowResponseTimeout);
             this.on('queue', ({ item }) => {
-                if (isYoutube(item.media) && item.media.source.videoId === videoId) resolve(item);
+                if (mediaHasSource(item.media, `youtube:${videoId}`)) resolve(item);
             });
             this.messaging.send('youtube', { videoId });
         });
     }
 
     async skip() {
-        const source = this.zone.lastPlayedItem?.media.source;
-        if (!source) return;
+        if (!this.zone.lastPlayedItem) return;
+        const source = this.zone.lastPlayedItem.media.sources[0];
         this.messaging.send('skip', { source });
     }
 
-    async unplayable(source?: PlayableSource) {
-        source = source || this.zone.lastPlayedItem?.media.source;
+    async unplayable(source?: string) {
+        source = source || this.zone.lastPlayedItem?.media.sources[0];
         if (!source) return;
         this.messaging.send('error', { source });
     }
@@ -240,7 +232,7 @@ export class ZoneClient extends EventEmitter {
         this.messaging.messages.on('play', (message: PlayMessage) => {
             this.zone.lastPlayedItem = message.item;
 
-            const index = this.zone.queue.findIndex((item) => mediaEquals(item.media, message.item.media));
+            const index = this.zone.queue.findIndex((item) => mediaEquals(item.media, message.item?.media));
             if (index >= 0) this.zone.queue.splice(index, 1);
 
             this.emit('play', { message });

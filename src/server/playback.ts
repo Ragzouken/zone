@@ -1,22 +1,10 @@
 import { EventEmitter } from 'events';
 import { performance } from 'perf_hooks';
 import { copy } from '../common/utility';
-import { UserId } from '../common/zone';
-
-export type PlayableSource = { type: string };
-
-export interface PlayableMetadata {
-    title: string;
-    duration: number;
-}
-
-export interface PlayableMedia<TSource extends PlayableSource = PlayableSource> {
-    source: TSource;
-    details: PlayableMetadata;
-}
+import { UserId, Media } from '../common/zone';
 
 export type QueueInfo = { userId?: UserId; ip?: unknown };
-export type QueueItem = { media: PlayableMedia; info: QueueInfo };
+export type QueueItem = { media: Media; info: QueueInfo };
 
 export type PlaybackState = {
     current?: QueueItem;
@@ -56,7 +44,7 @@ export class Playback extends EventEmitter {
         data.queue.forEach((item) => this.queueMedia(item.media, item.info));
     }
 
-    queueMedia(media: PlayableMedia, info: QueueInfo = {}) {
+    queueMedia(media: Media, info: QueueInfo = {}) {
         const queued = { media, info };
         this.queue.push(queued);
         this.emit('queue', queued);
@@ -102,7 +90,7 @@ export class Playback extends EventEmitter {
 
     private setMedia(item: QueueItem, time = 0) {
         this.currentItem = item;
-        this.setTime(item.media.details.duration, time);
+        this.setTime(item.media.duration, time);
         this.emit('play', copy(item));
     }
 

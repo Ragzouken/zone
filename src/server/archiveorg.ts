@@ -1,15 +1,10 @@
 import { fetchJson, timeToSeconds } from './utility';
-import { PlayableMedia, PlayableSource } from './playback';
-
-export interface ArchiveSource extends PlayableSource {
-    type: 'archive';
-    src: string;
-}
+import { Media } from '../common/zone';
 
 export type Metadata = { metadata: { title?: string }; files: File[] };
 export type File = { title?: string; name: string; format: string; length?: string };
 
-export async function archiveOrgToPlayable(path: string): Promise<PlayableMedia<ArchiveSource>> {
+export async function archiveOrgToMedia(path: string): Promise<Media> {
     const [item, filename] = path.includes('/') ? path.split('/') : [path, undefined];
 
     const metadata = (await fetchJson(`https://archive.org/metadata/${item}`)) as Metadata;
@@ -25,8 +20,5 @@ export async function archiveOrgToPlayable(path: string): Promise<PlayableMedia<
     const duration = (file.length.includes(':') ? timeToSeconds(file.length) : parseFloat(file.length)) * 1000;
     const src = `https://archive.org/download/${item}/${file.name}`;
 
-    return {
-        details: { title, duration },
-        source: { type: 'archive', src },
-    };
+    return { title, duration, sources: [src] };
 }
