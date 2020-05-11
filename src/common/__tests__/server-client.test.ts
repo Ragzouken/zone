@@ -434,7 +434,7 @@ describe('playback', () => {
 });
 
 describe('event mode', () => {
-    it("prevents non-dj queueing", async () => {
+    it('prevents non-dj queueing', async () => {
         const authPassword = 'riverdale';
         await zoneServer({ authPassword }, async (server) => {
             const client = await server.client();
@@ -447,7 +447,7 @@ describe('event mode', () => {
         });
     });
 
-    it("allows dj to queue", async () => {
+    it('allows dj to queue', async () => {
         const authPassword = 'riverdale';
         await zoneServer({ authPassword }, async (server) => {
             const client = await server.client();
@@ -460,7 +460,7 @@ describe('event mode', () => {
         });
     });
 
-    it("prevents former dj queueing", async () => {
+    it('prevents former dj queueing', async () => {
         const authPassword = 'riverdale';
         await zoneServer({ authPassword }, async (server) => {
             const client = await server.client();

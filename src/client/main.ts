@@ -300,16 +300,8 @@ async function load() {
     client.on('leave', (event) => chat.status(`{clr=#FF0000}${event.user.name}{clr=#FF00FF} left`));
     client.on('status', (event) => chat.status(event.text));
 
-    client.on('avatar', ({ user, local, data }) => {
+    client.on('avatar', ({ local, data }) => {
         if (local) localStorage.setItem('avatar', data);
-
-        if (!avatarTiles.has(data)) {
-            try {
-                avatarTiles.set(data, decodeBase64(data));
-            } catch (e) {
-                console.log('fucked up avatar', user.name);
-            }
-        }
     });
     client.on('chat', (message) => {
         const { user, text } = message;
@@ -627,7 +619,7 @@ async function load() {
 function setupEntrySplash() {
     const entrySplash = document.getElementById('entry-splash') as HTMLElement;
     const entryButton = document.getElementById('entry-button') as HTMLInputElement;
-    const entryForm   = document.getElementById('entry'       ) as HTMLFormElement;
+    const entryForm = document.getElementById('entry') as HTMLFormElement;
     entryButton.disabled = false;
     entryForm.addEventListener('submit', (e) => {
         e.preventDefault();

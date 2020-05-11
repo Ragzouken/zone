@@ -1126,17 +1126,9 @@ async function load() {
     exports.client.on('join', (event) => chat.status(`{clr=#FF0000}${event.user.name} {clr=#FF00FF}joined`));
     exports.client.on('leave', (event) => chat.status(`{clr=#FF0000}${event.user.name}{clr=#FF00FF} left`));
     exports.client.on('status', (event) => chat.status(event.text));
-    exports.client.on('avatar', ({ user, local, data }) => {
+    exports.client.on('avatar', ({ local, data }) => {
         if (local)
             localStorage.setItem('avatar', data);
-        if (!avatarTiles.has(data)) {
-            try {
-                avatarTiles.set(data, decodeBase64(data));
-            }
-            catch (e) {
-                console.log('fucked up avatar', user.name);
-            }
-        }
     });
     exports.client.on('chat', (message) => {
         const { user, text } = message;
@@ -2128,12 +2120,12 @@ class ZoneClient extends events_1.EventEmitter {
             else if (prev.name !== user.name) {
                 this.emit('rename', { user, local, previous: prev.name });
             }
-            if (changes.position) {
+            if (changes.position)
                 this.emit('move', { user, local, position: changes.position });
-            }
-            if (changes.emotes) {
+            if (changes.emotes)
                 this.emit('emotes', { user, local, emotes: changes.emotes });
-            }
+            if (changes.avatar)
+                this.emit('avatar', { user, local, data: changes.avatar });
         });
     }
 }

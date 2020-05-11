@@ -262,7 +262,7 @@ export function host(xws: expressWs.Instance, adapter: low.AdapterSync, options:
     }
 
     function statusAuthed(text: string) {
-        authorised.forEach(user => status(text, user));
+        authorised.forEach((user) => status(text, user));
     }
 
     const authCommands = new Map<string, (...args: any[]) => void>();
