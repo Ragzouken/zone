@@ -212,8 +212,8 @@ const help = [
     'press tab: toggle typing/controls',
     'press q: toggle queue',
     'press 1/2/3: toggle emotes',
-    '/youtube videoId',
-    '/search query terms',
+    '/youtube url',
+    '/search search terms',
     '/lucky search terms',
     '/skip',
     '/avatar',
@@ -226,6 +226,12 @@ const help = [
 
 function listHelp() {
     chat.log('{clr=#FFFF00}? /help\n' + help);
+}
+
+function textToYoutubeVideoId(text: string) {
+    text = text.trim();
+    if (text.length === 11) return text;
+    return new URL(text).searchParams.get('v');
 }
 
 async function load() {
@@ -390,7 +396,8 @@ async function load() {
             .map(({ title, duration }, i) => `${i + 1}. ${title} (${secondsToTime(duration / 1000)})`);
         chat.log('{clr=#FFFF00}? queue Search result with /result n\n{clr=#00FFFF}' + lines.join('\n'));
     });
-    chatCommands.set('youtube', (videoId) => {
+    chatCommands.set('youtube', (args) => {
+        const videoId = textToYoutubeVideoId(args)!;
         client.youtube(videoId).catch(() => chat.status("couldn't queue video :("));
     });
     chatCommands.set('skip', () => client.skip());
