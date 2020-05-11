@@ -180,9 +180,14 @@ function socket(): Promise<WebSocket> {
 
 let joinPassword: string | undefined;
 
-async function connect() {
+async function connect(): Promise<void> {
     const joined = !!client.localUserId;
-    client.messaging.setSocket(await socket());
+
+    try {
+        client.messaging.setSocket(await socket());
+    } catch (e) {
+        return connect();
+    }
 
     try {
         await client.join({ name: localName, password: joinPassword });

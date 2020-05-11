@@ -1020,7 +1020,12 @@ function socket() {
 let joinPassword;
 async function connect() {
     const joined = !!exports.client.localUserId;
-    exports.client.messaging.setSocket(await socket());
+    try {
+        exports.client.messaging.setSocket(await socket());
+    }
+    catch (e) {
+        return connect();
+    }
     try {
         await exports.client.join({ name: localName, password: joinPassword });
     }
