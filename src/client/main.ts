@@ -286,23 +286,26 @@ async function load() {
         const seconds = time / 1000;
 
         const youtubeSource = sources.find((source) => source.startsWith('youtube:'));
-        const httpSource = sources.find((source) => source.startsWith('http'));
+        const archiveSource = sources.find((source) => source.startsWith('archive:'));
+        const proxySource = sources.find((source) => source.startsWith('proxy:'));
 
         if (youtubeSource) {
-            const videoId = youtubeSource.split(':')[1];
+            const videoId = youtubeSource.slice(8);
             player!.playVideoById(videoId, seconds);
+        } else if (proxySource) {
+            const corsProxy = 'https://zone-cors.glitch.me';
+            const url = proxySource.slice(6);
+            httpvideo.src = `${corsProxy}/${url}`;
+            httpvideo.currentTime = seconds;
+            httpvideo.play();
+        } else if (archiveSource) {
+            const path = archiveSource.slice(8);
+            archive.src = `https://archive.org/download/${path}`;
         } else {
-            // const corsProxy = 'https://zone-cors.glitch.me';
-            // const src = httpSource.replace('embed', 'download');
-            // httpvideo.src = `${corsProxy}/${src}`;
             httpvideo.src = sources[0];
             httpvideo.currentTime = seconds;
             httpvideo.play();
-            // archive.src = ((source as any).src).replace('download', 'embed') + `?autoplay=1&start=${seconds}`;
-        } /* else {
-            chat.status(`unsupported media type`);
-            client.unplayable();
-        } */
+        }
 
         currentPlayStart = performance.now() - time;
     });
