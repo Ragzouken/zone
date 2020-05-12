@@ -331,7 +331,6 @@ export function host(xws: expressWs.Instance, adapter: low.AdapterSync, options:
         async function tryQueueYoutubeById(videoId: string) {
             const yt = await youtube.details(videoId);
             const media = { ...yt, sources: ['youtube:' + yt.videoId], videoId: undefined };
-            media.sources = media.sources.map((source) => 'zone:media/' + source);
             tryQueueMedia(media);
         }
 
