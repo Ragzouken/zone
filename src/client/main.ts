@@ -155,11 +155,6 @@ function getLocalUser() {
     return client.localUserId ? client.zone.getUser(client.localUserId) : undefined;
 }
 
-function setVolume(volume: number) {
-    player!.volume = volume;
-    localStorage.setItem('volume', volume.toString());
-}
-
 let localName = localStorage.getItem('name') || '';
 
 function rename(name: string) {
@@ -240,13 +235,19 @@ function textToYoutubeVideoId(text: string) {
 }
 
 async function load() {
-    setVolume(parseInt(localStorage.getItem('volume') || '100', 10));
-
     const youtube = document.querySelector('#youtube') as HTMLElement;
     const archive = document.querySelector('#archive') as HTMLIFrameElement;
     const httpvideo = document.querySelector('#http-video') as HTMLVideoElement;
     const joinName = document.querySelector('#join-name') as HTMLInputElement;
     const chatInput = document.querySelector('#chat-input') as HTMLInputElement;
+
+    function setVolume(volume: number) {
+        player!.volume = volume;
+        httpvideo.volume = volume;
+        localStorage.setItem('volume', volume.toString());
+    }
+
+    setVolume(parseInt(localStorage.getItem('volume') || '100', 10));
 
     joinName.value = localName;
 
