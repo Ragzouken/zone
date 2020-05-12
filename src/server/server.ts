@@ -2,6 +2,8 @@ import * as WebSocket from 'ws';
 import * as expressWs from 'express-ws';
 import * as low from 'lowdb';
 
+import { promises as fs } from 'fs';
+
 import Youtube from './youtube';
 import Playback, { QueueItem } from './playback';
 import Messaging from '../common/messaging';
@@ -11,11 +13,12 @@ import { archiveOrgToMedia } from './archiveorg';
 import { copy } from '../common/utility';
 import { MESSAGE_SCHEMAS } from './protocol';
 import { JoinMessage, SendAuth, SendCommand } from '../common/client';
+import { fetchJson } from './utility';
+import { promisify } from 'util';
 
 const SECONDS = 1000;
 
 export type HostOptions = {
-    listenHandle: any;
     pingInterval: number;
     saveInterval: number;
     userTimeout: number;
@@ -33,7 +36,6 @@ export type HostOptions = {
 };
 
 export const DEFAULT_OPTIONS: HostOptions = {
-    listenHandle: 0,
     pingInterval: 10 * SECONDS,
     saveInterval: 30 * SECONDS,
     userTimeout: 5 * SECONDS,
@@ -319,6 +321,12 @@ export function host(xws: expressWs.Instance, adapter: low.AdapterSync, options:
             }
         }
 
+        async function tryQueueLocalByPath(path: string) {
+            const json = (await fs.readFile(`media/${path}.json`, 'utf-8')).toString();
+            const media = JSON.parse(json) as Media;
+            tryQueueMedia(media);
+        }
+
         async function tryQueueArchiveByPath(path: string) {
             tryQueueMedia(await archiveOrgToMedia(path));
         }
@@ -326,11 +334,13 @@ export function host(xws: expressWs.Instance, adapter: low.AdapterSync, options:
         async function tryQueueYoutubeById(videoId: string) {
             const yt = await youtube.details(videoId);
             const media = { ...yt, sources: ['youtube:' + yt.videoId], videoId: undefined };
+            media.sources = media.sources.map((source) => 'zone:media/' + source);
             tryQueueMedia(media);
         }
 
         messaging.messages.on('youtube', (message: any) => tryQueueYoutubeById(message.videoId));
         messaging.messages.on('archive', (message: any) => tryQueueArchiveByPath(message.path));
+        messaging.messages.on('local', (message: any) => tryQueueLocalByPath(message.path));
 
         messaging.messages.on('search', (message: any) => {
             youtube.search(message.query).then(async (results) => {

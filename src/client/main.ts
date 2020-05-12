@@ -243,7 +243,7 @@ async function load() {
 
     function setVolume(volume: number) {
         player!.volume = volume;
-        httpvideo.volume = volume;
+        httpvideo.volume = volume / 100;
         localStorage.setItem('volume', volume.toString());
     }
 
@@ -287,10 +287,16 @@ async function load() {
 
         const youtubeSource = sources.find((source) => source.startsWith('youtube:'));
         const httpSource = sources.find((source) => source.startsWith('http'));
+        const zoneSource = sources.find((source) => source.startsWith('zone:'));
 
         if (youtubeSource) {
             const videoId = youtubeSource.split(':')[1];
             player!.playVideoById(videoId, seconds);
+        } else if (zoneSource) {
+            const path = zoneSource.slice(5);
+            httpvideo.src = window.location.protocol + '//' + window.location.host + '/media/' + path;
+            httpvideo.currentTime = seconds;
+            httpvideo.play();
         } else if (httpSource) {
             const corsProxy = 'https://zone-cors.glitch.me';
             const src = httpSource.replace('embed', 'download');
@@ -401,6 +407,7 @@ async function load() {
         const videoId = textToYoutubeVideoId(args)!;
         client.youtube(videoId).catch(() => chat.status("couldn't queue video :("));
     });
+    chatCommands.set('local', (path) => client.messaging.send('local', { path }));
     chatCommands.set('skip', () => client.skip());
     chatCommands.set('password', (args) => (joinPassword = args));
     chatCommands.set('users', () => listUsers());
@@ -604,7 +611,7 @@ async function load() {
     function redraw() {
         const playing = !!client.zone.lastPlayedItem;
         youtube.hidden = !player!.playing;
-        httpvideo.hidden = !playing || !client.zone.lastPlayedItem?.media.sources[0].startsWith('http');
+        httpvideo.hidden = !playing || httpvideo.src.length === 0;
         archive.hidden = true; // !playing || currentPlayMessage?.item.media.source.type !== "archive";
         zoneLogo.hidden = playing;
 
