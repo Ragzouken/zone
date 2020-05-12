@@ -1114,29 +1114,22 @@ async function load() {
         const seconds = time / 1000;
         const youtubeSource = sources.find((source) => source.startsWith('youtube:'));
         const httpSource = sources.find((source) => source.startsWith('http'));
-        const zoneSource = sources.find((source) => source.startsWith('zone:'));
         if (youtubeSource) {
             const videoId = youtubeSource.split(':')[1];
             player.playVideoById(videoId, seconds);
         }
-        else if (zoneSource) {
-            const path = zoneSource.slice(5);
-            httpvideo.src = window.location.protocol + '//' + window.location.host + '/media/' + path;
-            httpvideo.currentTime = seconds;
-            httpvideo.play();
-        }
-        else if (httpSource) {
-            const corsProxy = 'https://zone-cors.glitch.me';
-            const src = httpSource.replace('embed', 'download');
-            httpvideo.src = `${corsProxy}/${src}`;
+        else {
+            // const corsProxy = 'https://zone-cors.glitch.me';
+            // const src = httpSource.replace('embed', 'download');
+            // httpvideo.src = `${corsProxy}/${src}`;
+            httpvideo.src = sources[0];
             httpvideo.currentTime = seconds;
             httpvideo.play();
             // archive.src = ((source as any).src).replace('download', 'embed') + `?autoplay=1&start=${seconds}`;
-        }
-        else {
+        } /* else {
             chat.status(`unsupported media type`);
-            exports.client.unplayable();
-        }
+            client.unplayable();
+        } */
         currentPlayStart = performance.now() - time;
     });
     exports.client.on('join', (event) => chat.status(`{clr=#FF0000}${event.user.name} {clr=#FF00FF}joined`));

@@ -2,8 +2,6 @@ import * as WebSocket from 'ws';
 import * as expressWs from 'express-ws';
 import * as low from 'lowdb';
 
-import { promises as fs } from 'fs';
-
 import Youtube from './youtube';
 import Playback, { QueueItem } from './playback';
 import Messaging from '../common/messaging';
@@ -13,8 +11,6 @@ import { archiveOrgToMedia } from './archiveorg';
 import { copy } from '../common/utility';
 import { MESSAGE_SCHEMAS } from './protocol';
 import { JoinMessage, SendAuth, SendCommand } from '../common/client';
-import { fetchJson } from './utility';
-import { promisify } from 'util';
 
 const SECONDS = 1000;
 
@@ -98,6 +94,8 @@ export function host(xws: expressWs.Instance, adapter: low.AdapterSync, options:
     const youtube = new Youtube();
     let eventMode = false;
     const djs = new Set<UserState>();
+
+    const localLibrary = new Map<string, Media>();
 
     load();
 
@@ -322,9 +320,8 @@ export function host(xws: expressWs.Instance, adapter: low.AdapterSync, options:
         }
 
         async function tryQueueLocalByPath(path: string) {
-            const json = (await fs.readFile(`media/${path}.json`, 'utf-8')).toString();
-            const media = JSON.parse(json) as Media;
-            tryQueueMedia(media);
+            const media = localLibrary.get(path);
+            if (media) tryQueueMedia(media);
         }
 
         async function tryQueueArchiveByPath(path: string) {
@@ -391,5 +388,5 @@ export function host(xws: expressWs.Instance, adapter: low.AdapterSync, options:
         connections.get(userId)!.send(type, message);
     }
 
-    return { zone, playback, save, sendAll, authCommands };
+    return { zone, playback, save, sendAll, authCommands, localLibrary };
 }
