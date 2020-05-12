@@ -1,3 +1,4 @@
+import * as ytdl from 'ytdl-core';
 import { fetchDom, timeToSeconds } from './utility';
 import { Media, MediaMeta } from '../common/zone';
 
@@ -35,14 +36,18 @@ export default class Youtube {
         let details = this.cache.get(videoId);
         if (details) return details;
 
-        for (const strategy of SEARCH_STRATEGIES) {
-            try {
-                const query = await strategy(videoId);
-                await this.search(query);
-                details = this.cache.get(videoId);
-                if (details) break;
-            } catch (e) {
-                console.log(`strategy exception`, e);
+        try {
+            details = await getDetailsYtdl(videoId);
+        } catch (e) {
+            for (const strategy of SEARCH_STRATEGIES) {
+                try {
+                    const query = await strategy(videoId);
+                    await this.search(query);
+                    details = this.cache.get(videoId);
+                    if (details) break;
+                } catch (e) {
+                    console.log(`strategy exception`, e);
+                }
             }
         }
 
@@ -64,6 +69,16 @@ const SEARCH_STRATEGIES: SearchStrategy[] = [
     async (videoId) => `"v=${videoId}"`,
     async (videoId) => `"${await getTitleDirect(videoId)}"`,
 ];
+
+export async function getDetailsYtdl(videoId: string) {
+    const info = await ytdl.getBasicInfo(videoId);
+    const video: YoutubeVideo = {
+        videoId, 
+        title: info.title, 
+        duration: parseInt(info.length_seconds, 10) * 1000,
+    };
+    return video;
+}
 
 export async function getTitleDirect(videoId: string) {
     const dom = await fetchDom(`https://www.youtube.com/watch?v=${videoId}`);

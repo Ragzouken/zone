@@ -72,7 +72,7 @@ async function run() {
     app.use('/', express.static('public'));
     app.use('/media', express.static('media'));
     app.get('/update/:password', (req, res) => {
-        if ((req.params.password || '') === process.env.UPDATE_PASSWORD) {
+        if ((req.params.password || {}) === process.env.UPDATE_PASSWORD) {
             res.sendStatus(200);
             update();
         } else {
