@@ -329,9 +329,7 @@ export function host(xws: expressWs.Instance, adapter: low.AdapterSync, options:
         }
 
         async function tryQueueYoutubeById(videoId: string) {
-            const yt = await youtube.details(videoId);
-            const media = { ...yt, sources: ['youtube:' + yt.videoId], videoId: undefined };
-            tryQueueMedia(media);
+            tryQueueMedia(await youtube.media(videoId));
         }
 
         messaging.messages.on('youtube', (message: any) => tryQueueYoutubeById(message.videoId));

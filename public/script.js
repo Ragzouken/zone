@@ -1117,6 +1117,7 @@ async function load() {
         chat.log(`{clr=#00FFFF}> ${title} (${utility_1.secondsToTime(duration / 1000)})`);
         const time = message.time || 0;
         currentPlayStart = performance.now() - time;
+        console.log(sources);
         for (const source of sources) {
             const success = await tryMediaSource(source);
             if (success)

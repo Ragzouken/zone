@@ -37,7 +37,7 @@ export default class Youtube {
         if (details) return details;
 
         try {
-            details = await getDetailsYtdl(videoId);
+            details = await getDetailsYtdlFull(videoId);
         } catch (e) {
             for (const strategy of SEARCH_STRATEGIES) {
                 try {
@@ -58,8 +58,7 @@ export default class Youtube {
     }
 
     public async media(videoId: string): Promise<Media> {
-        const details = await this.details(videoId);
-        return { ...details, sources: ['youtube:' + videoId] };
+        return getMediaYtdl(videoId);
     }
 }
 
@@ -70,6 +69,27 @@ const SEARCH_STRATEGIES: SearchStrategy[] = [
     async (videoId) => `"${await getTitleDirect(videoId)}"`,
 ];
 
+export async function getMediaYtdl(videoId: string) {
+    const info = await ytdl.getInfo(videoId);
+    const format = ytdl.chooseFormat(info.formats, { quality: '18' });
+    const media: Media = {
+        title: info.title, 
+        duration: parseInt(info.length_seconds, 10) * 1000,
+        sources: ['proxy:' + format.url, 'youtube:' + videoId],
+    };
+    return media;
+}
+
+export async function getDetailsYtdlFull(videoId: string) {
+    const info = await ytdl.getInfo(videoId);
+    const video: YoutubeVideo = {
+        videoId, 
+        title: info.title, 
+        duration: parseInt(info.length_seconds, 10) * 1000,
+    };
+    return video;
+}
+
 export async function getDetailsYtdl(videoId: string) {
     const info = await ytdl.getBasicInfo(videoId);
     const video: YoutubeVideo = {
@@ -77,6 +97,7 @@ export async function getDetailsYtdl(videoId: string) {
         title: info.title, 
         duration: parseInt(info.length_seconds, 10) * 1000,
     };
+    console.log(info.formats);
     return video;
 }
 

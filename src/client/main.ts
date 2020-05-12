@@ -290,6 +290,7 @@ async function load() {
         const time = message.time || 0;
         currentPlayStart = performance.now() - time;
 
+        console.log(sources);
         for (const source of sources) {
             const success = await tryMediaSource(source);
             if (success) break;
