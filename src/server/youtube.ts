@@ -1,4 +1,5 @@
 import * as ytdl from 'ytdl-core';
+import * as FormData from 'form-data';
 import { fetchDom, timeToSeconds } from './utility';
 import { Media, MediaMeta } from '../common/zone';
 
@@ -58,7 +59,15 @@ export default class Youtube {
     }
 
     public async media(videoId: string): Promise<Media> {
-        return getMediaYtdl(videoId);
+        const details = await this.details(videoId);
+        const sources = ['youtube:' + videoId];
+
+        try {
+            sources.unshift(await getSourcesWeb(videoId));
+        } catch (e) {}
+    
+        const media: Media = { ...details, sources };
+        return media;
     }
 }
 
@@ -71,13 +80,28 @@ const SEARCH_STRATEGIES: SearchStrategy[] = [
 
 export async function getMediaYtdl(videoId: string) {
     const info = await ytdl.getInfo(videoId);
-    const format = ytdl.chooseFormat(info.formats, { quality: '18' });
+    const sources = ['youtube:' + videoId];
+
+    try {
+        const url = ytdl.chooseFormat(info.formats, { quality: '18' }).url;
+        sources.unshift('proxy:' + url);
+    } catch (e) {}
+
     const media: Media = {
         title: info.title, 
         duration: parseInt(info.length_seconds, 10) * 1000,
-        sources: ['proxy:' + format.url, 'youtube:' + videoId],
+        sources,
     };
     return media;
+}
+
+export async function getSourcesWeb(videoId: string) {
+    const url = "https://www.youtube.com/watch?v=" + videoId;
+    const form = new FormData();
+    form.append('url', encodeURI(url));
+    form.append('ajax', 1);
+    const dom = await fetchDom('https://getvideo.id/get_video', { method: 'post', body: form, });
+    return 'proxy:' + dom.querySelector('.btn-success').getAttribute('href');
 }
 
 export async function getDetailsYtdlFull(videoId: string) {
