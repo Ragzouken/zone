@@ -1094,7 +1094,7 @@ async function load() {
     });
     exports.client.on('queue', ({ item }) => {
         var _a;
-        const { title, duration } = item.media.details;
+        const { title, duration } = item.media;
         const username = getUsername((_a = item.info.userId) !== null && _a !== void 0 ? _a : 'server');
         const time = utility_1.secondsToTime(duration / 1000);
         chat.log(`{clr=#00FFFF}+ ${title} (${time}) added by {clr=#FF0000}${username}`);
@@ -1107,16 +1107,19 @@ async function load() {
             httpvideo.src = '';
             return;
         }
-        const { source, details } = message.item.media;
-        chat.log(`{clr=#00FFFF}> ${details.title} (${utility_1.secondsToTime(details.duration / 1000)})`);
+        const { title, duration, sources } = message.item.media;
+        chat.log(`{clr=#00FFFF}> ${title} (${utility_1.secondsToTime(duration / 1000)})`);
         const time = message.time || 0;
         const seconds = time / 1000;
-        if (source.type === 'youtube') {
-            player.playVideoById(source.videoId, seconds);
+        const youtubeSource = sources.find((source) => source.startsWith('youtube:'));
+        const httpSource = sources.find((source) => source.startsWith('http'));
+        if (youtubeSource) {
+            const videoId = youtubeSource.split(':')[1];
+            player.playVideoById(videoId, seconds);
         }
-        else if (source.type === 'archive') {
+        else if (httpSource) {
             const corsProxy = 'https://zone-cors.glitch.me';
-            const src = source.src.replace('embed', 'download');
+            const src = httpSource.replace('embed', 'download');
             httpvideo.src = `${corsProxy}/${src}`;
             httpvideo.currentTime = seconds;
             httpvideo.play();
@@ -1151,7 +1154,7 @@ async function load() {
         }
     });
     setInterval(() => exports.client.heartbeat(), 30 * 1000);
-    player.on('error', () => exports.client.unplayable({ type: 'youtube', videoId: player.video }));
+    player.on('error', () => exports.client.unplayable('youtube:' + player.video));
     function move(dx, dy) {
         const user = getLocalUser();
         if (user.position) {
@@ -1176,7 +1179,7 @@ async function load() {
         else if (!lastSearchResults || index < 0 || index >= lastSearchResults.length)
             chat.status(`there is no #${index + 1} search result`);
         else
-            exports.client.youtube(lastSearchResults[index].source.videoId);
+            exports.client.youtube(lastSearchResults[index].videoId);
     }
     const avatarPanel = document.querySelector('#avatar-panel');
     const avatarPaint = document.querySelector('#avatar-paint');
@@ -1207,7 +1210,6 @@ async function load() {
         ({ results: lastSearchResults } = await exports.client.search(query));
         const lines = lastSearchResults
             .slice(0, 5)
-            .map((media) => media.details)
             .map(({ title, duration }, i) => `${i + 1}. ${title} (${utility_1.secondsToTime(duration / 1000)})`);
         chat.log('{clr=#FFFF00}? queue Search result with /result n\n{clr=#00FFFF}' + lines.join('\n'));
     });
@@ -1363,25 +1365,26 @@ async function load() {
         }
         let remaining = 0;
         if (exports.client.zone.lastPlayedItem) {
-            if (exports.client.zone.lastPlayedItem.media.source.type === 'youtube') {
+            const source = exports.client.zone.lastPlayedItem.media.sources[0];
+            if (source.startsWith('youtube:')) {
                 remaining = Math.round(player.duration - player.time);
             }
-            else if (exports.client.zone.lastPlayedItem.media.source.type === 'archive') {
+            else if (source.startsWith('http')) {
                 remaining = httpvideo.duration - httpvideo.currentTime;
             }
             else {
-                const duration = exports.client.zone.lastPlayedItem.media.details.duration;
+                const duration = exports.client.zone.lastPlayedItem.media.duration;
                 const elapsed = performance.now() - currentPlayStart;
                 remaining = Math.max(0, duration - elapsed) / 1000;
             }
         }
         if (exports.client.zone.lastPlayedItem && remaining > 0)
-            line(exports.client.zone.lastPlayedItem.media.details.title, remaining);
+            line(exports.client.zone.lastPlayedItem.media.title, remaining);
         let total = remaining;
         if (showQueue) {
             exports.client.zone.queue.forEach((item) => {
-                line(item.media.details.title, item.media.details.duration / 1000);
-                total += item.media.details.duration / 1000;
+                line(item.media.title, item.media.duration / 1000);
+                total += item.media.duration / 1000;
             });
             line('*** END ***', total);
             lines[lines.length - 1] = '{clr=#FF00FF}' + lines[lines.length - 1];
@@ -1397,7 +1400,7 @@ async function load() {
         var _a;
         const playing = !!exports.client.zone.lastPlayedItem;
         youtube.hidden = !player.playing;
-        httpvideo.hidden = !playing || ((_a = exports.client.zone.lastPlayedItem) === null || _a === void 0 ? void 0 : _a.media.source.type) !== 'archive';
+        httpvideo.hidden = !playing || !((_a = exports.client.zone.lastPlayedItem) === null || _a === void 0 ? void 0 : _a.media.sources[0].startsWith('http'));
         archive.hidden = true; // !playing || currentPlayMessage?.item.media.source.type !== "archive";
         zoneLogo.hidden = playing;
         drawZone();
@@ -1955,12 +1958,6 @@ const messaging_1 = require("./messaging");
 const events_1 = require("events");
 const utility_1 = require("./utility");
 const zone_1 = require("./zone");
-function isYoutube(item) {
-    return item.source.type === 'youtube';
-}
-function mediaEquals(a, b) {
-    return utility_1.objEqual(a.source, b.source);
-}
 exports.DEFAULT_OPTIONS = {
     quickResponseTimeout: 1000,
     slowResponseTimeout: 5000,
@@ -2055,22 +2052,21 @@ class ZoneClient extends events_1.EventEmitter {
         return new Promise((resolve, reject) => {
             setTimeout(() => reject('timeout'), this.options.slowResponseTimeout);
             this.on('queue', ({ item }) => {
-                if (isYoutube(item.media) && item.media.source.videoId === videoId)
+                if (zone_1.mediaHasSource(item.media, `youtube:${videoId}`))
                     resolve(item);
             });
             this.messaging.send('youtube', { videoId });
         });
     }
     async skip() {
-        var _a;
-        const source = (_a = this.zone.lastPlayedItem) === null || _a === void 0 ? void 0 : _a.media.source;
-        if (!source)
+        if (!this.zone.lastPlayedItem)
             return;
+        const source = this.zone.lastPlayedItem.media.sources[0];
         this.messaging.send('skip', { source });
     }
     async unplayable(source) {
         var _a;
-        source = source || ((_a = this.zone.lastPlayedItem) === null || _a === void 0 ? void 0 : _a.media.source);
+        source = source || ((_a = this.zone.lastPlayedItem) === null || _a === void 0 ? void 0 : _a.media.sources[0]);
         if (!source)
             return;
         this.messaging.send('error', { source });
@@ -2101,7 +2097,7 @@ class ZoneClient extends events_1.EventEmitter {
         });
         this.messaging.messages.on('play', (message) => {
             this.zone.lastPlayedItem = message.item;
-            const index = this.zone.queue.findIndex((item) => mediaEquals(item.media, message.item.media));
+            const index = this.zone.queue.findIndex((item) => { var _a; return zone_1.mediaEquals(item.media, (_a = message.item) === null || _a === void 0 ? void 0 : _a.media); });
             if (index >= 0)
                 this.zone.queue.splice(index, 1);
             this.emit('play', { message });
@@ -2230,6 +2226,19 @@ exports.specifically = specifically;
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 const utility_1 = require("./utility");
+function mediaHasSource(a, source) {
+    return a.sources.includes(source);
+}
+exports.mediaHasSource = mediaHasSource;
+function mediaEquals(a, b) {
+    for (const source of a.sources) {
+        if (mediaHasSource(b, source)) {
+            return true;
+        }
+    }
+    return false;
+}
+exports.mediaEquals = mediaEquals;
 class ZoneState {
     constructor() {
         this.users = new Map();

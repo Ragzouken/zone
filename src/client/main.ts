@@ -15,8 +15,8 @@ import { loadYoutube, YoutubePlayer } from './youtube';
 import { ChatPanel, animatePage } from './chat';
 import { UserId } from '../common/zone';
 
-import { PlayableMedia, PlayableSource } from '../server/playback';
 import ZoneClient from '../common/client';
+import { YoutubeVideo } from '../server/youtube';
 
 export const client = new ZoneClient();
 
@@ -265,7 +265,7 @@ async function load() {
     });
 
     client.on('queue', ({ item }) => {
-        const { title, duration } = item.media.details;
+        const { title, duration } = item.media;
         const username = getUsername(item.info.userId ?? 'server');
         const time = secondsToTime(duration / 1000);
         chat.log(`{clr=#00FFFF}+ ${title} (${time}) added by {clr=#FF0000}${username}`);
@@ -278,17 +278,21 @@ async function load() {
             httpvideo.src = '';
             return;
         }
-        const { source, details } = message.item.media;
-        chat.log(`{clr=#00FFFF}> ${details.title} (${secondsToTime(details.duration / 1000)})`);
+        const { title, duration, sources } = message.item.media;
+        chat.log(`{clr=#00FFFF}> ${title} (${secondsToTime(duration / 1000)})`);
 
         const time = message.time || 0;
         const seconds = time / 1000;
 
-        if (source.type === 'youtube') {
-            player!.playVideoById((source as any).videoId, seconds);
-        } else if (source.type === 'archive') {
+        const youtubeSource = sources.find((source) => source.startsWith('youtube:'));
+        const httpSource = sources.find((source) => source.startsWith('http'));
+
+        if (youtubeSource) {
+            const videoId = youtubeSource.split(':')[1];
+            player!.playVideoById(videoId, seconds);
+        } else if (httpSource) {
             const corsProxy = 'https://zone-cors.glitch.me';
-            const src = (source as any).src.replace('embed', 'download');
+            const src = httpSource.replace('embed', 'download');
             httpvideo.src = `${corsProxy}/${src}`;
             httpvideo.currentTime = seconds;
             httpvideo.play();
@@ -325,7 +329,7 @@ async function load() {
 
     setInterval(() => client.heartbeat(), 30 * 1000);
 
-    player!.on('error', () => client.unplayable({ type: 'youtube', videoId: player!.video } as PlayableSource));
+    player!.on('error', () => client.unplayable('youtube:' + player!.video));
 
     function move(dx: number, dy: number) {
         const user = getLocalUser()!;
@@ -352,7 +356,7 @@ async function load() {
         if (isNaN(index)) chat.status(`did not understand '${args}' as a number`);
         else if (!lastSearchResults || index < 0 || index >= lastSearchResults.length)
             chat.status(`there is no #${index + 1} search result`);
-        else client.youtube((lastSearchResults[index].source as any).videoId);
+        else client.youtube(lastSearchResults[index].videoId);
     }
 
     const avatarPanel = document.querySelector('#avatar-panel') as HTMLElement;
@@ -382,14 +386,13 @@ async function load() {
     });
     avatarCancel.addEventListener('click', () => (avatarPanel.hidden = true));
 
-    let lastSearchResults: PlayableMedia[] = [];
+    let lastSearchResults: YoutubeVideo[] = [];
 
     const chatCommands = new Map<string, (args: string) => void>();
     chatCommands.set('search', async (query) => {
         ({ results: lastSearchResults } = await client.search(query));
         const lines = lastSearchResults
             .slice(0, 5)
-            .map((media) => media.details)
             .map(({ title, duration }, i) => `${i + 1}. ${title} (${secondsToTime(duration / 1000)})`);
         chat.log('{clr=#FFFF00}? queue Search result with /result n\n{clr=#00FFFF}' + lines.join('\n'));
     });
@@ -563,26 +566,26 @@ async function load() {
         let remaining = 0;
 
         if (client.zone.lastPlayedItem) {
-            if (client.zone.lastPlayedItem.media.source.type === 'youtube') {
+            const source = client.zone.lastPlayedItem.media.sources[0];
+            if (source.startsWith('youtube:')) {
                 remaining = Math.round(player!.duration - player!.time);
-            } else if (client.zone.lastPlayedItem.media.source.type === 'archive') {
+            } else if (source.startsWith('http')) {
                 remaining = httpvideo.duration - httpvideo.currentTime;
             } else {
-                const duration = client.zone.lastPlayedItem.media.details.duration;
+                const duration = client.zone.lastPlayedItem.media.duration;
                 const elapsed = performance.now() - currentPlayStart!;
                 remaining = Math.max(0, duration - elapsed) / 1000;
             }
         }
 
-        if (client.zone.lastPlayedItem && remaining > 0)
-            line(client.zone.lastPlayedItem.media.details.title, remaining);
+        if (client.zone.lastPlayedItem && remaining > 0) line(client.zone.lastPlayedItem.media.title, remaining);
 
         let total = remaining;
 
         if (showQueue) {
             client.zone.queue.forEach((item) => {
-                line(item.media.details.title, item.media.details.duration / 1000);
-                total += item.media.details.duration / 1000;
+                line(item.media.title, item.media.duration / 1000);
+                total += item.media.duration / 1000;
             });
             line('*** END ***', total);
             lines[lines.length - 1] = '{clr=#FF00FF}' + lines[lines.length - 1];
@@ -600,7 +603,7 @@ async function load() {
     function redraw() {
         const playing = !!client.zone.lastPlayedItem;
         youtube.hidden = !player!.playing;
-        httpvideo.hidden = !playing || client.zone.lastPlayedItem?.media.source.type !== 'archive';
+        httpvideo.hidden = !playing || !client.zone.lastPlayedItem?.media.sources[0].startsWith('http');
         archive.hidden = true; // !playing || currentPlayMessage?.item.media.source.type !== "archive";
         zoneLogo.hidden = playing;
 
