@@ -1083,6 +1083,11 @@ async function load() {
     setVolume(parseInt(localStorage.getItem('volume') || '100', 10));
     joinName.value = localName;
     let currentPlayStart;
+    function getCurrentPlayTime() {
+        if (!currentPlayStart)
+            return 0;
+        return performance.now() - currentPlayStart;
+    }
     function getUsername(userId) {
         return exports.client.zone.getUser(userId).name || userId;
     }
@@ -1100,7 +1105,7 @@ async function load() {
         const time = utility_1.secondsToTime(duration / 1000);
         chat.log(`{clr=#00FFFF}+ ${title} (${time}) added by {clr=#FF0000}${username}`);
     });
-    exports.client.on('play', ({ message }) => {
+    exports.client.on('play', async ({ message }) => {
         if (!message.item) {
             archive.src = '';
             player === null || player === void 0 ? void 0 : player.stop();
@@ -1111,32 +1116,44 @@ async function load() {
         const { title, duration, sources } = message.item.media;
         chat.log(`{clr=#00FFFF}> ${title} (${utility_1.secondsToTime(duration / 1000)})`);
         const time = message.time || 0;
-        const seconds = time / 1000;
-        const youtubeSource = sources.find((source) => source.startsWith('youtube:'));
-        const archiveSource = sources.find((source) => source.startsWith('archive:'));
-        const proxySource = sources.find((source) => source.startsWith('proxy:'));
-        if (youtubeSource) {
-            const videoId = youtubeSource.slice(8);
-            player.playVideoById(videoId, seconds);
+        currentPlayStart = performance.now() - time;
+        for (const source of sources) {
+            const success = await tryMediaSource(source);
+            if (success)
+                break;
+            console.log("source failed", source);
         }
-        else if (proxySource) {
-            const corsProxy = 'https://zone-cors.glitch.me';
-            const url = proxySource.slice(6);
-            httpvideo.src = `${corsProxy}/${url}`;
+    });
+    async function attemptLoadVideo(source, seconds) {
+        return new Promise((resolve) => {
+            httpvideo.src = source;
             httpvideo.currentTime = seconds;
             httpvideo.play();
+            setTimeout(() => resolve(false), 2000);
+            httpvideo.addEventListener('loadedmetadata', () => resolve(true), { once: true });
+        });
+    }
+    async function tryMediaSource(source) {
+        const seconds = getCurrentPlayTime() / 1000;
+        if (source.startsWith('youtube:')) {
+            const videoId = source.slice(8);
+            player.playVideoById(videoId, seconds);
+            return true;
         }
-        else if (archiveSource) {
-            const path = archiveSource.slice(8);
-            archive.src = `https://archive.org/download/${path}`;
+        else if (source.startsWith('archive:')) {
+            const path = source.slice(8);
+            archive.src = `https://archive.org/embed/${path}?autoplay=1&start=${seconds}`;
+            return true;
+        }
+        else if (source.startsWith('proxy:')) {
+            const corsProxy = 'https://zone-cors.glitch.me';
+            const url = source.slice(6);
+            return tryMediaSource(`${corsProxy}/${url}`);
         }
         else {
-            httpvideo.src = sources[0];
-            httpvideo.currentTime = seconds;
-            httpvideo.play();
+            return attemptLoadVideo(source, seconds);
         }
-        currentPlayStart = performance.now() - time;
-    });
+    }
     exports.client.on('join', (event) => chat.status(`{clr=#FF0000}${event.user.name} {clr=#FF00FF}joined`));
     exports.client.on('leave', (event) => chat.status(`{clr=#FF0000}${event.user.name}{clr=#FF00FF} left`));
     exports.client.on('status', (event) => chat.status(event.text));

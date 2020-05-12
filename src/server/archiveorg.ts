@@ -18,7 +18,8 @@ export async function archiveOrgToMedia(path: string): Promise<Media> {
 
     const title = file.title || metadata.metadata.title || file.name;
     const duration = (file.length.includes(':') ? timeToSeconds(file.length) : parseFloat(file.length)) * 1000;
-    const src = `proxy:https://archive.org/download/${item}/${file.name}`;
+    const proxy = `proxy:https://archive.org/download/${item}/${file.name}`;
+    const embed = `archive:${item}/${file.name}`;
 
-    return { title, duration, sources: [src] };
+    return { title, duration, sources: [proxy, embed] };
 }

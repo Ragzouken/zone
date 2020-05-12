@@ -11,11 +11,15 @@ import FileSync = require('lowdb/adapters/FileSync');
 import { Media } from '../common/zone';
 
 async function* findJsons(path: string) {
-    const entries = await fs.readdir('media', { withFileTypes: true });
-    for (const entry of entries) {
-        if (entry.isFile && entry.name.endsWith('.json')) {
-            yield resolve(path, entry.name);
+    try {
+        const entries = await fs.readdir('media', { withFileTypes: true });
+        for (const entry of entries) {
+            if (entry.isFile && entry.name.endsWith('.json')) {
+                yield resolve(path, entry.name);
+            }
         }
+    } catch (e) {
+        return;
     }
 }
 
