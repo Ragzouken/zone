@@ -303,7 +303,8 @@ async function load() {
             httpvideo.src = source;
             httpvideo.currentTime = seconds;
             httpvideo.play();
-            setTimeout(() => resolve(false), 2000);
+            // setTimeout(() => resolve(false), 5000);
+            httpvideo.addEventListener('error', () => resolve(false), { once: true });
             httpvideo.addEventListener('loadedmetadata', () => resolve(true), { once: true });
         });
     }
