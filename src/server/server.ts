@@ -15,7 +15,6 @@ import { JoinMessage, SendAuth, SendCommand } from '../common/client';
 const SECONDS = 1000;
 
 export type HostOptions = {
-    listenHandle: any;
     pingInterval: number;
     saveInterval: number;
     userTimeout: number;
@@ -33,7 +32,6 @@ export type HostOptions = {
 };
 
 export const DEFAULT_OPTIONS: HostOptions = {
-    listenHandle: 0,
     pingInterval: 10 * SECONDS,
     saveInterval: 30 * SECONDS,
     userTimeout: 5 * SECONDS,
@@ -96,6 +94,8 @@ export function host(xws: expressWs.Instance, adapter: low.AdapterSync, options:
     const youtube = new Youtube();
     let eventMode = false;
     const djs = new Set<UserState>();
+
+    const localLibrary = new Map<string, Media>();
 
     load();
 
@@ -319,6 +319,11 @@ export function host(xws: expressWs.Instance, adapter: low.AdapterSync, options:
             }
         }
 
+        async function tryQueueLocalByPath(path: string) {
+            const media = localLibrary.get(path);
+            if (media) tryQueueMedia(media);
+        }
+
         async function tryQueueArchiveByPath(path: string) {
             tryQueueMedia(await archiveOrgToMedia(path));
         }
@@ -331,6 +336,7 @@ export function host(xws: expressWs.Instance, adapter: low.AdapterSync, options:
 
         messaging.messages.on('youtube', (message: any) => tryQueueYoutubeById(message.videoId));
         messaging.messages.on('archive', (message: any) => tryQueueArchiveByPath(message.path));
+        messaging.messages.on('local', (message: any) => tryQueueLocalByPath(message.path));
 
         messaging.messages.on('search', (message: any) => {
             youtube.search(message.query).then(async (results) => {
@@ -381,5 +387,5 @@ export function host(xws: expressWs.Instance, adapter: low.AdapterSync, options:
         connections.get(userId)!.send(type, message);
     }
 
-    return { zone, playback, save, sendAll, authCommands };
+    return { zone, playback, save, sendAll, authCommands, localLibrary };
 }

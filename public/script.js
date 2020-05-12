@@ -998,10 +998,6 @@ const chat = new chat_1.ChatPanel();
 function getLocalUser() {
     return exports.client.localUserId ? exports.client.zone.getUser(exports.client.localUserId) : undefined;
 }
-function setVolume(volume) {
-    player.volume = volume;
-    localStorage.setItem('volume', volume.toString());
-}
 let localName = localStorage.getItem('name') || '';
 function rename(name) {
     localStorage.setItem('name', name);
@@ -1074,12 +1070,17 @@ function textToYoutubeVideoId(text) {
     return new URL(text).searchParams.get('v');
 }
 async function load() {
-    setVolume(parseInt(localStorage.getItem('volume') || '100', 10));
     const youtube = document.querySelector('#youtube');
     const archive = document.querySelector('#archive');
     const httpvideo = document.querySelector('#http-video');
     const joinName = document.querySelector('#join-name');
     const chatInput = document.querySelector('#chat-input');
+    function setVolume(volume) {
+        player.volume = volume;
+        httpvideo.volume = volume / 100;
+        localStorage.setItem('volume', volume.toString());
+    }
+    setVolume(parseInt(localStorage.getItem('volume') || '100', 10));
     joinName.value = localName;
     let currentPlayStart;
     function getUsername(userId) {
@@ -1112,22 +1113,27 @@ async function load() {
         const time = message.time || 0;
         const seconds = time / 1000;
         const youtubeSource = sources.find((source) => source.startsWith('youtube:'));
-        const httpSource = sources.find((source) => source.startsWith('http'));
+        const archiveSource = sources.find((source) => source.startsWith('archive:'));
+        const proxySource = sources.find((source) => source.startsWith('proxy:'));
         if (youtubeSource) {
-            const videoId = youtubeSource.split(':')[1];
+            const videoId = youtubeSource.slice(8);
             player.playVideoById(videoId, seconds);
         }
-        else if (httpSource) {
+        else if (proxySource) {
             const corsProxy = 'https://zone-cors.glitch.me';
-            const src = httpSource.replace('embed', 'download');
-            httpvideo.src = `${corsProxy}/${src}`;
+            const url = proxySource.slice(6);
+            httpvideo.src = `${corsProxy}/${url}`;
             httpvideo.currentTime = seconds;
             httpvideo.play();
-            // archive.src = ((source as any).src).replace('download', 'embed') + `?autoplay=1&start=${seconds}`;
+        }
+        else if (archiveSource) {
+            const path = archiveSource.slice(8);
+            archive.src = `https://archive.org/download/${path}`;
         }
         else {
-            chat.status(`unsupported media type`);
-            exports.client.unplayable();
+            httpvideo.src = sources[0];
+            httpvideo.currentTime = seconds;
+            httpvideo.play();
         }
         currentPlayStart = performance.now() - time;
     });
@@ -1217,6 +1223,7 @@ async function load() {
         const videoId = textToYoutubeVideoId(args);
         exports.client.youtube(videoId).catch(() => chat.status("couldn't queue video :("));
     });
+    chatCommands.set('local', (path) => exports.client.messaging.send('local', { path }));
     chatCommands.set('skip', () => exports.client.skip());
     chatCommands.set('password', (args) => (joinPassword = args));
     chatCommands.set('users', () => listUsers());
@@ -1397,10 +1404,9 @@ async function load() {
         chatContext.drawImage(pageRenderer.pageImage, 16, 16, 512, 512);
     }
     function redraw() {
-        var _a;
         const playing = !!exports.client.zone.lastPlayedItem;
         youtube.hidden = !player.playing;
-        httpvideo.hidden = !playing || !((_a = exports.client.zone.lastPlayedItem) === null || _a === void 0 ? void 0 : _a.media.sources[0].startsWith('http'));
+        httpvideo.hidden = !playing || httpvideo.src.length === 0;
         archive.hidden = true; // !playing || currentPlayMessage?.item.media.source.type !== "archive";
         zoneLogo.hidden = playing;
         drawZone();
