@@ -38,7 +38,7 @@ export default class Youtube {
         if (details) return details;
 
         try {
-            details = await getDetailsYtdlFull(videoId);
+            details = await getDetailsYtdl(videoId);
         } catch (e) {
             for (const strategy of SEARCH_STRATEGIES) {
                 try {
@@ -121,7 +121,6 @@ export async function getDetailsYtdl(videoId: string) {
         title: info.title, 
         duration: parseInt(info.length_seconds, 10) * 1000,
     };
-    console.log(info.formats);
     return video;
 }
 
