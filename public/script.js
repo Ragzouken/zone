@@ -888,13 +888,8 @@ const text_1 = require("./text");
 const youtube_1 = require("./youtube");
 const chat_1 = require("./chat");
 const client_1 = require("../common/client");
+window.addEventListener('load', () => load());
 exports.client = new client_1.default();
-let player;
-async function start() {
-    player = await youtube_1.loadYoutube('youtube', 448, 252);
-    await load();
-}
-start();
 const avatarImage = blitsy.decodeAsciiTexture(`
 ___XX___
 ___XX___
@@ -1071,13 +1066,22 @@ function textToYoutubeVideoId(text) {
 }
 async function load() {
     const youtube = document.querySelector('#youtube');
-    const archive = document.querySelector('#archive');
-    const httpvideo = document.querySelector('#http-video');
+    const videoPlayer = document.querySelector('#http-video');
     const joinName = document.querySelector('#join-name');
     const chatInput = document.querySelector('#chat-input');
+    let youtubePlayer;
+    async function getYoutubePlayer() {
+        if (!youtubePlayer) {
+            youtubePlayer = await youtube_1.loadYoutube('youtube', 448, 252);
+            youtubePlayer.volume = parseInt(localStorage.getItem('volume') || '100', 10);
+            youtubePlayer.on('error', () => exports.client.unplayable('youtube:' + youtubePlayer.video));
+        }
+        return youtubePlayer;
+    }
     function setVolume(volume) {
-        player.volume = volume;
-        httpvideo.volume = volume / 100;
+        if (youtubePlayer)
+            youtubePlayer.volume = volume;
+        videoPlayer.volume = volume / 100;
         localStorage.setItem('volume', volume.toString());
     }
     setVolume(parseInt(localStorage.getItem('volume') || '100', 10));
@@ -1107,26 +1111,29 @@ async function load() {
     });
     exports.client.on('play', async ({ message }) => {
         if (!message.item) {
-            archive.src = '';
-            player === null || player === void 0 ? void 0 : player.stop();
-            httpvideo.pause();
-            httpvideo.src = '';
+            youtubePlayer === null || youtubePlayer === void 0 ? void 0 : youtubePlayer.stop();
+            videoPlayer.pause();
+            videoPlayer.src = '';
             return;
         }
         const { title, duration, source } = message.item.media;
         chat.log(`{clr=#00FFFF}> ${title} (${utility_1.secondsToTime(duration / 1000)})`);
         const time = message.time || 0;
         currentPlayStart = performance.now() - time;
-        await attemptLoadVideo(source, getCurrentPlayTime() / 1000);
+        const success = await attemptLoadVideo(source, getCurrentPlayTime() / 1000);
+        if (!success && source.startsWith('youtube/')) {
+            const videoId = source.slice(8);
+            (await getYoutubePlayer()).playVideoById(videoId, getCurrentPlayTime() / 1000);
+        }
     });
     async function attemptLoadVideo(source, seconds) {
         return new Promise((resolve) => {
-            httpvideo.src = source;
-            httpvideo.currentTime = seconds;
-            httpvideo.play();
+            videoPlayer.src = source;
+            videoPlayer.currentTime = seconds;
+            videoPlayer.play();
             // setTimeout(() => resolve(false), 5000);
-            httpvideo.addEventListener('error', () => resolve(false), { once: true });
-            httpvideo.addEventListener('loadedmetadata', () => resolve(true), { once: true });
+            videoPlayer.addEventListener('error', () => resolve(false), { once: true });
+            videoPlayer.addEventListener('loadedmetadata', () => resolve(true), { once: true });
         });
     }
     exports.client.on('join', (event) => chat.status(`{clr=#FF0000}${event.user.name} {clr=#FF00FF}joined`));
@@ -1152,7 +1159,6 @@ async function load() {
         }
     });
     setInterval(() => exports.client.heartbeat(), 30 * 1000);
-    player.on('error', () => exports.client.unplayable('youtube:' + player.video));
     function move(dx, dy) {
         const user = getLocalUser();
         if (user.position) {
@@ -1364,8 +1370,8 @@ async function load() {
         }
         let remaining = 0;
         if (exports.client.zone.lastPlayedItem) {
-            if (httpvideo.src && httpvideo.currentTime > 0) {
-                remaining = httpvideo.duration - httpvideo.currentTime;
+            if (videoPlayer.src && videoPlayer.currentTime > 0) {
+                remaining = videoPlayer.duration - videoPlayer.currentTime;
             }
             else {
                 const duration = exports.client.zone.lastPlayedItem.media.duration;
@@ -1393,9 +1399,8 @@ async function load() {
     }
     function redraw() {
         const playing = !!exports.client.zone.lastPlayedItem;
-        youtube.hidden = !player.playing;
-        httpvideo.hidden = !playing || httpvideo.src.length === 0;
-        archive.hidden = true; // !playing || currentPlayMessage?.item.media.source.type !== "archive";
+        youtube.hidden = !(youtubePlayer === null || youtubePlayer === void 0 ? void 0 : youtubePlayer.playing);
+        videoPlayer.hidden = !playing || videoPlayer.src.length === 0;
         zoneLogo.hidden = playing;
         drawZone();
         chatContext.fillStyle = 'rgb(0, 0, 0)';
@@ -1408,6 +1413,7 @@ async function load() {
     redraw();
     setupEntrySplash();
 }
+exports.load = load;
 function setupEntrySplash() {
     const entrySplash = document.getElementById('entry-splash');
     const entryButton = document.getElementById('entry-button');

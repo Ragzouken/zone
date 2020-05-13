@@ -18,14 +18,9 @@ import { UserId } from '../common/zone';
 import ZoneClient from '../common/client';
 import { YoutubeVideo } from '../server/youtube';
 
-export const client = new ZoneClient();
+window.addEventListener('load', () => load());
 
-let player: YoutubePlayer | undefined;
-async function start() {
-    player = await loadYoutube('youtube', 448, 252);
-    await load();
-}
-start();
+export const client = new ZoneClient();
 
 const avatarImage = blitsy.decodeAsciiTexture(
     `
@@ -234,15 +229,26 @@ function textToYoutubeVideoId(text: string) {
     return new URL(text).searchParams.get('v');
 }
 
-async function load() {
+export async function load() {
     const youtube = document.querySelector('#youtube') as HTMLElement;
-    const httpvideo = document.querySelector('#http-video') as HTMLVideoElement;
+    const videoPlayer = document.querySelector('#http-video') as HTMLVideoElement;
     const joinName = document.querySelector('#join-name') as HTMLInputElement;
     const chatInput = document.querySelector('#chat-input') as HTMLInputElement;
 
+    let youtubePlayer: YoutubePlayer | undefined;
+    async function getYoutubePlayer() {
+        if (!youtubePlayer) {
+            youtubePlayer = await loadYoutube('youtube', 448, 252);
+            youtubePlayer.volume = parseInt(localStorage.getItem('volume') || '100', 10);
+            youtubePlayer.on('error', () => client.unplayable('youtube:' + youtubePlayer!.video));
+        }
+
+        return youtubePlayer;
+    }
+
     function setVolume(volume: number) {
-        player!.volume = volume;
-        httpvideo.volume = volume / 100;
+        if (youtubePlayer) youtubePlayer.volume = volume;
+        videoPlayer.volume = volume / 100;
         localStorage.setItem('volume', volume.toString());
     }
 
@@ -276,9 +282,9 @@ async function load() {
     });
     client.on('play', async ({ message }) => {
         if (!message.item) {
-            player?.stop();
-            httpvideo.pause();
-            httpvideo.src = '';
+            youtubePlayer?.stop();
+            videoPlayer.pause();
+            videoPlayer.src = '';
             return;
         }
         const { title, duration, source } = message.item.media;
@@ -287,17 +293,21 @@ async function load() {
         const time = message.time || 0;
         currentPlayStart = performance.now() - time;
         
-        await attemptLoadVideo(source, getCurrentPlayTime() / 1000);
+        const success = await attemptLoadVideo(source, getCurrentPlayTime() / 1000);
+        if (!success && source.startsWith('youtube/')) {
+            const videoId = source.slice(8);
+            (await getYoutubePlayer()).playVideoById(videoId, getCurrentPlayTime() / 1000);
+        }
     });
 
     async function attemptLoadVideo(source: string, seconds: number): Promise<boolean> {
         return new Promise((resolve) => {
-            httpvideo.src = source;
-            httpvideo.currentTime = seconds;
-            httpvideo.play();
+            videoPlayer.src = source;
+            videoPlayer.currentTime = seconds;
+            videoPlayer.play();
             // setTimeout(() => resolve(false), 5000);
-            httpvideo.addEventListener('error', () => resolve(false), { once: true });
-            httpvideo.addEventListener('loadedmetadata', () => resolve(true), { once: true });
+            videoPlayer.addEventListener('error', () => resolve(false), { once: true });
+            videoPlayer.addEventListener('loadedmetadata', () => resolve(true), { once: true });
         });
     }
 
@@ -324,8 +334,6 @@ async function load() {
     });
 
     setInterval(() => client.heartbeat(), 30 * 1000);
-
-    player!.on('error', () => client.unplayable('youtube:' + player!.video));
 
     function move(dx: number, dy: number) {
         const user = getLocalUser()!;
@@ -563,8 +571,8 @@ async function load() {
         let remaining = 0;
 
         if (client.zone.lastPlayedItem) {
-            if (httpvideo.src && httpvideo.currentTime > 0) {
-                remaining = httpvideo.duration - httpvideo.currentTime;
+            if (videoPlayer.src && videoPlayer.currentTime > 0) {
+                remaining = videoPlayer.duration - videoPlayer.currentTime;
             } else {
                 const duration = client.zone.lastPlayedItem.media.duration;
                 const elapsed = performance.now() - currentPlayStart!;
@@ -596,8 +604,8 @@ async function load() {
 
     function redraw() {
         const playing = !!client.zone.lastPlayedItem;
-        youtube.hidden = !player!.playing;
-        httpvideo.hidden = !playing || httpvideo.src.length === 0;
+        youtube.hidden = !youtubePlayer?.playing;
+        videoPlayer.hidden = !playing || videoPlayer.src.length === 0;
         zoneLogo.hidden = playing;
 
         drawZone();
