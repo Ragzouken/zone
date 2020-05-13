@@ -38,6 +38,7 @@ async function run() {
     }
 
     const xws = expressWs(app, server);
+    server.setTimeout(10 * 60 * 1000); // might be the video cutting...
     server.listen(process.env.PORT || 4000, () => console.log('listening...'));
     server.on('error', (error) => console.log('server error', error));
 
