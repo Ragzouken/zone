@@ -13,8 +13,11 @@ import FileSync = require('lowdb/adapters/FileSync');
 import { Media } from '../common/zone';
 
 process.on('uncaughtException', (err) => {
-    console.log('uncaught:', err, err.stack);
+    console.log('uncaught exception:', err, err.stack);
 });
+process.on('unhandledRejection', (err) => {
+    console.log('uncaught reject:', err);
+})
 
 async function run() {
     const app = express();
