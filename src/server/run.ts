@@ -1,6 +1,5 @@
 import * as express from 'express';
 import * as expressWs from 'express-ws';
-import * as cors from 'cors';
 import * as http from 'http';
 import * as https from 'https';
 import * as request from 'request';
@@ -70,7 +69,6 @@ async function run() {
 
     // trust glitch's proxy to give us socket ips
     app.set('trust proxy', true);
-    app.use(cors());
     app.use('/', express.static('public'));
     app.use('/media', express.static('media'));
     app.get('/update/:password', (req, res) => {
