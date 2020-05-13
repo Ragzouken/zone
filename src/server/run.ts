@@ -13,8 +13,7 @@ import FileSync = require('lowdb/adapters/FileSync');
 import { Media } from '../common/zone';
 
 process.on('uncaughtException', (err) => {
-    console.error(err.stack);
-    console.log("Node NOT Exiting...");
+    console.log('uncaught:', err, err.stack);
 });
 
 async function run() {
