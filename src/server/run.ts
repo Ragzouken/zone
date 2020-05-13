@@ -67,7 +67,7 @@ async function run() {
     }
 
     authCommands.set('update', update);
-    authCommands.set('find-videos', findLocalVideos);
+    authCommands.set('refresh-videos', refreshLocalVideos);
 
     // trust glitch's proxy to give us socket ips
     app.set('trust proxy', true);
@@ -115,7 +115,8 @@ async function run() {
         });
     }
 
-    function findLocalVideos() {
+    function refreshLocalVideos() {
+        localLibrary.clear();
         glob('media/**/*.mp4', (error, matches) => {
             matches.forEach(async (path) => {
                 const title = basename(path, extname(path));
@@ -126,7 +127,7 @@ async function run() {
         });
     }
 
-    findLocalVideos();
+    refreshLocalVideos();
 }
 
 run();
