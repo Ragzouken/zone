@@ -72,7 +72,7 @@ async function run() {
     app.get('/youtube/:videoId', (req, res) => {
         youtube.direct(req.params.videoId).then(
             (url) => {
-                req.pipe(request(url)).pipe(res);
+                req.pipe(request(url)).pipe(res).on('error', console.log);
             },
             () => res.sendStatus(503),
         );
@@ -80,7 +80,7 @@ async function run() {
 
     app.get(/^\/archive\/(.+)/, (req, res) => {
         const url = `https://archive.org/download/${req.params[0]}`;
-        req.pipe(request(url)).pipe(res);
+        req.pipe(request(url)).pipe(res).on('error', console.log);
     });
 
     process.on('SIGINT', () => {
