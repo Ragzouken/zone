@@ -67,6 +67,7 @@ async function run() {
     }
 
     authCommands.set('update', update);
+    authCommands.set('find-videos', findLocalVideos);
 
     // trust glitch's proxy to give us socket ips
     app.set('trust proxy', true);
@@ -114,14 +115,18 @@ async function run() {
         });
     }
 
-    glob('media/**/*.mp4', (error, matches) => {
-        matches.forEach(async (path) => {
-            const title = basename(path, extname(path));
-            const duration = await getDuration(path);
-            const media: Media = { title, duration, source: path };
-            localLibrary.set(title, media);
+    function findLocalVideos() {
+        glob('media/**/*.mp4', (error, matches) => {
+            matches.forEach(async (path) => {
+                const title = basename(path, extname(path));
+                const duration = await getDuration(path);
+                const media: Media = { title, duration, source: path };
+                localLibrary.set(title, media);
+            });
         });
-    });
+    }
+
+    findLocalVideos();
 }
 
 run();
