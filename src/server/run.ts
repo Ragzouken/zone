@@ -12,19 +12,6 @@ import { exec } from 'child_process';
 import FileSync = require('lowdb/adapters/FileSync');
 import { Media } from '../common/zone';
 
-async function* findJsons(path: string) {
-    try {
-        const entries = await fs.readdir('media', { withFileTypes: true });
-        for (const entry of entries) {
-            if (entry.isFile && entry.name.endsWith('.json')) {
-                yield resolve(path, entry.name);
-            }
-        }
-    } catch (e) {
-        return;
-    }
-}
-
 async function run() {
     const app = express();
     let server: http.Server | https.Server;
@@ -104,7 +91,7 @@ async function run() {
     });
 
     const durationCommand =
-        'ffprobe -v error -select_streams v:0 -show_entries stream=duration -of default=noprint_wrappers=1:nokey=1';
+        'ffprobe -v error -select_streams a:0 -show_entries stream=duration -of default=noprint_wrappers=1:nokey=1';
 
     function getDuration(file: string): Promise<number> {
         return new Promise((resolve, reject) => {
@@ -118,6 +105,14 @@ async function run() {
     function refreshLocalVideos() {
         localLibrary.clear();
         glob('media/**/*.mp4', (error, matches) => {
+            matches.forEach(async (path) => {
+                const title = basename(path, extname(path));
+                const duration = await getDuration(path);
+                const media: Media = { title, duration, source: path };
+                localLibrary.set(title, media);
+            });
+        });
+        glob('media/**/*.mp3', (error, matches) => {
             matches.forEach(async (path) => {
                 const title = basename(path, extname(path));
                 const duration = await getDuration(path);
