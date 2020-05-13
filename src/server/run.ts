@@ -4,6 +4,7 @@ import * as http from 'http';
 import * as https from 'https';
 import * as request from 'request';
 import * as youtube from './youtube';
+import * as glob from 'glob';
 import { promises as fs } from 'fs';
 import { resolve, basename, extname } from 'path';
 import { host } from './server';
@@ -101,12 +102,25 @@ async function run() {
         process.exit();
     });
 
-    for await (const path of findJsons('media')) {
-        const name = basename(path, extname(path));
-        const json = (await fs.readFile(path, 'utf-8')).toString();
-        const media = JSON.parse(json) as Media;
-        localLibrary.set(name, media);
+    const durationCommand = "ffprobe -v error -select_streams v:0 -show_entries stream=duration -of default=noprint_wrappers=1:nokey=1";
+
+    function getDuration(file: string): Promise<number> {
+        return new Promise((resolve, reject) => {
+            exec(durationCommand + " " + file, (error, stdout, stderr) => {
+                if (error) reject(error);
+                else resolve(parseFloat(stdout) * 1000);
+            });
+        });
     }
+
+    glob('media/**/*.mp4', (error, matches) => {
+        matches.forEach(async (path) => {
+            const title = basename(path, extname(path));
+            const duration = await getDuration(path);
+            const media: Media = { title, duration, source: path };
+            localLibrary.set(title, media);
+        });
+    });
 }
 
 run();
