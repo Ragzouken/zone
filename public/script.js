@@ -1113,17 +1113,11 @@ async function load() {
             httpvideo.src = '';
             return;
         }
-        const { title, duration, sources } = message.item.media;
+        const { title, duration, source } = message.item.media;
         chat.log(`{clr=#00FFFF}> ${title} (${utility_1.secondsToTime(duration / 1000)})`);
         const time = message.time || 0;
         currentPlayStart = performance.now() - time;
-        console.log(sources);
-        for (const source of sources) {
-            const success = await tryMediaSource(source);
-            if (success)
-                break;
-            console.log('source failed', source);
-        }
+        await attemptLoadVideo(source, getCurrentPlayTime() / 1000);
     });
     async function attemptLoadVideo(source, seconds) {
         return new Promise((resolve) => {
@@ -1134,27 +1128,6 @@ async function load() {
             httpvideo.addEventListener('error', () => resolve(false), { once: true });
             httpvideo.addEventListener('loadedmetadata', () => resolve(true), { once: true });
         });
-    }
-    async function tryMediaSource(source) {
-        const seconds = getCurrentPlayTime() / 1000;
-        if (source.startsWith('youtube:')) {
-            const videoId = source.slice(8);
-            player.playVideoById(videoId, seconds);
-            return true;
-        }
-        else if (source.startsWith('archive:')) {
-            const path = source.slice(8);
-            archive.src = `https://archive.org/embed/${path}?autoplay=1&start=${seconds}`;
-            return true;
-        }
-        else if (source.startsWith('proxy:')) {
-            const corsProxy = 'https://zone-cors.glitch.me';
-            const url = source.slice(6);
-            return tryMediaSource(`${corsProxy}/${url}`);
-        }
-        else {
-            return attemptLoadVideo(source, seconds);
-        }
     }
     exports.client.on('join', (event) => chat.status(`{clr=#FF0000}${event.user.name} {clr=#FF00FF}joined`));
     exports.client.on('leave', (event) => chat.status(`{clr=#FF0000}${event.user.name}{clr=#FF00FF} left`));
@@ -1391,11 +1364,7 @@ async function load() {
         }
         let remaining = 0;
         if (exports.client.zone.lastPlayedItem) {
-            const source = exports.client.zone.lastPlayedItem.media.sources[0];
-            if (source.startsWith('youtube:')) {
-                remaining = Math.round(player.duration - player.time);
-            }
-            else if (source.startsWith('http')) {
+            if (httpvideo.src && httpvideo.currentTime > 0) {
                 remaining = httpvideo.duration - httpvideo.currentTime;
             }
             else {
@@ -2093,12 +2062,12 @@ class ZoneClient extends events_1.EventEmitter {
     async skip() {
         if (!this.zone.lastPlayedItem)
             return;
-        const source = this.zone.lastPlayedItem.media.sources[0];
+        const source = this.zone.lastPlayedItem.media.source[0];
         this.messaging.send('skip', { source });
     }
     async unplayable(source) {
         var _a;
-        source = source || ((_a = this.zone.lastPlayedItem) === null || _a === void 0 ? void 0 : _a.media.sources[0]);
+        source = source || ((_a = this.zone.lastPlayedItem) === null || _a === void 0 ? void 0 : _a.media.source[0]);
         if (!source)
             return;
         this.messaging.send('error', { source });
@@ -2259,11 +2228,11 @@ exports.specifically = specifically;
 Object.defineProperty(exports, "__esModule", { value: true });
 const utility_1 = require("./utility");
 function mediaHasSource(a, source) {
-    return a.sources.includes(source);
+    return a.source.includes(source);
 }
 exports.mediaHasSource = mediaHasSource;
 function mediaEquals(a, b) {
-    for (const source of a.sources) {
+    for (const source of a.source) {
         if (mediaHasSource(b, source)) {
             return true;
         }

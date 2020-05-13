@@ -14,18 +14,18 @@ export type UserState = {
 export type Media = {
     title: string;
     duration: number;
-    sources: string[];
+    source: string;
     image?: string;
 };
 
-export type MediaMeta = Omit<Media, 'sources'>;
+export type MediaMeta = Omit<Media, 'source'>;
 
 export function mediaHasSource(a: Media, source: string) {
-    return a.sources.includes(source);
+    return a.source.includes(source);
 }
 
 export function mediaEquals(a: Media, b: Media) {
-    for (const source of a.sources) {
+    for (const source of a.source) {
         if (mediaHasSource(b, source)) {
             return true;
         }

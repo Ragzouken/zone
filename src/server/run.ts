@@ -4,6 +4,7 @@ import * as cors from 'cors';
 import * as http from 'http';
 import * as https from 'https';
 import * as request from 'request';
+import * as youtube from './youtube';
 import { promises as fs } from 'fs';
 import { resolve, basename, extname } from 'path';
 import { host } from './server';
@@ -81,8 +82,14 @@ async function run() {
         }
     });
 
-    app.use('/proxy/:url', (req, res) => {
-        const url = decodeURIComponent(req.params.url);
+    app.get('/youtube/:videoId', (req, res) => {
+        youtube.direct(req.params.videoId).then((url) => {
+            req.pipe(request(url)).pipe(res);
+        }, () => res.sendStatus(503));
+    });
+
+    app.get(/^\/archive\/(.+)/, (req, res) => {
+        const url = `https://archive.org/download/${req.params[0]}`;
         req.pipe(request(url)).pipe(res);
     });
 

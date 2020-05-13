@@ -1,24 +1,39 @@
+import { performance } from 'perf_hooks';
 import * as ytdl from 'ytdl-core';
 import { fetchDom, timeToSeconds } from './utility';
 import { Media, MediaMeta } from '../common/zone';
 
 export type YoutubeVideo = MediaMeta & { videoId: string };
 
+const TIMEOUT = 30 * 60 * 1000;
+const infoCache = new Map<string, { info: ytdl.videoInfo, expires: number }>();
+
+async function getCachedInfo(videoId: string) {
+    const entry = infoCache.get(videoId);
+
+    if (entry && entry.expires > performance.now()) {
+        return entry.info;
+    } else {
+        infoCache.delete(videoId);
+        const info = await ytdl.getInfo(videoId);
+        const expires = performance.now() + TIMEOUT;
+        infoCache.set(videoId, { info, expires });
+        return info;
+    }
+}
+
+export async function direct(videoId: string): Promise<string> {
+    const info = await getCachedInfo(videoId);
+    const format = ytdl.chooseFormat(info.formats, { quality: '18' });
+    return format.url;
+}
+
 export async function media(videoId: string): Promise<Media> {
-    const info = await ytdl.getInfo(videoId);
-    const sources = ['youtube:' + videoId];
+    const { title, length_seconds } = await ytdl.getInfo(videoId);
+    const duration = parseInt(length_seconds, 10) * 1000;
+    const source = 'youtube/' + videoId;
 
-    try {
-        const url = ytdl.chooseFormat(info.formats, { quality: '18' }).url;
-        sources.unshift('./proxy/' + encodeURIComponent(url));
-    } catch (e) {}
-
-    const media: Media = {
-        title: info.title,
-        duration: parseInt(info.length_seconds, 10) * 1000,
-        sources,
-    };
-    return media;
+    return { title, duration, source };
 }
 
 export async function search(query: string): Promise<YoutubeVideo[]> {

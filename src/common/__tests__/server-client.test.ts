@@ -498,7 +498,7 @@ describe('media sources', () => {
             const client = await server.client({ slowResponseTimeout: 5000 });
             await client.join();
             const item = await client.youtube(youtube.videoId);
-            expect(item.media.sources).toContain(youtube.sources[0]);
+            expect(item.media.source).toContain(youtube.source[0]);
         });
     });
 

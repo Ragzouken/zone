@@ -17,7 +17,6 @@ import { UserId } from '../common/zone';
 
 import ZoneClient from '../common/client';
 import { YoutubeVideo } from '../server/youtube';
-import { resolve } from 'dns';
 
 export const client = new ZoneClient();
 
@@ -237,7 +236,6 @@ function textToYoutubeVideoId(text: string) {
 
 async function load() {
     const youtube = document.querySelector('#youtube') as HTMLElement;
-    const archive = document.querySelector('#archive') as HTMLIFrameElement;
     const httpvideo = document.querySelector('#http-video') as HTMLVideoElement;
     const joinName = document.querySelector('#join-name') as HTMLInputElement;
     const chatInput = document.querySelector('#chat-input') as HTMLInputElement;
@@ -278,24 +276,18 @@ async function load() {
     });
     client.on('play', async ({ message }) => {
         if (!message.item) {
-            archive.src = '';
             player?.stop();
             httpvideo.pause();
             httpvideo.src = '';
             return;
         }
-        const { title, duration, sources } = message.item.media;
+        const { title, duration, source } = message.item.media;
         chat.log(`{clr=#00FFFF}> ${title} (${secondsToTime(duration / 1000)})`);
 
         const time = message.time || 0;
         currentPlayStart = performance.now() - time;
-
-        console.log(sources);
-        for (const source of sources) {
-            const success = await tryMediaSource(source);
-            if (success) break;
-            console.log('source failed', source);
-        }
+        
+        await attemptLoadVideo(source, getCurrentPlayTime() / 1000);
     });
 
     async function attemptLoadVideo(source: string, seconds: number): Promise<boolean> {
@@ -307,26 +299,6 @@ async function load() {
             httpvideo.addEventListener('error', () => resolve(false), { once: true });
             httpvideo.addEventListener('loadedmetadata', () => resolve(true), { once: true });
         });
-    }
-
-    async function tryMediaSource(source: string): Promise<boolean> {
-        const seconds = getCurrentPlayTime() / 1000;
-
-        if (source.startsWith('youtube:')) {
-            const videoId = source.slice(8);
-            player!.playVideoById(videoId, seconds);
-            return true;
-        } else if (source.startsWith('archive:')) {
-            const path = source.slice(8);
-            archive.src = `https://archive.org/embed/${path}?autoplay=1&start=${seconds}`;
-            return true;
-        } else if (source.startsWith('proxy:')) {
-            const corsProxy = 'https://zone-cors.glitch.me';
-            const url = source.slice(6);
-            return tryMediaSource(`${corsProxy}/${url}`);
-        } else {
-            return attemptLoadVideo(source, seconds);
-        }
     }
 
     client.on('join', (event) => chat.status(`{clr=#FF0000}${event.user.name} {clr=#FF00FF}joined`));
@@ -591,10 +563,7 @@ async function load() {
         let remaining = 0;
 
         if (client.zone.lastPlayedItem) {
-            const source = client.zone.lastPlayedItem.media.sources[0];
-            if (source.startsWith('youtube:')) {
-                remaining = Math.round(player!.duration - player!.time);
-            } else if (source.startsWith('http')) {
+            if (httpvideo.src && httpvideo.currentTime > 0) {
                 remaining = httpvideo.duration - httpvideo.currentTime;
             } else {
                 const duration = client.zone.lastPlayedItem.media.duration;
@@ -629,7 +598,6 @@ async function load() {
         const playing = !!client.zone.lastPlayedItem;
         youtube.hidden = !player!.playing;
         httpvideo.hidden = !playing || httpvideo.src.length === 0;
-        archive.hidden = true; // !playing || currentPlayMessage?.item.media.source.type !== "archive";
         zoneLogo.hidden = playing;
 
         drawZone();
