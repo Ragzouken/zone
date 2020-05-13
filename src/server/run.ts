@@ -6,11 +6,16 @@ import * as request from 'request';
 import * as youtube from './youtube';
 import * as glob from 'glob';
 import { promises as fs } from 'fs';
-import { resolve, basename, extname } from 'path';
+import { basename, extname } from 'path';
 import { host } from './server';
 import { exec } from 'child_process';
 import FileSync = require('lowdb/adapters/FileSync');
 import { Media } from '../common/zone';
+
+process.on('uncaughtException', (err) => {
+    console.error(err.stack);
+    console.log("Node NOT Exiting...");
+});
 
 async function run() {
     const app = express();
