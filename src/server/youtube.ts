@@ -4,54 +4,7 @@ import { Media, MediaMeta } from '../common/zone';
 
 export type YoutubeVideo = MediaMeta & { videoId: string };
 
-export type YoutubeState = {
-    videos: YoutubeVideo[];
-};
-
-export default class Youtube {
-    private cache = new Map<string, YoutubeVideo>();
-
-    public copyState(): YoutubeState {
-        return {
-            videos: Array.from(this.cache.values()),
-        };
-    }
-
-    public loadState(state: YoutubeState) {
-        this.cache.clear();
-        state.videos.forEach((video) => this.addVideo(video));
-    }
-
-    public addVideo(video: YoutubeVideo) {
-        this.cache.set(video.videoId, video);
-    }
-
-    public async search(query: string): Promise<YoutubeVideo[]> {
-        const results = await search(query);
-        results.forEach((video: YoutubeVideo) => this.addVideo(video));
-        return results;
-    }
-
-    public async details(videoId: string): Promise<YoutubeVideo> {
-        let details = this.cache.get(videoId);
-        if (details) return details;
-
-        try {
-            details = await getDetailsYtdl(videoId);
-        } catch (e) {}
-
-        if (!details) throw new Error(`Couldn't determine details of ${videoId}`);
-
-        this.addVideo(details);
-        return details;
-    }
-
-    public async media(videoId: string): Promise<Media> {
-        return getMediaYtdl(videoId);
-    }
-}
-
-export async function getMediaYtdl(videoId: string) {
+export async function media(videoId: string): Promise<Media> {
     const info = await ytdl.getInfo(videoId);
     const sources = ['youtube:' + videoId];
 
@@ -66,16 +19,6 @@ export async function getMediaYtdl(videoId: string) {
         sources,
     };
     return media;
-}
-
-export async function getDetailsYtdl(videoId: string) {
-    const info = await ytdl.getBasicInfo(videoId);
-    const video: YoutubeVideo = {
-        videoId,
-        title: info.title,
-        duration: parseInt(info.length_seconds, 10) * 1000,
-    };
-    return video;
 }
 
 export async function search(query: string): Promise<YoutubeVideo[]> {

@@ -1345,7 +1345,6 @@ async function load() {
     const pageRenderer = new text_1.PageRenderer(256, 256);
     const zoneLogo = document.querySelector('#zone-logo');
     function drawZone() {
-        roomBackground.drawImage(httpvideo, 32 / 4, 32 / 4, 448 / 4, 252 / 4);
         sceneContext.clearRect(0, 0, 512, 512);
         sceneContext.drawImage(roomBackground.canvas, 0, 0, 512, 512);
         exports.client.zone.users.forEach((user) => {
