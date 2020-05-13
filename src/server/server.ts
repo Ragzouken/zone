@@ -2,10 +2,10 @@ import * as WebSocket from 'ws';
 import * as expressWs from 'express-ws';
 import * as low from 'lowdb';
 
-import Youtube from './youtube';
+import * as youtube from './youtube';
 import Playback, { QueueItem } from './playback';
 import Messaging from '../common/messaging';
-import { ZoneState, UserId, UserState, mediaHasSource, mediaEquals, Media } from '../common/zone';
+import { ZoneState, UserId, UserState, mediaEquals, Media } from '../common/zone';
 import { nanoid } from 'nanoid';
 import { archiveOrgToMedia } from './archiveorg';
 import { copy } from '../common/utility';
@@ -91,7 +91,6 @@ export function host(xws: expressWs.Instance, adapter: low.AdapterSync, options:
     const playback = new Playback();
     playback.paddingTime = opts.playbackPaddingTime;
 
-    const youtube = new Youtube();
     let eventMode = false;
     const djs = new Set<UserState>();
 
@@ -115,12 +114,10 @@ export function host(xws: expressWs.Instance, adapter: low.AdapterSync, options:
 
     function load() {
         playback.loadState(db.get('playback').value());
-        youtube.loadState(db.get('youtube').value());
     }
 
     function save() {
         db.set('playback', playback.copyState()).write();
-        db.set('youtube', youtube.copyState()).write();
     }
 
     const userToConnections = new Map<UserState, Set<Messaging>>();
@@ -150,7 +147,7 @@ export function host(xws: expressWs.Instance, adapter: low.AdapterSync, options:
     }
 
     function voteError(source: string, user: UserState) {
-        if (!playback.currentItem || !mediaHasSource(playback.currentItem.media, source)) return;
+        if (!playback.currentItem || playback.currentItem.media.source !== source) return;
 
         errors.add(user.userId);
         if (errors.size >= Math.floor(zone.users.size * opts.errorSkipThreshold)) {
@@ -159,7 +156,7 @@ export function host(xws: expressWs.Instance, adapter: low.AdapterSync, options:
     }
 
     function voteSkip(source: string, user: UserState) {
-        if (!playback.currentItem || !mediaHasSource(playback.currentItem.media, source)) return;
+        if (!playback.currentItem || playback.currentItem.media.source !== source) return;
 
         skips.add(user.userId);
         const current = skips.size;
@@ -329,9 +326,7 @@ export function host(xws: expressWs.Instance, adapter: low.AdapterSync, options:
         }
 
         async function tryQueueYoutubeById(videoId: string) {
-            const yt = await youtube.details(videoId);
-            const media = { ...yt, sources: ['youtube:' + yt.videoId], videoId: undefined };
-            tryQueueMedia(media);
+            tryQueueMedia(await youtube.media(videoId));
         }
 
         messaging.messages.on('youtube', (message: any) => tryQueueYoutubeById(message.videoId));

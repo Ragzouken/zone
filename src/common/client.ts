@@ -3,7 +3,7 @@ import { QueueItem } from '../server/playback';
 import { EventEmitter } from 'events';
 import { YoutubeVideo } from '../server/youtube';
 import { specifically } from './utility';
-import { ZoneState, UserState, Media, mediaHasSource, mediaEquals } from './zone';
+import { ZoneState, UserState, mediaEquals } from './zone';
 
 export type StatusMesage = { text: string };
 export type JoinMessage = { name: string; token?: string; password?: string };
@@ -187,20 +187,28 @@ export class ZoneClient extends EventEmitter {
         return new Promise<QueueItem>((resolve, reject) => {
             setTimeout(() => reject('timeout'), this.options.slowResponseTimeout);
             this.on('queue', ({ item }) => {
-                if (mediaHasSource(item.media, `youtube:${videoId}`)) resolve(item);
+                if (item.media.source === 'youtube/' + videoId) resolve(item);
             });
             this.messaging.send('youtube', { videoId });
         });
     }
 
+    async local(path: string) {
+        return new Promise<QueueItem>((resolve, reject) => {
+            setTimeout(() => reject('timeout'), this.options.quickResponseTimeout);
+            this.once('queue', ({ item }) => resolve(item));
+            this.messaging.send('local', { path });
+        });
+    }
+
     async skip() {
         if (!this.zone.lastPlayedItem) return;
-        const source = this.zone.lastPlayedItem.media.sources[0];
+        const source = this.zone.lastPlayedItem.media.source;
         this.messaging.send('skip', { source });
     }
 
     async unplayable(source?: string) {
-        source = source || this.zone.lastPlayedItem?.media.sources[0];
+        source = source || this.zone.lastPlayedItem?.media.source;
         if (!source) return;
         this.messaging.send('error', { source });
     }

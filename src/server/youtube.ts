@@ -1,74 +1,39 @@
+import { performance } from 'perf_hooks';
+import * as ytdl from 'ytdl-core';
 import { fetchDom, timeToSeconds } from './utility';
 import { Media, MediaMeta } from '../common/zone';
 
 export type YoutubeVideo = MediaMeta & { videoId: string };
 
-export type YoutubeState = {
-    videos: YoutubeVideo[];
-};
+const TIMEOUT = 30 * 60 * 1000;
+const infoCache = new Map<string, { info: ytdl.videoInfo; expires: number }>();
 
-export default class Youtube {
-    private cache = new Map<string, YoutubeVideo>();
+async function getCachedInfo(videoId: string) {
+    const entry = infoCache.get(videoId);
 
-    public copyState(): YoutubeState {
-        return {
-            videos: Array.from(this.cache.values()),
-        };
-    }
-
-    public loadState(state: YoutubeState) {
-        this.cache.clear();
-        state.videos.forEach((video) => this.addVideo(video));
-    }
-
-    public addVideo(video: YoutubeVideo) {
-        this.cache.set(video.videoId, video);
-    }
-
-    public async search(query: string): Promise<YoutubeVideo[]> {
-        const results = await search(query);
-        results.forEach((video: YoutubeVideo) => this.addVideo(video));
-        return results;
-    }
-
-    public async details(videoId: string): Promise<YoutubeVideo> {
-        let details = this.cache.get(videoId);
-        if (details) return details;
-
-        for (const strategy of SEARCH_STRATEGIES) {
-            try {
-                const query = await strategy(videoId);
-                await this.search(query);
-                details = this.cache.get(videoId);
-                if (details) break;
-            } catch (e) {
-                console.log(`strategy exception`, e);
-            }
-        }
-
-        if (!details) throw new Error(`Couldn't determine details of ${videoId}`);
-
-        this.addVideo(details);
-        return details;
-    }
-
-    public async media(videoId: string): Promise<Media> {
-        const details = await this.details(videoId);
-        return { ...details, sources: ['youtube:' + videoId] };
+    if (entry && entry.expires > performance.now()) {
+        return entry.info;
+    } else {
+        infoCache.delete(videoId);
+        const info = await ytdl.getInfo(videoId);
+        const expires = performance.now() + TIMEOUT;
+        infoCache.set(videoId, { info, expires });
+        return info;
     }
 }
 
-type SearchStrategy = (videoId: string) => Promise<string>;
-const SEARCH_STRATEGIES: SearchStrategy[] = [
-    async (videoId) => `"${videoId}"`,
-    async (videoId) => `"v=${videoId}"`,
-    async (videoId) => `"${await getTitleDirect(videoId)}"`,
-];
+export async function direct(videoId: string): Promise<string> {
+    const info = await getCachedInfo(videoId);
+    const format = ytdl.chooseFormat(info.formats, { quality: '18' });
+    return format.url;
+}
 
-export async function getTitleDirect(videoId: string) {
-    const dom = await fetchDom(`https://www.youtube.com/watch?v=${videoId}`);
-    const title = dom.querySelectorAll('meta').filter((element) => element.getAttribute('property') === 'og:title')[0];
-    return title.getAttribute('content');
+export async function media(videoId: string): Promise<Media> {
+    const { title, length_seconds } = await getCachedInfo(videoId);
+    const duration = parseInt(length_seconds, 10) * 1000;
+    const source = 'youtube/' + videoId;
+
+    return { title, duration, source };
 }
 
 export async function search(query: string): Promise<YoutubeVideo[]> {

@@ -14,24 +14,14 @@ export type UserState = {
 export type Media = {
     title: string;
     duration: number;
-    sources: string[];
+    source: string;
     image?: string;
 };
 
-export type MediaMeta = Omit<Media, 'sources'>;
-
-export function mediaHasSource(a: Media, source: string) {
-    return a.sources.includes(source);
-}
+export type MediaMeta = Omit<Media, 'source'>;
 
 export function mediaEquals(a: Media, b: Media) {
-    for (const source of a.sources) {
-        if (mediaHasSource(b, source)) {
-            return true;
-        }
-    }
-
-    return false;
+    return a.source === b.source;
 }
 
 export class ZoneState {

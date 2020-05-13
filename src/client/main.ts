@@ -18,14 +18,9 @@ import { UserId } from '../common/zone';
 import ZoneClient from '../common/client';
 import { YoutubeVideo } from '../server/youtube';
 
-export const client = new ZoneClient();
+window.addEventListener('load', () => load());
 
-let player: YoutubePlayer | undefined;
-async function start() {
-    player = await loadYoutube('youtube', 448, 252);
-    await load();
-}
-start();
+export const client = new ZoneClient();
 
 const avatarImage = blitsy.decodeAsciiTexture(
     `
@@ -234,16 +229,26 @@ function textToYoutubeVideoId(text: string) {
     return new URL(text).searchParams.get('v');
 }
 
-async function load() {
+export async function load() {
     const youtube = document.querySelector('#youtube') as HTMLElement;
-    const archive = document.querySelector('#archive') as HTMLIFrameElement;
-    const httpvideo = document.querySelector('#http-video') as HTMLVideoElement;
+    const videoPlayer = document.querySelector('#http-video') as HTMLVideoElement;
     const joinName = document.querySelector('#join-name') as HTMLInputElement;
     const chatInput = document.querySelector('#chat-input') as HTMLInputElement;
 
+    let youtubePlayer: YoutubePlayer | undefined;
+    async function getYoutubePlayer() {
+        if (!youtubePlayer) {
+            youtubePlayer = await loadYoutube('youtube', 448, 252);
+            youtubePlayer.volume = parseInt(localStorage.getItem('volume') || '100', 10);
+            youtubePlayer.on('error', () => client.unplayable('youtube:' + youtubePlayer!.video));
+        }
+
+        return youtubePlayer;
+    }
+
     function setVolume(volume: number) {
-        player!.volume = volume;
-        httpvideo.volume = volume / 100;
+        if (youtubePlayer) youtubePlayer.volume = volume;
+        videoPlayer.volume = volume / 100;
         localStorage.setItem('volume', volume.toString());
     }
 
@@ -252,6 +257,10 @@ async function load() {
     joinName.value = localName;
 
     let currentPlayStart: number | undefined;
+    function getCurrentPlayTime() {
+        if (!currentPlayStart) return 0;
+        return performance.now() - currentPlayStart;
+    }
 
     function getUsername(userId: UserId) {
         return client.zone.getUser(userId).name || userId;
@@ -271,44 +280,36 @@ async function load() {
         const time = secondsToTime(duration / 1000);
         chat.log(`{clr=#00FFFF}+ ${title} (${time}) added by {clr=#FF0000}${username}`);
     });
-    client.on('play', ({ message }) => {
+    client.on('play', async ({ message }) => {
         if (!message.item) {
-            archive.src = '';
-            player?.stop();
-            httpvideo.pause();
-            httpvideo.src = '';
+            youtubePlayer?.stop();
+            videoPlayer.pause();
+            videoPlayer.src = '';
             return;
         }
-        const { title, duration, sources } = message.item.media;
+        const { title, duration, source } = message.item.media;
         chat.log(`{clr=#00FFFF}> ${title} (${secondsToTime(duration / 1000)})`);
 
         const time = message.time || 0;
-        const seconds = time / 1000;
-
-        const youtubeSource = sources.find((source) => source.startsWith('youtube:'));
-        const archiveSource = sources.find((source) => source.startsWith('archive:'));
-        const proxySource = sources.find((source) => source.startsWith('proxy:'));
-
-        if (youtubeSource) {
-            const videoId = youtubeSource.slice(8);
-            player!.playVideoById(videoId, seconds);
-        } else if (proxySource) {
-            const corsProxy = 'https://zone-cors.glitch.me';
-            const url = proxySource.slice(6);
-            httpvideo.src = `${corsProxy}/${url}`;
-            httpvideo.currentTime = seconds;
-            httpvideo.play();
-        } else if (archiveSource) {
-            const path = archiveSource.slice(8);
-            archive.src = `https://archive.org/download/${path}`;
-        } else {
-            httpvideo.src = sources[0];
-            httpvideo.currentTime = seconds;
-            httpvideo.play();
-        }
-
         currentPlayStart = performance.now() - time;
+
+        const success = await attemptLoadVideo(source, getCurrentPlayTime() / 1000);
+        if (!success && source.startsWith('youtube/')) {
+            const videoId = source.slice(8);
+            (await getYoutubePlayer()).playVideoById(videoId, getCurrentPlayTime() / 1000);
+        }
     });
+
+    async function attemptLoadVideo(source: string, seconds: number): Promise<boolean> {
+        return new Promise((resolve) => {
+            videoPlayer.src = source;
+            videoPlayer.currentTime = seconds;
+            videoPlayer.play();
+            // setTimeout(() => resolve(false), 5000);
+            videoPlayer.addEventListener('error', () => resolve(false), { once: true });
+            videoPlayer.addEventListener('loadedmetadata', () => resolve(true), { once: true });
+        });
+    }
 
     client.on('join', (event) => chat.status(`{clr=#FF0000}${event.user.name} {clr=#FF00FF}joined`));
     client.on('leave', (event) => chat.status(`{clr=#FF0000}${event.user.name}{clr=#FF00FF} left`));
@@ -333,8 +334,6 @@ async function load() {
     });
 
     setInterval(() => client.heartbeat(), 30 * 1000);
-
-    player!.on('error', () => client.unplayable('youtube:' + player!.video));
 
     function move(dx: number, dy: number) {
         const user = getLocalUser()!;
@@ -405,7 +404,7 @@ async function load() {
         const videoId = textToYoutubeVideoId(args)!;
         client.youtube(videoId).catch(() => chat.status("couldn't queue video :("));
     });
-    chatCommands.set('local', (path) => client.messaging.send('local', { path }));
+    chatCommands.set('local', (path) => client.local(path));
     chatCommands.set('skip', () => client.skip());
     chatCommands.set('password', (args) => (joinPassword = args));
     chatCommands.set('users', () => listUsers());
@@ -572,11 +571,8 @@ async function load() {
         let remaining = 0;
 
         if (client.zone.lastPlayedItem) {
-            const source = client.zone.lastPlayedItem.media.sources[0];
-            if (source.startsWith('youtube:')) {
-                remaining = Math.round(player!.duration - player!.time);
-            } else if (source.startsWith('http')) {
-                remaining = httpvideo.duration - httpvideo.currentTime;
+            if (videoPlayer.src && videoPlayer.currentTime > 0) {
+                remaining = videoPlayer.duration - videoPlayer.currentTime;
             } else {
                 const duration = client.zone.lastPlayedItem.media.duration;
                 const elapsed = performance.now() - currentPlayStart!;
@@ -608,9 +604,8 @@ async function load() {
 
     function redraw() {
         const playing = !!client.zone.lastPlayedItem;
-        youtube.hidden = !player!.playing;
-        httpvideo.hidden = !playing || httpvideo.src.length === 0;
-        archive.hidden = true; // !playing || currentPlayMessage?.item.media.source.type !== "archive";
+        youtube.hidden = !youtubePlayer?.playing;
+        videoPlayer.hidden = !playing || videoPlayer.src.length === 0;
         zoneLogo.hidden = playing;
 
         drawZone();

@@ -19,7 +19,7 @@ describe('connectivity', () => {
             const socket = await server.socket();
             await once(socket, 'ping');
         });
-    }, 100);
+    }, 500);
 
     test('server responds with pong', async () => {
         await zoneServer({}, async (server) => {
@@ -28,7 +28,7 @@ describe('connectivity', () => {
             socket.ping();
             await waiter;
         });
-    }, 100);
+    }, 500);
 });
 
 describe('join open server', () => {
@@ -296,13 +296,14 @@ describe('playback', () => {
         await zoneServer({}, async (server) => {
             const client = await server.client();
 
-            const youtube = await YOUTUBE_MEDIA[0];
             // queue twice because currently playing doesn't count
-            server.hosting.playback.queueMedia(youtube);
-            server.hosting.playback.queueMedia(youtube);
+            server.hosting.playback.queueMedia(DAY_MEDIA);
+            server.hosting.playback.queueMedia(DAY_MEDIA);
 
+            const waiter = client.expect('queue');
             await client.join();
-            const queued = client.youtube(youtube.videoId);
+            await waiter;
+            const queued = client.local('DAY_MEDIA');
 
             await expect(queued).rejects.toEqual('timeout');
         });
@@ -313,7 +314,7 @@ describe('playback', () => {
             const client = await server.client();
 
             await client.join();
-            const queued = client.youtube('2GjyNgQ4Dos');
+            const queued = client.local('DAY_MEDIA');
 
             await expect(queued).rejects.toEqual('timeout');
         });
@@ -440,7 +441,7 @@ describe('event mode', () => {
             client.auth(authPassword);
             client.command('mode', ['event']);
 
-            const queued = client.youtube(YOUTUBE_MEDIA[0].videoId);
+            const queued = client.local('DAY_MEDIA');
             await expect(queued).rejects.toEqual('timeout');
         });
     });
@@ -454,7 +455,7 @@ describe('event mode', () => {
             client.command('mode', ['event']);
             client.command('dj-add', [client.localUser!.name]);
 
-            await client.youtube(YOUTUBE_MEDIA[0].videoId);
+            await client.local('DAY_MEDIA');
         });
     });
 
@@ -468,7 +469,7 @@ describe('event mode', () => {
             client.command('dj-add', [client.localUser!.name]);
             client.command('dj-del', [client.localUser!.name]);
 
-            const queued = client.youtube(YOUTUBE_MEDIA[0].videoId);
+            const queued = client.local('DAY_MEDIA');
             await expect(queued).rejects.toEqual('timeout');
         });
     });
@@ -494,11 +495,10 @@ describe('media sources', () => {
         await zoneServer({}, async (server) => {
             const youtube = YOUTUBE_MEDIA[0];
 
-            const client = await server.client();
+            const client = await server.client({ slowResponseTimeout: 5000 });
             await client.join();
-
             const item = await client.youtube(youtube.videoId);
-            expect(item.media.sources).toEqual(youtube.sources);
+            expect(item.media.source).toContain(youtube.source[0]);
         });
     });
 
@@ -512,7 +512,7 @@ describe('media sources', () => {
 
     test('can lucky search youtube', async () => {
         await zoneServer({}, async (server) => {
-            const client = await server.client();
+            const client = await server.client({ slowResponseTimeout: 5000 });
             await client.join();
             await client.lucky('hello');
         });
