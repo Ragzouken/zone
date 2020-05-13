@@ -29,7 +29,7 @@ export async function direct(videoId: string): Promise<string> {
 }
 
 export async function media(videoId: string): Promise<Media> {
-    const { title, length_seconds } = await ytdl.getInfo(videoId);
+    const { title, length_seconds } = await getCachedInfo(videoId);
     const duration = parseInt(length_seconds, 10) * 1000;
     const source = 'youtube/' + videoId;
 

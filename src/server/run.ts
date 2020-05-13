@@ -102,7 +102,8 @@ async function run() {
         process.exit();
     });
 
-    const durationCommand = "ffprobe -v error -select_streams v:0 -show_entries stream=duration -of default=noprint_wrappers=1:nokey=1";
+    const durationCommand =
+        'ffprobe -v error -select_streams v:0 -show_entries stream=duration -of default=noprint_wrappers=1:nokey=1';
 
     function getDuration(file: string): Promise<number> {
         return new Promise((resolve, reject) => {
