@@ -292,7 +292,7 @@ export async function load() {
 
         const time = message.time || 0;
         currentPlayStart = performance.now() - time;
-        
+
         const success = await attemptLoadVideo(source, getCurrentPlayTime() / 1000);
         if (!success && source.startsWith('youtube/')) {
             const videoId = source.slice(8);

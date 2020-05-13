@@ -6,7 +6,7 @@ import { Media, MediaMeta } from '../common/zone';
 export type YoutubeVideo = MediaMeta & { videoId: string };
 
 const TIMEOUT = 30 * 60 * 1000;
-const infoCache = new Map<string, { info: ytdl.videoInfo, expires: number }>();
+const infoCache = new Map<string, { info: ytdl.videoInfo; expires: number }>();
 
 async function getCachedInfo(videoId: string) {
     const entry = infoCache.get(videoId);

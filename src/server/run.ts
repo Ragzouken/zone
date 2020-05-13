@@ -83,9 +83,12 @@ async function run() {
     });
 
     app.get('/youtube/:videoId', (req, res) => {
-        youtube.direct(req.params.videoId).then((url) => {
-            req.pipe(request(url)).pipe(res);
-        }, () => res.sendStatus(503));
+        youtube.direct(req.params.videoId).then(
+            (url) => {
+                req.pipe(request(url)).pipe(res);
+            },
+            () => res.sendStatus(503),
+        );
     });
 
     app.get(/^\/archive\/(.+)/, (req, res) => {
