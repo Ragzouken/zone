@@ -2052,7 +2052,7 @@ class ZoneClient extends events_1.EventEmitter {
         return new Promise((resolve, reject) => {
             setTimeout(() => reject('timeout'), this.options.slowResponseTimeout);
             this.on('queue', ({ item }) => {
-                if (zone_1.mediaHasSource(item.media, `youtube:${videoId}`))
+                if (item.media.source === 'youtube/' + videoId)
                     resolve(item);
             });
             this.messaging.send('youtube', { videoId });
@@ -2068,12 +2068,12 @@ class ZoneClient extends events_1.EventEmitter {
     async skip() {
         if (!this.zone.lastPlayedItem)
             return;
-        const source = this.zone.lastPlayedItem.media.source[0];
+        const source = this.zone.lastPlayedItem.media.source;
         this.messaging.send('skip', { source });
     }
     async unplayable(source) {
         var _a;
-        source = source || ((_a = this.zone.lastPlayedItem) === null || _a === void 0 ? void 0 : _a.media.source[0]);
+        source = source || ((_a = this.zone.lastPlayedItem) === null || _a === void 0 ? void 0 : _a.media.source);
         if (!source)
             return;
         this.messaging.send('error', { source });
@@ -2233,17 +2233,8 @@ exports.specifically = specifically;
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 const utility_1 = require("./utility");
-function mediaHasSource(a, source) {
-    return a.source.includes(source);
-}
-exports.mediaHasSource = mediaHasSource;
 function mediaEquals(a, b) {
-    for (const source of a.source) {
-        if (mediaHasSource(b, source)) {
-            return true;
-        }
-    }
-    return false;
+    return a.source === b.source;
 }
 exports.mediaEquals = mediaEquals;
 class ZoneState {

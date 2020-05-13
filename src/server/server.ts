@@ -5,7 +5,7 @@ import * as low from 'lowdb';
 import * as youtube from './youtube';
 import Playback, { QueueItem } from './playback';
 import Messaging from '../common/messaging';
-import { ZoneState, UserId, UserState, mediaHasSource, mediaEquals, Media } from '../common/zone';
+import { ZoneState, UserId, UserState, mediaEquals, Media } from '../common/zone';
 import { nanoid } from 'nanoid';
 import { archiveOrgToMedia } from './archiveorg';
 import { copy } from '../common/utility';
@@ -147,7 +147,7 @@ export function host(xws: expressWs.Instance, adapter: low.AdapterSync, options:
     }
 
     function voteError(source: string, user: UserState) {
-        if (!playback.currentItem || !mediaHasSource(playback.currentItem.media, source)) return;
+        if (!playback.currentItem || playback.currentItem.media.source !== source) return;
 
         errors.add(user.userId);
         if (errors.size >= Math.floor(zone.users.size * opts.errorSkipThreshold)) {
@@ -156,7 +156,7 @@ export function host(xws: expressWs.Instance, adapter: low.AdapterSync, options:
     }
 
     function voteSkip(source: string, user: UserState) {
-        if (!playback.currentItem || !mediaHasSource(playback.currentItem.media, source)) return;
+        if (!playback.currentItem || playback.currentItem.media.source !== source) return;
 
         skips.add(user.userId);
         const current = skips.size;

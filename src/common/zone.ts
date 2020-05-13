@@ -20,18 +20,8 @@ export type Media = {
 
 export type MediaMeta = Omit<Media, 'source'>;
 
-export function mediaHasSource(a: Media, source: string) {
-    return a.source.includes(source);
-}
-
 export function mediaEquals(a: Media, b: Media) {
-    for (const source of a.source) {
-        if (mediaHasSource(b, source)) {
-            return true;
-        }
-    }
-
-    return false;
+    return a.source === b.source;
 }
 
 export class ZoneState {
