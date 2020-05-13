@@ -3,6 +3,7 @@ import * as expressWs from 'express-ws';
 import * as cors from 'cors';
 import * as http from 'http';
 import * as https from 'https';
+import * as request from 'request';
 import { promises as fs } from 'fs';
 import { resolve, basename, extname } from 'path';
 import { host } from './server';
@@ -78,6 +79,11 @@ async function run() {
         } else {
             res.sendStatus(401);
         }
+    });
+
+    app.use('/proxy/:url', (req, res) => {
+        const url = decodeURIComponent(req.params.url);
+        req.pipe(request(url)).pipe(res);
     });
 
     process.on('SIGINT', () => {

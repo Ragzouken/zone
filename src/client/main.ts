@@ -294,7 +294,7 @@ async function load() {
         for (const source of sources) {
             const success = await tryMediaSource(source);
             if (success) break;
-            console.log("source failed", source);
+            console.log('source failed', source);
         }
     });
 
@@ -424,7 +424,7 @@ async function load() {
         const videoId = textToYoutubeVideoId(args)!;
         client.youtube(videoId).catch(() => chat.status("couldn't queue video :("));
     });
-    chatCommands.set('local', (path) => client.messaging.send('local', { path }));
+    chatCommands.set('local', (path) => client.local(path));
     chatCommands.set('skip', () => client.skip());
     chatCommands.set('password', (args) => (joinPassword = args));
     chatCommands.set('users', () => listUsers());
@@ -532,6 +532,7 @@ async function load() {
     const zoneLogo = document.querySelector('#zone-logo') as HTMLElement;
 
     function drawZone() {
+        roomBackground.drawImage(httpvideo, 32 / 4, 32 / 4, 448 / 4, 252 / 4);
         sceneContext.clearRect(0, 0, 512, 512);
         sceneContext.drawImage(roomBackground.canvas, 0, 0, 512, 512);
 

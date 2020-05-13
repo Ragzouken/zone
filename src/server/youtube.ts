@@ -1,5 +1,4 @@
 import * as ytdl from 'ytdl-core';
-import * as FormData from 'form-data';
 import { fetchDom, timeToSeconds } from './utility';
 import { Media, MediaMeta } from '../common/zone';
 
@@ -39,18 +38,7 @@ export default class Youtube {
 
         try {
             details = await getDetailsYtdl(videoId);
-        } catch (e) {
-            for (const strategy of SEARCH_STRATEGIES) {
-                try {
-                    const query = await strategy(videoId);
-                    await this.search(query);
-                    details = this.cache.get(videoId);
-                    if (details) break;
-                } catch (e) {
-                    console.log(`strategy exception`, e);
-                }
-            }
-        }
+        } catch (e) {}
 
         if (!details) throw new Error(`Couldn't determine details of ${videoId}`);
 
@@ -59,24 +47,9 @@ export default class Youtube {
     }
 
     public async media(videoId: string): Promise<Media> {
-        const details = await this.details(videoId);
-        const sources = ['youtube:' + videoId];
-
-        try {
-            sources.unshift(await getSourcesWeb(videoId));
-        } catch (e) {}
-    
-        const media: Media = { ...details, sources };
-        return media;
+        return getMediaYtdl(videoId);
     }
 }
-
-type SearchStrategy = (videoId: string) => Promise<string>;
-const SEARCH_STRATEGIES: SearchStrategy[] = [
-    async (videoId) => `"${videoId}"`,
-    async (videoId) => `"v=${videoId}"`,
-    async (videoId) => `"${await getTitleDirect(videoId)}"`,
-];
 
 export async function getMediaYtdl(videoId: string) {
     const info = await ytdl.getInfo(videoId);
@@ -84,50 +57,25 @@ export async function getMediaYtdl(videoId: string) {
 
     try {
         const url = ytdl.chooseFormat(info.formats, { quality: '18' }).url;
-        sources.unshift('proxy:' + url);
+        sources.unshift('./proxy/' + encodeURIComponent(url));
     } catch (e) {}
 
     const media: Media = {
-        title: info.title, 
+        title: info.title,
         duration: parseInt(info.length_seconds, 10) * 1000,
         sources,
     };
     return media;
 }
 
-export async function getSourcesWeb(videoId: string) {
-    const url = "https://www.youtube.com/watch?v=" + videoId;
-    const form = new FormData();
-    form.append('url', encodeURI(url));
-    form.append('ajax', 1);
-    const dom = await fetchDom('https://getvideo.id/get_video', { method: 'post', body: form, });
-    return 'proxy:' + dom.querySelector('.btn-success').getAttribute('href');
-}
-
-export async function getDetailsYtdlFull(videoId: string) {
-    const info = await ytdl.getInfo(videoId);
-    const video: YoutubeVideo = {
-        videoId, 
-        title: info.title, 
-        duration: parseInt(info.length_seconds, 10) * 1000,
-    };
-    return video;
-}
-
 export async function getDetailsYtdl(videoId: string) {
     const info = await ytdl.getBasicInfo(videoId);
     const video: YoutubeVideo = {
-        videoId, 
-        title: info.title, 
+        videoId,
+        title: info.title,
         duration: parseInt(info.length_seconds, 10) * 1000,
     };
     return video;
-}
-
-export async function getTitleDirect(videoId: string) {
-    const dom = await fetchDom(`https://www.youtube.com/watch?v=${videoId}`);
-    const title = dom.querySelectorAll('meta').filter((element) => element.getAttribute('property') === 'og:title')[0];
-    return title.getAttribute('content');
 }
 
 export async function search(query: string): Promise<YoutubeVideo[]> {

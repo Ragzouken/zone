@@ -193,6 +193,14 @@ export class ZoneClient extends EventEmitter {
         });
     }
 
+    async local(path: string) {
+        return new Promise<QueueItem>((resolve, reject) => {
+            setTimeout(() => reject('timeout'), this.options.quickResponseTimeout);
+            this.once('queue', ({ item }) => resolve(item));
+            this.messaging.send('local', { path });
+        });
+    }
+
     async skip() {
         if (!this.zone.lastPlayedItem) return;
         const source = this.zone.lastPlayedItem.media.sources[0];

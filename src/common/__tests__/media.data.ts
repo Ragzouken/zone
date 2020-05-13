@@ -29,13 +29,19 @@ export const THREADS_ARCHIVE_VIDEO: Media = {
 export const PRISONER_ARCHIVE_VIDEO: Media = {
     title: 'The Prisoner 01 Arrival',
     duration: 2935410,
-    sources: ['proxy:https://archive.org/download/The_Prisoner/ThePrisoner01Arrival.mp4', 'archive:The_Prisoner/ThePrisoner01Arrival.mp4'],
+    sources: [
+        'proxy:https://archive.org/download/The_Prisoner/ThePrisoner01Arrival.mp4',
+        'archive:The_Prisoner/ThePrisoner01Arrival.mp4',
+    ],
 };
 
 export const BAD_DURATION_ARCHIVE_MUSIC: Media = {
     title: 'Ike Stubblefield',
     duration: 498000,
-    sources: ['proxy:https://archive.org/download/blr2020-05-01/bobby2020-05-01d01t01.mp3', 'archive:blr2020-05-01/bobby2020-05-01d01t01.mp3'],
+    sources: [
+        'proxy:https://archive.org/download/blr2020-05-01/bobby2020-05-01d01t01.mp3',
+        'archive:blr2020-05-01/bobby2020-05-01d01t01.mp3',
+    ],
 };
 
 export const ARCHIVE_PATH_TO_MEDIA = [

@@ -1,10 +1,5 @@
-import Youtube, { getTitleDirect } from '../youtube';
+import Youtube from '../youtube';
 import { YOUTUBE_MEDIA, FAKE_YOUTUBE_VIDEO } from '../../common/__tests__/media.data';
-
-test.each(YOUTUBE_MEDIA)('getTitleDirect', async (knownVideo) => {
-    const title = await getTitleDirect(knownVideo.sources[0].split(':')[1]);
-    expect(title).toEqual(knownVideo.title);
-});
 
 test.each(YOUTUBE_MEDIA)('youtube.details', async ({ title, duration, videoId }) => {
     const youtube = new Youtube();
