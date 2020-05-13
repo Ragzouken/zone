@@ -532,7 +532,6 @@ async function load() {
     const zoneLogo = document.querySelector('#zone-logo') as HTMLElement;
 
     function drawZone() {
-        roomBackground.drawImage(httpvideo, 32 / 4, 32 / 4, 448 / 4, 252 / 4);
         sceneContext.clearRect(0, 0, 512, 512);
         sceneContext.drawImage(roomBackground.canvas, 0, 0, 512, 512);
 
