@@ -98,6 +98,9 @@ export function host(xws: expressWs.Instance, adapter: low.AdapterSync, options:
 
     const localLibrary = new Map<string, Media>();
 
+    playback.on('play', cacheYoutubes);
+    playback.on('queue', cacheYoutubes);
+
     load();
 
     playback.on('queue', (item: QueueItem) => sendAll('queue', { items: [item] }));
@@ -124,9 +127,6 @@ export function host(xws: expressWs.Instance, adapter: low.AdapterSync, options:
             if (videoId) youtubeCache.renewCachedVideo(videoId);
         });
     }
-
-    playback.on('play', cacheYoutubes);
-    playback.on('queue', cacheYoutubes);
 
     const skips = new Set<UserId>();
     const errors = new Set<UserId>();
