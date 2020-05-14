@@ -305,7 +305,6 @@ export async function load() {
             videoPlayer.src = source;
             videoPlayer.currentTime = seconds;
             videoPlayer.play();
-            // setTimeout(() => resolve(false), 5000);
             videoPlayer.addEventListener('error', () => resolve(false), { once: true });
             videoPlayer.addEventListener('loadedmetadata', () => resolve(true), { once: true });
         });

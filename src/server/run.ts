@@ -6,11 +6,14 @@ import * as request from 'request';
 import * as youtube from './youtube';
 import * as glob from 'glob';
 import { promises as fs } from 'fs';
-import { resolve, basename, extname } from 'path';
+import { basename, extname } from 'path';
 import { host } from './server';
 import { exec } from 'child_process';
 import FileSync = require('lowdb/adapters/FileSync');
 import { Media } from '../common/zone';
+
+process.on('uncaughtException', (err) => console.log('uncaught exception:', err, err.stack));
+process.on('unhandledRejection', (err) => console.log('uncaught reject:', err));
 
 async function run() {
     const app = express();
@@ -35,7 +38,9 @@ async function run() {
     }
 
     const xws = expressWs(app, server);
+    server.setTimeout(10 * 60 * 1000); // might be the video cutting...
     server.listen(process.env.PORT || 4000, () => console.log('listening...'));
+    server.on('error', (error) => console.log('server error', error));
 
     const dataPath = process.env.ZONE_DATA_PATH || '.data/db.json';
     const adapter = new FileSync(dataPath);
