@@ -42,6 +42,7 @@ export async function media(videoId: string): Promise<Media> {
     return { title, duration, source };
 }
 
+const durationLimit = 60 * 60;
 const downloading = new Set<string>();
 const downloaded = new Map<string, string>();
 tmp.setGracefulCleanup();
@@ -53,6 +54,8 @@ export function ensureDownloading(videoId: string) {
     downloading.add(videoId);
 
     info(videoId).then((info) => {
+        const duration = parseFloat(info.length_seconds);
+        if (duration > durationLimit) return;
         const format = ytdl.chooseFormat(info.formats, { quality: '18' });
         const options = {
             discardDescriptor: true,
