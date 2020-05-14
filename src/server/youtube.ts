@@ -96,11 +96,9 @@ export class YoutubeCache {
         const timeout = Math.max(duration * 2, 15 * 60 * 60 * 1000);
         
         const existing = this.cached.get(videoId);
-        const download = this.downloads.get(videoId);
-
         if (existing) {
             existing.expires = performance.now() + timeout;
-        } else if (!download) {
+        } else if (!this.downloads.has(videoId)) {
             const download = this.downloadToCache(videoId);
             this.downloads.set(videoId, download);
             download.then((path) => {
