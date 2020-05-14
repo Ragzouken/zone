@@ -2,6 +2,8 @@ import { performance } from 'perf_hooks';
 import * as ytdl from 'ytdl-core';
 import { fetchDom, timeToSeconds } from './utility';
 import { Media, MediaMeta } from '../common/zone';
+import { createWriteStream } from 'fs';
+import * as tmp from 'tmp';
 
 export type YoutubeVideo = MediaMeta & { videoId: string };
 
@@ -22,6 +24,10 @@ async function getCachedInfo(videoId: string) {
     }
 }
 
+export async function info(videoID: string) {
+    return getCachedInfo(videoID);
+}
+
 export async function direct(videoId: string): Promise<string> {
     const info = await getCachedInfo(videoId);
     const format = ytdl.chooseFormat(info.formats, { quality: '18' });
@@ -34,6 +40,37 @@ export async function media(videoId: string): Promise<Media> {
     const source = 'youtube/' + videoId;
 
     return { title, duration, source };
+}
+
+const downloading = new Set<string>();
+const downloaded = new Map<string, string>();
+tmp.setGracefulCleanup();
+
+export function ensureDownloading(videoId: string) {
+    const existing = downloaded.get(videoId);
+    if (existing) return existing;
+    if (downloading.has(videoId)) return undefined;
+    downloading.add(videoId);
+
+    info(videoId).then((info) => {
+        const format = ytdl.chooseFormat(info.formats, { quality: '18' });
+        const options = {
+            discardDescriptor: true,
+            mode: 0o644, 
+            prefix: `youtube-${videoId}-`, 
+            postfix: '.mp4',
+        };
+
+        tmp.file(options, (err, path) => {
+            const writable = createWriteStream(path);
+            const readable = ytdl.downloadFromInfo(info, { format });
+            writable.on('close', () => downloaded.set(videoId, path));
+            readable.pipe(writable);
+            console.log('downloading...');
+        });
+    });
+    
+    return undefined;
 }
 
 export async function search(query: string): Promise<YoutubeVideo[]> {

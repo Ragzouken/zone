@@ -11,6 +11,7 @@ import { host } from './server';
 import { exec } from 'child_process';
 import FileSync = require('lowdb/adapters/FileSync');
 import { Media } from '../common/zone';
+import ytdl = require('ytdl-core');
 
 process.on('uncaughtException', (err) => console.log('uncaught exception:', err, err.stack));
 process.on('unhandledRejection', (err) => console.log('uncaught reject:', err));
@@ -75,12 +76,19 @@ async function run() {
     });
 
     app.get('/youtube/:videoId', (req, res) => {
-        youtube.direct(req.params.videoId).then(
-            (url) => {
-                req.pipe(request(url)).pipe(res);
-            },
-            () => res.sendStatus(503),
-        );
+        const videoId = req.params.videoId;
+        const path = youtube.ensureDownloading(videoId);
+
+        if (path) {
+            console.log('serve');
+            res.sendFile(path);
+        } else {
+            console.log('proxy');
+            youtube.direct(videoId).then(
+                (url) => req.pipe(request(url)).pipe(res),
+                () => res.status(503),
+            );
+        } 
     });
 
     app.get(/^\/archive\/(.+)/, (req, res) => {
