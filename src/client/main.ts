@@ -235,15 +235,6 @@ export async function load() {
     const joinName = document.querySelector('#join-name') as HTMLInputElement;
     const chatInput = document.querySelector('#chat-input') as HTMLInputElement;
 
-    let retryTimeout = performance.now();
-
-    videoPlayer.addEventListener('waiting', async () => {
-        if (performance.now() < retryTimeout) return;
-        retryTimeout = performance.now() + 100;
-        console.log('auto resync');
-        await client.resync();
-    });
-
     let youtubePlayer: YoutubePlayer | undefined;
     async function getYoutubePlayer() {
         if (!youtubePlayer) {
@@ -289,6 +280,16 @@ export async function load() {
         const time = secondsToTime(duration / 1000);
         chat.log(`{clr=#00FFFF}+ ${title} (${time}) added by {clr=#FF0000}${username}`);
     });
+
+    let retryTimeout = performance.now();
+
+    videoPlayer.addEventListener('waiting', async () => {
+        if (performance.now() < retryTimeout) return;
+        retryTimeout = performance.now() + 100;
+        console.log('auto resync');
+        await client.resync();
+    });
+
     client.on('play', async ({ message }) => {
         if (!message.item) {
             youtubePlayer?.stop();
@@ -312,6 +313,7 @@ export async function load() {
     async function attemptLoadVideo(source: string, seconds: number): Promise<boolean> {
         return new Promise((resolve) => {
             setTimeout(() => resolve(false), 2000);
+            retryTimeout = performance.now() + 100;
             videoPlayer.src = source;
             videoPlayer.currentTime = seconds;
             videoPlayer.play();
