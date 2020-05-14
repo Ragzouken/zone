@@ -229,22 +229,33 @@ function textToYoutubeVideoId(text: string) {
     return new URL(text).searchParams.get('v');
 }
 
+let youtubePlayer: YoutubePlayer | undefined;
+async function getYoutubePlayer() {
+    if (!youtubePlayer) {
+        const insert = document.getElementById('insert')!;
+        const container = document.createElement('div');
+        container.id = "youtube";
+        container.classList.add('player');
+        insert.appendChild(container);
+
+        youtubePlayer = await loadYoutube('youtube', 448, 252);
+        youtubePlayer.volume = parseInt(localStorage.getItem('volume') || '100', 10);
+        youtubePlayer.on('error', () => client.unplayable('youtube:' + youtubePlayer!.video));
+    }
+
+    return youtubePlayer;
+}
+
 export async function load() {
-    const youtube = document.querySelector('#youtube') as HTMLElement;
-    const videoPlayer = document.querySelector('#http-video') as HTMLVideoElement;
+    const videoPlayer = document.createElement('video');
+    const zoneLogo = document.createElement('img');
+    zoneLogo.src = 'zone-logo.png';
+
     const joinName = document.querySelector('#join-name') as HTMLInputElement;
     const chatInput = document.querySelector('#chat-input') as HTMLInputElement;
 
-    let youtubePlayer: YoutubePlayer | undefined;
-    async function getYoutubePlayer() {
-        if (!youtubePlayer) {
-            youtubePlayer = await loadYoutube('youtube', 448, 252);
-            youtubePlayer.volume = parseInt(localStorage.getItem('volume') || '100', 10);
-            youtubePlayer.on('error', () => client.unplayable('youtube:' + youtubePlayer!.video));
-        }
-
-        return youtubePlayer;
-    }
+    videoPlayer.width = 448;
+    videoPlayer.height = 252;
 
     function setVolume(volume: number) {
         if (youtubePlayer) youtubePlayer.volume = volume;
@@ -519,11 +530,19 @@ export async function load() {
     sceneContext.imageSmoothingEnabled = false;
 
     const pageRenderer = new PageRenderer(256, 256);
-    const zoneLogo = document.querySelector('#zone-logo') as HTMLElement;
 
     function drawZone() {
         sceneContext.clearRect(0, 0, 512, 512);
         sceneContext.drawImage(roomBackground.canvas, 0, 0, 512, 512);
+
+        sceneContext.save();
+        sceneContext.globalCompositeOperation = 'screen';
+        sceneContext.drawImage(videoPlayer, 32, 32, 448, 252);
+        if (!client.zone.lastPlayedItem) {
+            sceneContext.globalAlpha = .35;
+            sceneContext.drawImage(zoneLogo, 32, 32, 448, 252);
+        }
+        sceneContext.restore();
 
         client.zone.users.forEach((user) => {
             const { position, emotes, avatar } = user;
@@ -614,9 +633,7 @@ export async function load() {
 
     function redraw() {
         const playing = !!client.zone.lastPlayedItem;
-        youtube.hidden = !youtubePlayer?.playing;
-        videoPlayer.hidden = !playing || videoPlayer.src.length === 0;
-        zoneLogo.hidden = playing;
+        if (youtubePlayer) youtubePlayer.player. youtube.hidden = !youtubePlayer?.playing;
 
         drawZone();
 
