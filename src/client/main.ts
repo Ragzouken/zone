@@ -538,7 +538,7 @@ export async function load() {
         sceneContext.save();
         sceneContext.globalCompositeOperation = 'screen';
         sceneContext.drawImage(videoPlayer, 32, 32, 448, 252);
-        if (!client.zone.lastPlayedItem) {
+        if (!client.zone.lastPlayedItem || videoPlayer.src?.endsWith('.mp3')) {
             sceneContext.globalAlpha = .35;
             sceneContext.drawImage(zoneLogo, 32, 32, 448, 252);
         }

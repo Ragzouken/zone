@@ -1339,12 +1339,13 @@ async function load() {
     sceneContext.imageSmoothingEnabled = false;
     const pageRenderer = new text_1.PageRenderer(256, 256);
     function drawZone() {
+        var _a;
         sceneContext.clearRect(0, 0, 512, 512);
         sceneContext.drawImage(roomBackground.canvas, 0, 0, 512, 512);
         sceneContext.save();
         sceneContext.globalCompositeOperation = 'screen';
         sceneContext.drawImage(videoPlayer, 32, 32, 448, 252);
-        if (!exports.client.zone.lastPlayedItem) {
+        if (!exports.client.zone.lastPlayedItem || ((_a = videoPlayer.src) === null || _a === void 0 ? void 0 : _a.endsWith('.mp3'))) {
             sceneContext.globalAlpha = .35;
             sceneContext.drawImage(zoneLogo, 32, 32, 448, 252);
         }
