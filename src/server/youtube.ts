@@ -91,13 +91,13 @@ export class YoutubeCache {
     }
 
     async renewCachedVideo(videoId: string) {
-        const existing = this.cached.get(videoId);
-        const download = this.downloads.get(videoId);
-
         const videoInfo = await info(videoId);
         const duration = parseFloat(videoInfo.length_seconds) * 1000;
         const timeout = Math.max(duration * 2, 15 * 60 * 60 * 1000);
         
+        const existing = this.cached.get(videoId);
+        const download = this.downloads.get(videoId);
+
         if (existing) {
             existing.expires = performance.now() + timeout;
         } else if (!download) {
