@@ -48,6 +48,8 @@ export const DEFAULT_OPTIONS: HostOptions = {
 export function host(xws: expressWs.Instance, adapter: low.AdapterSync, options: Partial<HostOptions> = {}) {
     const opts = Object.assign({}, DEFAULT_OPTIONS, options);
 
+    const youtubeCache = new youtube.YoutubeCache();
+
     const db = low(adapter);
     db.defaults({
         playback: { current: undefined, queue: [], time: 0 },
@@ -105,11 +107,35 @@ export function host(xws: expressWs.Instance, adapter: low.AdapterSync, options:
     playback.on('queue', save);
     playback.on('play', save);
 
+    function sourceToVideoId(source: string) {
+        return source.startsWith('youtube/') ? source.slice(8) : undefined;
+    }
+
+    function cacheYoutubes() {
+        const item = playback.currentItem;
+        
+        if (item) {
+            const videoId = sourceToVideoId(item.media.source);
+            if (videoId) youtubeCache.renewCachedVideo(videoId);
+        }
+
+        playback.queue.slice(0, 3).forEach((item) => {
+            const videoId = sourceToVideoId(item.media.source);
+            if (videoId) youtubeCache.renewCachedVideo(videoId);
+        });
+    }
+
+    playback.on('play', cacheYoutubes);
+    playback.on('queue', cacheYoutubes);
+
     const skips = new Set<UserId>();
     const errors = new Set<UserId>();
-    playback.on('play', () => {
+    playback.on('play', (item) => {
         errors.clear();
         skips.clear();
+
+        const videoId = sourceToVideoId(item.media.source);
+        if (videoId) youtubeCache.renewCachedVideo(videoId);
     });
 
     function load() {
@@ -382,5 +408,5 @@ export function host(xws: expressWs.Instance, adapter: low.AdapterSync, options:
         connections.get(userId)!.send(type, message);
     }
 
-    return { zone, playback, save, sendAll, authCommands, localLibrary };
+    return { zone, playback, save, sendAll, authCommands, localLibrary, youtubeCache };
 }

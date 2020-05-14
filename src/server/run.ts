@@ -11,7 +11,6 @@ import { host } from './server';
 import { exec } from 'child_process';
 import FileSync = require('lowdb/adapters/FileSync');
 import { Media } from '../common/zone';
-import ytdl = require('ytdl-core');
 
 process.on('uncaughtException', (err) => console.log('uncaught exception:', err, err.stack));
 process.on('unhandledRejection', (err) => console.log('uncaught reject:', err));
@@ -46,7 +45,7 @@ async function run() {
     const dataPath = process.env.ZONE_DATA_PATH || '.data/db.json';
     const adapter = new FileSync(dataPath);
 
-    const { save, sendAll, authCommands, localLibrary } = host(xws, adapter, {
+    const { save, sendAll, authCommands, localLibrary, youtubeCache } = host(xws, adapter, {
         joinPassword: process.env.JOIN_PASSWORD,
         authPassword: process.env.AUTH_PASSWORD,
     });
@@ -68,16 +67,18 @@ async function run() {
     app.use('/media', express.static('media'));
     app.get('/youtube/:videoId', (req, res) => {
         const videoId = req.params.videoId;
-        const path = youtube.ensureDownloading(videoId);
+        const path = youtubeCache.getPath(videoId);
 
         if (path) {
             res.sendFile(path);
-        } else {
+        } else if (youtubeCache.isPending(videoId)) {
             youtube.direct(videoId).then(
                 (url) => req.pipe(request(url)).pipe(res),
-                () => res.status(503),
+                () => res.status(503).send('Youtube Failure'),
             );
-        } 
+        } else {
+            res.status(403).send('Video Not Active');
+        }
     });
 
     app.get(/^\/archive\/(.+)/, (req, res) => {
