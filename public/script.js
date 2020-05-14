@@ -1064,28 +1064,28 @@ function textToYoutubeVideoId(text) {
         return text;
     return new URL(text).searchParams.get('v');
 }
+let youtubePlayer;
+async function getYoutubePlayer() {
+    if (!youtubePlayer) {
+        const insert = document.getElementById('insert');
+        const container = document.createElement('div');
+        container.id = "youtube";
+        container.classList.add('player');
+        insert.appendChild(container);
+        youtubePlayer = await youtube_1.loadYoutube('youtube', 448, 252);
+        youtubePlayer.volume = parseInt(localStorage.getItem('volume') || '100', 10);
+        youtubePlayer.on('error', () => exports.client.unplayable('youtube:' + youtubePlayer.video));
+    }
+    return youtubePlayer;
+}
 async function load() {
-    const youtube = document.querySelector('#youtube');
-    const videoPlayer = document.querySelector('#http-video');
+    const videoPlayer = document.createElement('video');
+    const zoneLogo = document.createElement('img');
+    zoneLogo.src = 'zone-logo.png';
     const joinName = document.querySelector('#join-name');
     const chatInput = document.querySelector('#chat-input');
-    let retryTimeout = performance.now();
-    videoPlayer.addEventListener('waiting', async () => {
-        if (performance.now() < retryTimeout)
-            return;
-        retryTimeout = performance.now() + 500;
-        console.log('auto resync');
-        await exports.client.resync();
-    });
-    let youtubePlayer;
-    async function getYoutubePlayer() {
-        if (!youtubePlayer) {
-            youtubePlayer = await youtube_1.loadYoutube('youtube', 448, 252);
-            youtubePlayer.volume = parseInt(localStorage.getItem('volume') || '100', 10);
-            youtubePlayer.on('error', () => exports.client.unplayable('youtube:' + youtubePlayer.video));
-        }
-        return youtubePlayer;
-    }
+    videoPlayer.width = 448;
+    videoPlayer.height = 252;
     function setVolume(volume) {
         if (youtubePlayer)
             youtubePlayer.volume = volume;
@@ -1117,6 +1117,14 @@ async function load() {
         const time = utility_1.secondsToTime(duration / 1000);
         chat.log(`{clr=#00FFFF}+ ${title} (${time}) added by {clr=#FF0000}${username}`);
     });
+    let retryTimeout = performance.now();
+    videoPlayer.addEventListener('waiting', async () => {
+        if (performance.now() < retryTimeout)
+            return;
+        retryTimeout = performance.now() + 100;
+        console.log('auto resync');
+        await exports.client.resync();
+    });
     exports.client.on('play', async ({ message }) => {
         if (!message.item) {
             youtubePlayer === null || youtubePlayer === void 0 ? void 0 : youtubePlayer.stop();
@@ -1137,6 +1145,7 @@ async function load() {
     async function attemptLoadVideo(source, seconds) {
         return new Promise((resolve) => {
             setTimeout(() => resolve(false), 2000);
+            retryTimeout = performance.now() + 100;
             videoPlayer.src = source;
             videoPlayer.currentTime = seconds;
             videoPlayer.play();
@@ -1329,10 +1338,18 @@ async function load() {
     const sceneContext = document.querySelector('#scene-canvas').getContext('2d');
     sceneContext.imageSmoothingEnabled = false;
     const pageRenderer = new text_1.PageRenderer(256, 256);
-    const zoneLogo = document.querySelector('#zone-logo');
     function drawZone() {
+        var _a;
         sceneContext.clearRect(0, 0, 512, 512);
         sceneContext.drawImage(roomBackground.canvas, 0, 0, 512, 512);
+        sceneContext.save();
+        sceneContext.globalCompositeOperation = 'screen';
+        sceneContext.drawImage(videoPlayer, 32, 32, 448, 252);
+        if (!exports.client.zone.lastPlayedItem || ((_a = videoPlayer.src) === null || _a === void 0 ? void 0 : _a.endsWith('.mp3'))) {
+            sceneContext.globalAlpha = .35;
+            sceneContext.drawImage(zoneLogo, 32, 32, 448, 252);
+        }
+        sceneContext.restore();
         exports.client.zone.users.forEach((user) => {
             const { position, emotes, avatar } = user;
             if (!position)
@@ -1406,9 +1423,8 @@ async function load() {
     }
     function redraw() {
         const playing = !!exports.client.zone.lastPlayedItem;
-        youtube.hidden = !(youtubePlayer === null || youtubePlayer === void 0 ? void 0 : youtubePlayer.playing);
-        videoPlayer.hidden = !playing || videoPlayer.src.length === 0;
-        zoneLogo.hidden = playing;
+        if (youtubePlayer)
+            youtubePlayer.player.youtube.hidden = !(youtubePlayer === null || youtubePlayer === void 0 ? void 0 : youtubePlayer.playing);
         drawZone();
         chatContext.fillStyle = 'rgb(0, 0, 0)';
         chatContext.fillRect(0, 0, 512, 512);
