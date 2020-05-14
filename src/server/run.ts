@@ -80,10 +80,8 @@ async function run() {
         const path = youtube.ensureDownloading(videoId);
 
         if (path) {
-            console.log('serve');
             res.sendFile(path);
         } else {
-            console.log('proxy');
             youtube.direct(videoId).then(
                 (url) => req.pipe(request(url)).pipe(res),
                 () => res.status(503),

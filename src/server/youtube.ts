@@ -66,7 +66,6 @@ export function ensureDownloading(videoId: string) {
             const readable = ytdl.downloadFromInfo(info, { format });
             writable.on('close', () => downloaded.set(videoId, path));
             readable.pipe(writable);
-            console.log('downloading...');
         });
     });
     
