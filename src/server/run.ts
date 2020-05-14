@@ -52,10 +52,10 @@ async function run() {
     });
 
     function update() {
-        exec('update-zone', () => {
+        exec('zone-update', () => {
             save();
             sendAll('status', { text: 'restarting server' });
-            exec('restart-zone');
+            exec('zone-restart');
         });
     }
 
@@ -66,15 +66,6 @@ async function run() {
     app.set('trust proxy', true);
     app.use('/', express.static('public'));
     app.use('/media', express.static('media'));
-    app.get('/update/:password', (req, res) => {
-        if ((req.params.password || {}) === process.env.UPDATE_PASSWORD) {
-            res.sendStatus(200);
-            update();
-        } else {
-            res.sendStatus(401);
-        }
-    });
-
     app.get('/youtube/:videoId', (req, res) => {
         const videoId = req.params.videoId;
         const path = youtube.ensureDownloading(videoId);
