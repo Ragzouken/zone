@@ -45,16 +45,16 @@ async function run() {
     const dataPath = process.env.ZONE_DATA_PATH || '.data/db.json';
     const adapter = new FileSync(dataPath);
 
-    const { save, sendAll, authCommands, localLibrary } = host(xws, adapter, {
+    const { save, sendAll, authCommands, localLibrary, youtubeCache } = host(xws, adapter, {
         joinPassword: process.env.JOIN_PASSWORD,
         authPassword: process.env.AUTH_PASSWORD,
     });
 
     function update() {
-        exec('update-zone', () => {
+        exec('zone-update', () => {
             save();
             sendAll('status', { text: 'restarting server' });
-            exec('restart-zone');
+            exec('zone-restart');
         });
     }
 
@@ -65,22 +65,20 @@ async function run() {
     app.set('trust proxy', true);
     app.use('/', express.static('public'));
     app.use('/media', express.static('media'));
-    app.get('/update/:password', (req, res) => {
-        if ((req.params.password || {}) === process.env.UPDATE_PASSWORD) {
-            res.sendStatus(200);
-            update();
-        } else {
-            res.sendStatus(401);
-        }
-    });
-
     app.get('/youtube/:videoId', (req, res) => {
-        youtube.direct(req.params.videoId).then(
-            (url) => {
-                req.pipe(request(url)).pipe(res);
-            },
-            () => res.sendStatus(503),
-        );
+        const videoId = req.params.videoId;
+        const path = youtubeCache.getPath(videoId);
+
+        if (path) {
+            res.sendFile(path);
+        } else if (youtubeCache.isPending(videoId)) {
+            youtube.direct(videoId).then(
+                (url) => req.pipe(request(url)).pipe(res),
+                () => res.status(503).send('Youtube Failure'),
+            );
+        } else {
+            res.status(403).send('Video Not Active');
+        }
     });
 
     app.get(/^\/archive\/(.+)/, (req, res) => {

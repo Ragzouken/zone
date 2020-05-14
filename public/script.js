@@ -1069,6 +1069,14 @@ async function load() {
     const videoPlayer = document.querySelector('#http-video');
     const joinName = document.querySelector('#join-name');
     const chatInput = document.querySelector('#chat-input');
+    let retryTimeout = performance.now();
+    videoPlayer.addEventListener('waiting', async () => {
+        if (performance.now() < retryTimeout)
+            return;
+        retryTimeout = performance.now() + 500;
+        console.log('auto resync');
+        await exports.client.resync();
+    });
     let youtubePlayer;
     async function getYoutubePlayer() {
         if (!youtubePlayer) {
@@ -1128,11 +1136,10 @@ async function load() {
     });
     async function attemptLoadVideo(source, seconds) {
         return new Promise((resolve) => {
+            setTimeout(() => resolve(false), 2000);
             videoPlayer.src = source;
             videoPlayer.currentTime = seconds;
             videoPlayer.play();
-            // setTimeout(() => resolve(false), 5000);
-            videoPlayer.addEventListener('error', () => resolve(false), { once: true });
             videoPlayer.addEventListener('loadedmetadata', () => resolve(true), { once: true });
         });
     }
