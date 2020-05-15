@@ -1,9 +1,7 @@
 import * as blitsy from 'blitsy';
 import {
     num2hex,
-    rgb2num,
     recolor,
-    hslToRgb,
     secondsToTime,
     fakedownToTag,
     eventToElementPixel,
@@ -11,7 +9,6 @@ import {
 } from './utility';
 import { sleep, randomInt, clamp } from '../common/utility';
 import { scriptToPages, PageRenderer, getPageHeight } from './text';
-import { loadYoutube, YoutubePlayer } from './youtube';
 import { ChatPanel, animatePage } from './chat';
 import { UserId } from '../common/zone';
 
@@ -226,23 +223,6 @@ function textToYoutubeVideoId(text: string) {
     return new URL(text).searchParams.get('v');
 }
 
-let youtubePlayer: YoutubePlayer | undefined;
-async function getYoutubePlayer() {
-    if (!youtubePlayer) {
-        const insert = document.getElementById('insert')!;
-        const container = document.createElement('div');
-        container.id = "youtube";
-        container.classList.add('player');
-        insert.appendChild(container);
-
-        youtubePlayer = await loadYoutube('youtube', 448, 252);
-        youtubePlayer.volume = parseInt(localStorage.getItem('volume') || '100', 10);
-        youtubePlayer.on('error', () => client.unplayable('youtube:' + youtubePlayer!.video));
-    }
-
-    return youtubePlayer;
-}
-
 export async function load() {
     const videoPlayer = document.createElement('video');
     const zoneLogo = document.createElement('img');
@@ -255,7 +235,6 @@ export async function load() {
     videoPlayer.height = 252;
 
     function setVolume(volume: number) {
-        if (youtubePlayer) youtubePlayer.volume = volume;
         videoPlayer.volume = volume / 100;
         localStorage.setItem('volume', volume.toString());
     }
@@ -300,7 +279,6 @@ export async function load() {
 
     client.on('play', async ({ message }) => {
         if (!message.item) {
-            youtubePlayer?.stop();
             videoPlayer.pause();
             videoPlayer.src = '';
             return;
@@ -314,12 +292,6 @@ export async function load() {
         const success = await attemptLoadVideo(source, getCurrentPlayTime() / 1000);
 
         if (!success) chat.status('slow loading video...');
-
-        return;
-        if (!success && source.startsWith('youtube/')) {
-            const videoId = source.slice(8);
-            (await getYoutubePlayer()).playVideoById(videoId, getCurrentPlayTime() / 1000);
-        }
     });
 
     async function attemptLoadVideo(source: string, seconds: number): Promise<boolean> {
@@ -577,8 +549,6 @@ export async function load() {
     }
 
     function redraw() {
-        if (youtubePlayer) youtubePlayer.player.youtube.hidden = !youtubePlayer?.playing;
-
         chatContext.fillStyle = 'rgb(0, 0, 0)';
         chatContext.fillRect(0, 0, 512, 512);
 
