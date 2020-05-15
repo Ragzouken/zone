@@ -528,62 +528,6 @@ export async function load() {
 
     const pageRenderer = new PageRenderer(256, 256);
 
-    function drawZone() {
-        sceneContext.clearRect(0, 0, 512, 512);
-        sceneContext.drawImage(roomBackground.canvas, 0, 0, 512, 512);
-
-        sceneContext.save();
-        sceneContext.globalCompositeOperation = 'screen';
-        sceneContext.drawImage(videoPlayer, 32, 32, 448, 252);
-        if (!client.zone.lastPlayedItem || videoPlayer.src?.endsWith('.mp3')) {
-            sceneContext.globalAlpha = .35;
-            sceneContext.drawImage(zoneLogo, 32, 32, 448, 252);
-        }
-        sceneContext.restore();
-
-        client.zone.users.forEach((user) => {
-            const { position, emotes, avatar } = user;
-            if (!position) return;
-
-            let dx = 0;
-            let dy = 0;
-
-            if (emotes && emotes.includes('shk')) {
-                dx += randomInt(-8, 8);
-                dy += randomInt(-8, 8);
-            }
-
-            if (emotes && emotes.includes('wvy')) {
-                dy += Math.sin(performance.now() / 250 - position[0] / 2) * 4;
-            }
-
-            let [r, g, b] = [255, 255, 255];
-
-            const x = position[0] * 32 + dx;
-            const y = position[1] * 32 + dy;
-
-            let image = getTile(avatar);
-
-            if (emotes && emotes.includes('rbw')) {
-                const h = Math.abs(Math.sin(performance.now() / 600 - position[0] / 8));
-                [r, g, b] = hslToRgb(h, 1, 0.5);
-                image = recolored(image, rgb2num(r, g, b));
-            }
-
-            sceneContext.drawImage(image.canvas, x, y, 32, 32);
-        });
-
-        const socket = (client.messaging as any).socket;
-        const state = socket ? socket.readyState : 0;
-
-        if (state !== WebSocket.OPEN) {
-            const status = scriptToPages('connecting...', layout)[0];
-            animatePage(status);
-            pageRenderer.renderPage(status, 0, 0);
-            sceneContext.drawImage(pageRenderer.pageImage, 16, 16, 512, 512);
-        }
-    }
-
     function drawQueue() {
         const lines: string[] = [];
         const cols = 40;
@@ -629,10 +573,7 @@ export async function load() {
     }
 
     function redraw() {
-        const playing = !!client.zone.lastPlayedItem;
-        if (youtubePlayer) youtubePlayer.player. youtube.hidden = !youtubePlayer?.playing;
-
-        // drawZone();
+        if (youtubePlayer) youtubePlayer.player.youtube.hidden = !youtubePlayer?.playing;
 
         chatContext.fillStyle = 'rgb(0, 0, 0)';
         chatContext.fillRect(0, 0, 512, 512);
@@ -655,15 +596,20 @@ export async function load() {
         return state !== WebSocket.OPEN;
     }
 
+    function showLogo() {
+        return !client.zone.lastPlayedItem || videoPlayer.src?.endsWith('.mp3');
+    }
+
     init(
         document.getElementById('three-container')!, 
         videoPlayer, 
         brickTile.canvas, 
         floorTile.canvas,
-        avatarImage.canvas,
+        zoneLogo,
         client.zone,
         getTile,
         connecting,
+        showLogo,
     )();
 }
 

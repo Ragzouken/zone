@@ -52379,51 +52379,6 @@ async function load() {
     const sceneContext = document.querySelector('#scene-canvas').getContext('2d');
     sceneContext.imageSmoothingEnabled = false;
     const pageRenderer = new text_1.PageRenderer(256, 256);
-    function drawZone() {
-        var _a;
-        sceneContext.clearRect(0, 0, 512, 512);
-        sceneContext.drawImage(roomBackground.canvas, 0, 0, 512, 512);
-        sceneContext.save();
-        sceneContext.globalCompositeOperation = 'screen';
-        sceneContext.drawImage(videoPlayer, 32, 32, 448, 252);
-        if (!exports.client.zone.lastPlayedItem || ((_a = videoPlayer.src) === null || _a === void 0 ? void 0 : _a.endsWith('.mp3'))) {
-            sceneContext.globalAlpha = .35;
-            sceneContext.drawImage(zoneLogo, 32, 32, 448, 252);
-        }
-        sceneContext.restore();
-        exports.client.zone.users.forEach((user) => {
-            const { position, emotes, avatar } = user;
-            if (!position)
-                return;
-            let dx = 0;
-            let dy = 0;
-            if (emotes && emotes.includes('shk')) {
-                dx += utility_2.randomInt(-8, 8);
-                dy += utility_2.randomInt(-8, 8);
-            }
-            if (emotes && emotes.includes('wvy')) {
-                dy += Math.sin(performance.now() / 250 - position[0] / 2) * 4;
-            }
-            let [r, g, b] = [255, 255, 255];
-            const x = position[0] * 32 + dx;
-            const y = position[1] * 32 + dy;
-            let image = getTile(avatar);
-            if (emotes && emotes.includes('rbw')) {
-                const h = Math.abs(Math.sin(performance.now() / 600 - position[0] / 8));
-                [r, g, b] = utility_1.hslToRgb(h, 1, 0.5);
-                image = recolored(image, utility_1.rgb2num(r, g, b));
-            }
-            sceneContext.drawImage(image.canvas, x, y, 32, 32);
-        });
-        const socket = exports.client.messaging.socket;
-        const state = socket ? socket.readyState : 0;
-        if (state !== WebSocket.OPEN) {
-            const status = text_1.scriptToPages('connecting...', layout)[0];
-            chat_1.animatePage(status);
-            pageRenderer.renderPage(status, 0, 0);
-            sceneContext.drawImage(pageRenderer.pageImage, 16, 16, 512, 512);
-        }
-    }
     function drawQueue() {
         const lines = [];
         const cols = 40;
@@ -52463,10 +52418,8 @@ async function load() {
         chatContext.drawImage(pageRenderer.pageImage, 16, 16, 512, 512);
     }
     function redraw() {
-        const playing = !!exports.client.zone.lastPlayedItem;
         if (youtubePlayer)
             youtubePlayer.player.youtube.hidden = !(youtubePlayer === null || youtubePlayer === void 0 ? void 0 : youtubePlayer.playing);
-        // drawZone();
         chatContext.fillStyle = 'rgb(0, 0, 0)';
         chatContext.fillRect(0, 0, 512, 512);
         chat.render();
@@ -52481,7 +52434,11 @@ async function load() {
         const state = socket ? socket.readyState : 0;
         return state !== WebSocket.OPEN;
     }
-    three_test_1.init(document.getElementById('three-container'), videoPlayer, brickTile.canvas, floorTile.canvas, avatarImage.canvas, exports.client.zone, getTile, connecting)();
+    function showLogo() {
+        var _a;
+        return !exports.client.zone.lastPlayedItem || ((_a = videoPlayer.src) === null || _a === void 0 ? void 0 : _a.endsWith('.mp3'));
+    }
+    three_test_1.init(document.getElementById('three-container'), videoPlayer, brickTile.canvas, floorTile.canvas, zoneLogo, exports.client.zone, getTile, connecting, showLogo)();
 }
 exports.load = load;
 function setupEntrySplash() {
@@ -52819,7 +52776,7 @@ function setAvatarCount(count) {
         avatarStuffs.push({ context, texture, material, mesh });
     }
 }
-function init(container, video, brick, floor, avatar, zone, getTile, connecting) {
+function init(container, video, brick, floor, logo, zone, getTile, connecting, showLogo) {
     const aspect = container.clientWidth / container.clientHeight;
     const frustumSize = 1;
     const camera = new THREE.OrthographicCamera(frustumSize * aspect / -2, frustumSize * aspect / 2, frustumSize / 2, frustumSize / -2, 0.01, 10);
@@ -52830,7 +52787,8 @@ function init(container, video, brick, floor, avatar, zone, getTile, connecting)
     const brickTexture = new THREE.CanvasTexture(brick);
     const floorTexture = new THREE.CanvasTexture(floor);
     const videoTexture = new THREE.VideoTexture(video);
-    [brickTexture, floorTexture, videoTexture].forEach((texture) => {
+    const logoTexture = new THREE.CanvasTexture(logo);
+    [brickTexture, floorTexture, videoTexture, logoTexture].forEach((texture) => {
         texture.minFilter = THREE.NearestFilter;
         texture.magFilter = THREE.NearestFilter;
         texture.wrapS = THREE.RepeatWrapping;
@@ -52852,25 +52810,31 @@ function init(container, video, brick, floor, avatar, zone, getTile, connecting)
     });
     const brickMaterial = new THREE.MeshBasicMaterial({ map: brickTexture, side: THREE.DoubleSide });
     const floorMaterial = new THREE.MeshBasicMaterial({ map: floorTexture, side: THREE.DoubleSide });
+    const logoMaterial = new THREE.MeshBasicMaterial({
+        map: logoTexture,
+        side: THREE.DoubleSide,
+        blending: THREE.AdditiveBlending,
+        transparent: true,
+        depthTest: false,
+        depthWrite: false,
+    });
     const vWidth = video.width / 512;
     const vHeight = video.height / 512;
+    const logoMesh = new THREE.Mesh(new THREE.PlaneGeometry(vWidth, vHeight, 1, 1), logoMaterial);
     const videoMesh = new THREE.Mesh(new THREE.PlaneGeometry(vWidth, vHeight, 1, 1), videoMaterial);
     const brickMesh = new THREE.Mesh(new THREE.PlaneGeometry(1, 10 / 16, 1, 1), brickMaterial);
     const floorMesh = new THREE.Mesh(new THREE.PlaneGeometry(1, 6 / 16, 1, 1), floorMaterial);
     floorMesh.rotateX(Math.PI / 2);
     videoMesh.translateZ(-3 / 16 + 1 / 512);
+    logoMesh.translateZ(-3 / 16 + 1 / 512);
     brickMesh.translateZ(-3 / 16);
     floorMesh.translateZ(5 / 16);
-    window.meshes = {
-        videoMesh,
-        brickMesh,
-        floorMesh,
-    };
     const avatarGroup = new THREE.Group();
     scene.add(brickMesh);
     scene.add(floorMesh);
     scene.add(avatarGroup);
     scene.add(videoMesh);
+    scene.add(logoMesh);
     const renderer = new THREE.WebGLRenderer({ antialias: false });
     renderer.setSize(container.clientWidth, container.clientHeight);
     container.appendChild(renderer.domElement);
@@ -52878,6 +52842,8 @@ function init(container, video, brick, floor, avatar, zone, getTile, connecting)
     const red = new THREE.Color(255, 0, 0);
     function update() {
         renderer.setClearColor(connecting() ? red : black);
+        videoMesh.visible = !showLogo();
+        logoMesh.visible = showLogo();
         setAvatarCount(zone.users.size);
         avatarGroup.children = [];
         let i = 0;
@@ -52911,6 +52877,7 @@ function init(container, video, brick, floor, avatar, zone, getTile, connecting)
             b = Math.round(b);
             stuff.context.clearRect(0, 0, 8, 8);
             stuff.context.drawImage(getTile(user.avatar).canvas, 0, 0);
+            stuff.texture.needsUpdate = true;
             stuff.mesh.position.set(x / 16 + dx / 512, y / 16 + dy / 512, z / 16);
             stuff.material.color.set(`rgb(${r}, ${g}, ${b})`);
             avatarGroup.add(stuff.mesh);

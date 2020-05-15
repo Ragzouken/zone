@@ -34,10 +34,11 @@ export function init(
     video: HTMLVideoElement,
     brick: HTMLCanvasElement,
     floor: HTMLCanvasElement,
-    avatar: HTMLCanvasElement,
+    logo: HTMLImageElement,
     zone: ZoneState,
     getTile: (base64: string | undefined) => CanvasRenderingContext2D,
     connecting: () => boolean,
+    showLogo: () => boolean,
 ) {
     const aspect = container.clientWidth / container.clientHeight;
     const frustumSize = 1;
@@ -50,8 +51,9 @@ export function init(
     const brickTexture = new THREE.CanvasTexture(brick);
     const floorTexture = new THREE.CanvasTexture(floor);
     const videoTexture = new THREE.VideoTexture(video);
+    const logoTexture = new THREE.CanvasTexture(logo);
 
-    [brickTexture, floorTexture, videoTexture].forEach((texture) => {
+    [brickTexture, floorTexture, videoTexture, logoTexture].forEach((texture) => {
         texture.minFilter = THREE.NearestFilter;
         texture.magFilter = THREE.NearestFilter;
         texture.wrapS = THREE.RepeatWrapping;
@@ -76,10 +78,19 @@ export function init(
     });
     const brickMaterial = new THREE.MeshBasicMaterial({ map: brickTexture, side: THREE.DoubleSide });
     const floorMaterial = new THREE.MeshBasicMaterial({ map: floorTexture, side: THREE.DoubleSide });
+    const logoMaterial = new THREE.MeshBasicMaterial({ 
+        map: logoTexture, 
+        side: THREE.DoubleSide,
+        blending: THREE.AdditiveBlending, 
+        transparent: true,
+        depthTest: false,
+        depthWrite: false,
+    });
 
     const vWidth = video.width / 512;
     const vHeight = video.height / 512;
 
+    const logoMesh = new THREE.Mesh(new THREE.PlaneGeometry(vWidth, vHeight, 1, 1), logoMaterial);
     const videoMesh = new THREE.Mesh(new THREE.PlaneGeometry(vWidth, vHeight, 1, 1), videoMaterial);
     const brickMesh = new THREE.Mesh(new THREE.PlaneGeometry(1, 10 / 16, 1, 1), brickMaterial);
     const floorMesh = new THREE.Mesh(new THREE.PlaneGeometry(1,  6 / 16, 1, 1), floorMaterial);
@@ -87,14 +98,10 @@ export function init(
     floorMesh.rotateX(Math.PI / 2);
 
     videoMesh.translateZ(-3 / 16 + 1/512);
+    logoMesh.translateZ(-3/16 + 1/512);
+
     brickMesh.translateZ(-3 / 16);
     floorMesh.translateZ( 5 / 16);
-
-    (window as any).meshes = {
-        videoMesh,
-        brickMesh,
-        floorMesh,
-    };
     
     const avatarGroup = new THREE.Group();
 
@@ -102,6 +109,7 @@ export function init(
     scene.add(floorMesh);
     scene.add(avatarGroup);
     scene.add(videoMesh);
+    scene.add(logoMesh);
 
 	const renderer = new THREE.WebGLRenderer({ antialias: false });
 	renderer.setSize(container.clientWidth, container.clientHeight);
@@ -112,6 +120,9 @@ export function init(
 
     function update() {
         renderer.setClearColor(connecting() ? red : black);
+
+        videoMesh.visible = !showLogo();
+        logoMesh.visible = showLogo();
         
         setAvatarCount(zone.users.size);
         avatarGroup.children = [];
