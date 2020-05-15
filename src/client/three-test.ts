@@ -153,6 +153,8 @@ export function init(
 
             stuff.context.clearRect(0, 0, 8, 8);
             stuff.context.drawImage(getTile(user.avatar).canvas, 0, 0);
+            stuff.texture.needsUpdate = true;
+
             stuff.mesh.position.set(x/16 + dx/512, y/16 + dy/512, z/16);
             stuff.material.color.set(`rgb(${r}, ${g}, ${b})`);
             avatarGroup.add(stuff.mesh);
