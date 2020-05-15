@@ -110,18 +110,6 @@ function getTile(base64: string | undefined): CanvasRenderingContext2D {
     return tile || avatarImage;
 }
 
-const recolorBuffer = blitsy.createContext2D(8, 8);
-
-function recolored(tile: CanvasRenderingContext2D, color: number) {
-    recolorBuffer.clearRect(0, 0, 8, 8);
-    recolorBuffer.fillStyle = num2hex(color);
-    recolorBuffer.fillRect(0, 0, 8, 8);
-    recolorBuffer.globalCompositeOperation = 'destination-in';
-    recolorBuffer.drawImage(tile.canvas, 0, 0);
-    recolorBuffer.globalCompositeOperation = 'source-over';
-    return recolorBuffer;
-}
-
 function notify(title: string, body: string, tag: string) {
     if ('Notification' in window && Notification.permission === 'granted' && !document.hasFocus()) {
         const notification = new Notification(title, { body, tag, renotify: true, icon: './avatar.png' });
@@ -249,10 +237,6 @@ export async function load() {
         return performance.now() - currentPlayStart;
     }
 
-    function getUsername(userId: UserId) {
-        return client.zone.getUser(userId).name || userId;
-    }
-
     let showQueue = false;
 
     client.on('disconnect', async ({ clean }) => {
@@ -263,7 +247,8 @@ export async function load() {
 
     client.on('queue', ({ item }) => {
         const { title, duration } = item.media;
-        const username = getUsername(item.info.userId ?? 'server');
+        const user = item.info.userId ? client.zone.users.get(item.info.userId) : undefined;
+        const username = user?.name || 'server';
         const time = secondsToTime(duration / 1000);
         chat.log(`{clr=#00FFFF}+ ${title} (${time}) added by {clr=#FF0000}${username}`);
     });
