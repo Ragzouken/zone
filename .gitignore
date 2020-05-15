@@ -3,3 +3,4 @@ lib
 coverage
 .data
 media
+public/script.js
