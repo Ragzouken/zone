@@ -313,7 +313,7 @@ export async function load() {
 
         const success = await attemptLoadVideo(source, getCurrentPlayTime() / 1000);
 
-        chat.status('slow loading video...');
+        if (!success) chat.status('slow loading video...');
 
         return;
         if (!success && source.startsWith('youtube/')) {
