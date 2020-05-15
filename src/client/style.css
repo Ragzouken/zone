@@ -129,6 +129,11 @@ body {
     pointer-events: none;
 }
 
+#three-container {
+    position: absolute;
+    width: 512px; height: 512px;
+}
+
 #noyoutube {
     position: absolute;
     width: 100%; height: 100%;

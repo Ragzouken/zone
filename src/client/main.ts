@@ -17,6 +17,7 @@ import { UserId } from '../common/zone';
 
 import ZoneClient from '../common/client';
 import { YoutubeVideo } from '../server/youtube';
+import { init } from './three-test';
 
 window.addEventListener('load', () => load());
 
@@ -71,7 +72,7 @@ const roomBackground = blitsy.createContext2D(128, 128);
 drawRoomBackground(roomBackground);
 
 function drawRoomBackground(room: CanvasRenderingContext2D) {
-    room.fillStyle = 'rgb(0, 82, 204)';
+    room.fillStyle = '#001533';
     room.fillRect(0, 0, 128, 128);
 
     for (let x = 0; x < 16; ++x) {
@@ -82,10 +83,6 @@ function drawRoomBackground(room: CanvasRenderingContext2D) {
             room.drawImage(floorTile.canvas, x * 8, y * 8);
         }
     }
-
-    room.fillStyle = 'rgb(0, 0, 0)';
-    room.globalAlpha = 0.75;
-    room.fillRect(0, 0, 128, 128);
 }
 
 const avatarTiles = new Map<string | undefined, CanvasRenderingContext2D>();
@@ -102,8 +99,8 @@ function decodeBase64(data: string) {
     return blitsy.decodeTexture(texture);
 }
 
-function getTile(base64: string | undefined): CanvasRenderingContext2D | undefined {
-    if (!base64) return;
+function getTile(base64: string | undefined): CanvasRenderingContext2D {
+    if (!base64) return avatarImage;
     let tile = avatarTiles.get(base64);
     if (!tile) {
         try {
@@ -113,7 +110,7 @@ function getTile(base64: string | undefined): CanvasRenderingContext2D | undefin
             console.log('fucked up avatar', base64);
         }
     }
-    return tile;
+    return tile || avatarImage;
 }
 
 const recolorBuffer = blitsy.createContext2D(8, 8);
@@ -565,7 +562,7 @@ export async function load() {
             const x = position[0] * 32 + dx;
             const y = position[1] * 32 + dy;
 
-            let image = getTile(avatar) || avatarImage;
+            let image = getTile(avatar);
 
             if (emotes && emotes.includes('rbw')) {
                 const h = Math.abs(Math.sin(performance.now() / 600 - position[0] / 8));
@@ -635,7 +632,7 @@ export async function load() {
         const playing = !!client.zone.lastPlayedItem;
         if (youtubePlayer) youtubePlayer.player. youtube.hidden = !youtubePlayer?.playing;
 
-        drawZone();
+        // drawZone();
 
         chatContext.fillStyle = 'rgb(0, 0, 0)';
         chatContext.fillRect(0, 0, 512, 512);
@@ -650,6 +647,24 @@ export async function load() {
     redraw();
 
     setupEntrySplash();
+
+    function connecting() {
+        const socket = (client.messaging as any).socket;
+        const state = socket ? socket.readyState : 0;
+
+        return state !== WebSocket.OPEN;
+    }
+
+    init(
+        document.getElementById('three-container')!, 
+        videoPlayer, 
+        brickTile.canvas, 
+        floorTile.canvas,
+        avatarImage.canvas,
+        client.zone,
+        getTile,
+        connecting,
+    )();
 }
 
 function setupEntrySplash() {

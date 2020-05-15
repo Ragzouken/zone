@@ -17,7 +17,7 @@ export function secondsToTime(seconds: number) {
 export function recolor(context: CanvasRenderingContext2D) {
     withPixels(context, (pixels) => {
         for (let i = 0; i < pixels.length; ++i)
-            if (pixels[i] === 0xffffffff) pixels[i] = rgbaToColor({ r: 128, g: 159, b: 255, a: 255 });
+            if (pixels[i] === 0xffffffff) pixels[i] = rgbaToColor({ r: 32, g: 40, b: 64, a: 255 });
     });
 }
 
