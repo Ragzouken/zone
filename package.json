@@ -5,7 +5,7 @@
   "scripts": {
     "start": "node lib/server/run.js",
     "test": "jest --config jestconfig.json",
-    "build:client:script": "browserify src/client/main.ts -t [ babelify --presets [ @babel/preset-env ] ] -p [ tsify -p src/client/tsconfig.json ] -o public/script.js -s zone",
+    "build:client:script": "browserify src/client/main.ts -p [ tsify -p src/client/tsconfig.json ] -o public/script.js -s zone",
     "build:client:html": "pug --pretty src/client/index.pug -o public",
     "build:client:css": "cp-cli src/client/style.css public/style.css",
     "build:client": "npm run build:client:css && npm run build:client:html && npm run build:client:script",
@@ -45,8 +45,6 @@
     "ytdl-core": "^2.1.2"
   },
   "devDependencies": {
-    "@babel/core": "^7.9.6",
-    "@babel/preset-env": "^7.9.6",
     "@types/express": "^4.17.6",
     "@types/express-ws": "^3.0.0",
     "@types/glob": "^7.1.1",
@@ -59,7 +57,6 @@
     "@types/request": "^2.48.4",
     "@types/tmp": "^0.2.0",
     "@types/ws": "^7.2.4",
-    "babelify": "^10.0.0",
     "blitsy": "^0.2.1",
     "browserify": "^16.5.1",
     "cp-cli": "^2.0.0",
