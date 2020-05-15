@@ -312,6 +312,10 @@ export async function load() {
         currentPlayStart = performance.now() - time;
 
         const success = await attemptLoadVideo(source, getCurrentPlayTime() / 1000);
+
+        chat.status('slow loading video...');
+
+        return;
         if (!success && source.startsWith('youtube/')) {
             const videoId = source.slice(8);
             (await getYoutubePlayer()).playVideoById(videoId, getCurrentPlayTime() / 1000);

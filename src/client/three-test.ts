@@ -149,7 +149,7 @@ export function init(
             }
 
             if (user.emotes && user.emotes.includes('wvy')) {
-                dy += Math.sin(performance.now() / 250 - x / 2) * 4;
+                dy += 4 + Math.sin(performance.now() / 250 - x / 2) * 4;
             }
 
             let [r, g, b] = [255, 255, 255];
