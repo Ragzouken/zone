@@ -116,7 +116,7 @@ export function host(xws: expressWs.Instance, adapter: low.AdapterSync, options:
 
     function cacheYoutubes() {
         const item = playback.currentItem;
-        
+
         if (item) {
             const videoId = sourceToVideoId(item.media.source);
             if (videoId) youtubeCache.renewCachedVideo(videoId);

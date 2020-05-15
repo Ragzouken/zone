@@ -1,12 +1,5 @@
 import * as blitsy from 'blitsy';
-import {
-    num2hex,
-    recolor,
-    secondsToTime,
-    fakedownToTag,
-    eventToElementPixel,
-    withPixels,
-} from './utility';
+import { num2hex, recolor, secondsToTime, fakedownToTag, eventToElementPixel, withPixels } from './utility';
 import { sleep, randomInt, clamp } from '../common/utility';
 import { scriptToPages, PageRenderer, getPageHeight } from './text';
 import { ChatPanel, animatePage } from './chat';
@@ -560,9 +553,9 @@ export async function load() {
     }
 
     init(
-        document.getElementById('three-container')!, 
-        videoPlayer, 
-        brickTile.canvas, 
+        document.getElementById('three-container')!,
+        videoPlayer,
+        brickTile.canvas,
         floorTile.canvas,
         zoneLogo,
         client.zone,
