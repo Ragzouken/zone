@@ -288,20 +288,20 @@ export function host(xws: expressWs.Instance, adapter: low.AdapterSync, options:
         authorised.forEach((user) => status(text, user));
     }
 
-    const authCommands = new Map<string, (...args: any[]) => void>();
+    const authCommands = new Map<string, (admin: UserState, ...args: any[]) => void>();
     authCommands.set('skip', () => skip(`admin skipped ${playback.currentItem!.media.title}`));
-    authCommands.set('mode', (mode: string) => {
+    authCommands.set('mode', (admin, mode: string) => {
         eventMode = mode === 'event';
         status(`event mode: ${eventMode}`);
     });
-    authCommands.set('dj-add', (name: string) =>
+    authCommands.set('dj-add', (admin, name: string) =>
         ifUser(name, (user) => {
             djs.add(user);
             status('you are a dj', user);
             statusAuthed(`${user.name} is a dj`);
         }),
     );
-    authCommands.set('dj-del', (name: string) =>
+    authCommands.set('dj-del', (admin, name: string) =>
         ifUser(name, (user) => {
             djs.delete(user);
             status('no longer a dj', user);
@@ -309,10 +309,30 @@ export function host(xws: expressWs.Instance, adapter: low.AdapterSync, options:
         }),
     );
 
+    function tryQueueMedia2(user: UserState, media: Media, userIp: unknown) {
+        if (eventMode && !djs.has(user)) {
+            status('zone is currently in event mode, only djs may queue', user);
+            return;
+        }
+
+        const existing = playback.queue.find((queued) => mediaEquals(queued.media, media))?.media;
+        const count = playback.queue.filter((item) => item.info.ip === userIp).length;
+
+        if (existing) {
+            status(`'${existing.title}' is already queued`, user);
+        } else if (count >= opts.perUserQueueLimit) {
+            status(`you already have ${count} videos in the queue`, user);
+        } else {
+            playback.queueMedia(media, { userId: user.userId, ip: userIp });
+        }
+    }
+
     function bindMessagingToUser(user: UserState, messaging: Messaging, userIp: unknown) {
         function sendUser(type: string, message: any = {}) {
             sendOnly(type, message, user.userId);
         }
+
+        const tryQueueMedia = (media: Media) => tryQueueMedia2(user, media, userIp);
 
         messaging.messages.on('heartbeat', () => sendUser('heartbeat'));
 
@@ -323,24 +343,6 @@ export function host(xws: expressWs.Instance, adapter: low.AdapterSync, options:
         });
 
         messaging.messages.on('resync', () => sendCurrent(user));
-
-        async function tryQueueMedia(media: Media) {
-            if (eventMode && !djs.has(user)) {
-                status('zone is currently in event mode, only djs may queue', user);
-                return;
-            }
-
-            const existing = playback.queue.find((queued) => mediaEquals(queued.media, media))?.media;
-            const count = playback.queue.filter((item) => item.info.ip === userIp).length;
-
-            if (existing) {
-                status(`'${existing.title}' is already queued`, user);
-            } else if (count >= opts.perUserQueueLimit) {
-                status(`you already have ${count} videos in the queue`, user);
-            } else {
-                playback.queueMedia(media, { userId: user.userId, ip: userIp });
-            }
-        }
 
         async function tryQueueLocalByPath(path: string) {
             const media = localLibrary.get(path);
@@ -355,9 +357,14 @@ export function host(xws: expressWs.Instance, adapter: low.AdapterSync, options:
             tryQueueMedia(await youtube.media(videoId));
         }
 
+        async function tryQueueBanger() {
+            tryQueueMedia2(user, await youtube.banger(), userIp);
+        }
+
         messaging.messages.on('youtube', (message: any) => tryQueueYoutubeById(message.videoId));
         messaging.messages.on('archive', (message: any) => tryQueueArchiveByPath(message.path));
         messaging.messages.on('local', (message: any) => tryQueueLocalByPath(message.path));
+        messaging.messages.on('banger', () => tryQueueBanger());
 
         messaging.messages.on('search', (message: any) => {
             youtube.search(message.query).then(async (results) => {
@@ -393,7 +400,7 @@ export function host(xws: expressWs.Instance, adapter: low.AdapterSync, options:
             const { name, args } = message;
             const command = authCommands.get(name);
             if (command) {
-                command(...args);
+                command(user, ...args);
             } else {
                 status(`no command "${name}"`, user);
             }

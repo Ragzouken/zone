@@ -2,6 +2,7 @@ import { performance } from 'perf_hooks';
 
 import * as ytdl from 'ytdl-core';
 import ytsr = require('ytsr');
+import * as ytpl from 'ytpl';
 
 import { timeToSeconds } from './utility';
 import { Media, MediaMeta } from '../common/zone';
@@ -9,6 +10,7 @@ import { createWriteStream } from 'fs';
 import { once } from 'events';
 import { killCacheFile, getCacheFile } from './cache';
 import { URL } from 'url';
+import { randomInt } from '../common/utility';
 
 export type YoutubeVideo = MediaMeta & { videoId: string };
 
@@ -47,7 +49,7 @@ export async function media(videoId: string): Promise<Media> {
     return { title, duration, source };
 }
 
-export async function search(query: string ): Promise<YoutubeVideo[]> {
+export async function search(query: string): Promise<YoutubeVideo[]> {
     const results = await ytsr(query, { limit: 5 });
     return results.items.map((item) => {
         const videoId = new URL(item.link).searchParams.get('v')!;
@@ -56,6 +58,17 @@ export async function search(query: string ): Promise<YoutubeVideo[]> {
 
         return { videoId, title, duration };
     });
+}
+
+export const BANGER_PLAYLIST_ID = 'PLUkMc2z58ECZFcxvdwncKK1qDYZzVHrbB';
+export async function banger(): Promise<Media> {
+    const result = await ytpl(BANGER_PLAYLIST_ID);
+    const chosen = result.items[randomInt(0, result.items.length - 1)];
+    const videoId = new URL(chosen.url).searchParams.get('v')!;
+    const duration = timeToSeconds(chosen.duration) * 1000;
+    const source = 'youtube/' + videoId;
+
+    return { title: chosen.title, duration, source }
 }
 
 type CachedVideo = {
