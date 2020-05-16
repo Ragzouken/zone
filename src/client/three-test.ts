@@ -1,5 +1,4 @@
 import * as THREE from 'three';
-import { createContext2D } from 'blitsy';
 import { ZoneState } from '../common/zone';
 import { hslToRgb } from './utility';
 import { randomInt } from '../common/utility';
@@ -22,17 +21,12 @@ function getTileMaterial(canvas: HTMLCanvasElement) {
 }
 
 const avatarQuad = new THREE.PlaneGeometry(1 / 16, 1 / 16, 1, 1);
-type AvatarStuff = {
-    material: THREE.MeshBasicMaterial;
-    mesh: THREE.Mesh;
-};
-const avatarStuffs: AvatarStuff[] = [];
+const avatarMeshes: THREE.Mesh[] = [];
 function setAvatarCount(count: number) {
-    while (avatarStuffs.length < count) {
+    while (avatarMeshes.length < count) {
         const material = new THREE.MeshBasicMaterial({ transparent: true, side: THREE.DoubleSide });
         const mesh = new THREE.Mesh(avatarQuad, material);
-
-        avatarStuffs.push({ material, mesh });
+        avatarMeshes.push(mesh);
     }
 }
 
@@ -146,7 +140,7 @@ export function init(
             if (!user.position) return;
             let y = -4.5;
             let [x, z] = user.position;
-            const stuff = avatarStuffs[i++];
+            const mesh = avatarMeshes[i++];
 
             if (z < 10) {
                 y -= z - 9;
@@ -175,7 +169,7 @@ export function init(
             const spin = (user.emotes && user.emotes.includes('spn'));
             const angle = spin ? (performance.now() / 100 - x) : 0;
 
-            stuff.mesh.rotation.y = angle;
+            mesh.rotation.y = angle;
 
             r = Math.round(r);
             g = Math.round(g);
@@ -183,11 +177,11 @@ export function init(
 
             const tile = getTile(user.avatar).canvas;
             const material = getTileMaterial(tile);
+            material.color.set(`rgb(${r}, ${g}, ${b})`);
 
-            stuff.mesh.material = material;
-            stuff.mesh.position.set(x / 16 + dx / 512, y / 16 + dy / 512, z / 16);
-            stuff.material.color.set(`rgb(${r}, ${g}, ${b})`);
-            avatarGroup.add(stuff.mesh);
+            mesh.material = material;
+            mesh.position.set(x / 16 + dx / 512, y / 16 + dy / 512, z / 16);
+            avatarGroup.add(mesh);
         });
     }
 
