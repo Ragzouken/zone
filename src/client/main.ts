@@ -429,6 +429,7 @@ export async function load() {
     gameKeys.set('1', () => toggleEmote('wvy'));
     gameKeys.set('2', () => toggleEmote('shk'));
     gameKeys.set('3', () => toggleEmote('rbw'));
+    gameKeys.set('4', () => toggleEmote('spn'));
     gameKeys.set('q', () => (showQueue = !showQueue));
     gameKeys.set('ArrowLeft', () => move(-1, 0));
     gameKeys.set('ArrowRight', () => move(1, 0));

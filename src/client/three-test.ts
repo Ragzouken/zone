@@ -22,7 +22,7 @@ function setAvatarCount(count: number) {
         texture.wrapS = THREE.RepeatWrapping;
         texture.wrapT = THREE.RepeatWrapping;
 
-        const material = new THREE.MeshBasicMaterial({ map: texture, transparent: true });
+        const material = new THREE.MeshBasicMaterial({ map: texture, transparent: true, side: THREE.DoubleSide });
         const mesh = new THREE.Mesh(avatarQuad, material);
 
         avatarStuffs.push({ context, texture, material, mesh });
@@ -164,6 +164,11 @@ export function init(
                 const h = Math.abs(Math.sin(performance.now() / 600 - x / 8));
                 [r, g, b] = hslToRgb(h, 1, 0.5);
             }
+
+            const spin = (user.emotes && user.emotes.includes('spn'));
+            const angle = spin ? (performance.now() / 100 - x) : 0;
+
+            stuff.mesh.rotation.y = angle;
 
             r = Math.round(r);
             g = Math.round(g);
