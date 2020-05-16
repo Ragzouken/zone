@@ -7,9 +7,8 @@ import { rgbaToColor, decodeAsciiTexture } from 'blitsy';
 function recolor(context: CanvasRenderingContext2D) {
     withPixels(context, (pixels) => {
         const fg = rgbaToColor({ r: 32, g: 40, b: 64, a: 255 });
-        const bg = rgbaToColor({ r:  0, g: 21, b: 51, a: 255 });
-        for (let i = 0; i < pixels.length; ++i)
-            pixels[i] = (pixels[i] === 0xffffffff) ? fg : bg;
+        const bg = rgbaToColor({ r: 0, g: 21, b: 51, a: 255 });
+        for (let i = 0; i < pixels.length; ++i) pixels[i] = pixels[i] === 0xffffffff ? fg : bg;
     });
 }
 
@@ -83,10 +82,10 @@ function getTileMaterial(canvas: HTMLCanvasElement) {
     if (existing) return existing;
 
     const texture = new THREE.CanvasTexture(canvas);
-    const material = new THREE.MeshBasicMaterial({ 
-        map: texture, 
-        transparent: true, 
-        side: THREE.DoubleSide 
+    const material = new THREE.MeshBasicMaterial({
+        map: texture,
+        transparent: true,
+        side: THREE.DoubleSide,
     });
     tileMaterials.set(canvas, material);
 
@@ -102,7 +101,7 @@ const avatarMaterial = new THREE.MeshBasicMaterial({
     map: new THREE.CanvasTexture(avatarImage.canvas),
     transparent: true,
     side: THREE.DoubleSide,
-})
+});
 
 const avatarQuad = new THREE.PlaneGeometry(1 / 16, 1 / 16, 1, 1);
 const avatarMeshes: THREE.Mesh[] = [];
@@ -114,7 +113,7 @@ function setAvatarCount(count: number) {
 
 export class ZoneSceneRenderer {
     mediaElement?: HTMLImageElement | HTMLCanvasElement | HTMLVideoElement;
-    
+
     private readonly renderer = new THREE.WebGLRenderer({ antialias: false });
     private readonly camera: THREE.Camera;
     private readonly mediaTexture = new THREE.VideoTexture(document.createElement('video'));
@@ -141,13 +140,13 @@ export class ZoneSceneRenderer {
         // const camera = new THREE.PerspectiveCamera(70, aspect, 0.01, 10);
         this.camera.position.set(-1 / 8, 4.5 / 8, 4.5 / 8);
         this.camera.lookAt(0, 0, 0);
-        
+
         this.mediaTexture.minFilter = THREE.NearestFilter;
         this.mediaTexture.magFilter = THREE.NearestFilter;
         this.mediaTexture.wrapS = THREE.ClampToEdgeWrapping;
         this.mediaTexture.wrapT = THREE.ClampToEdgeWrapping;
         this.mediaTexture.format = THREE.RGBFormat;
-    
+
         const mediaMaterial = new THREE.MeshBasicMaterial({
             map: this.mediaTexture,
             side: THREE.DoubleSide,
@@ -156,21 +155,21 @@ export class ZoneSceneRenderer {
             depthTest: false,
             depthWrite: false,
         });
-    
+
         const mediaMesh = new THREE.Mesh(new THREE.PlaneGeometry(448 / 512, 252 / 512, 1, 1), mediaMaterial);
         const brickMesh = new THREE.Mesh(new THREE.PlaneGeometry(1, 10 / 16, 1, 1), brickMaterial);
         const floorMesh = new THREE.Mesh(new THREE.PlaneGeometry(1, 6 / 16, 1, 1), floorMaterial);
-    
+
         floorMesh.rotateX(Math.PI / 2);
-        floorMesh.translateZ( 5 / 16);
+        floorMesh.translateZ(5 / 16);
         mediaMesh.translateZ(-3 / 16 + 1 / 512);
         brickMesh.translateZ(-3 / 16);
-    
+
         this.scene.add(brickMesh);
         this.scene.add(floorMesh);
         this.scene.add(this.avatarGroup);
         this.scene.add(mediaMesh);
-    
+
         this.renderer.setSize(container.clientWidth, container.clientHeight);
         container.appendChild(this.renderer.domElement);
     }
@@ -217,8 +216,8 @@ export class ZoneSceneRenderer {
                 b = Math.round(b);
             }
 
-            const spin = (user.emotes && user.emotes.includes('spn'));
-            const angle = spin ? (performance.now() / 100 - x) : 0;
+            const spin = user.emotes && user.emotes.includes('spn');
+            const angle = spin ? performance.now() / 100 - x : 0;
 
             mesh.rotation.y = angle;
 
