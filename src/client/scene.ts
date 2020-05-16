@@ -84,8 +84,8 @@ function getTileMaterial(canvas: HTMLCanvasElement) {
 
     const texture = new THREE.CanvasTexture(canvas);
     const material = new THREE.MeshBasicMaterial({ 
-        // map: texture, 
-        // transparent: true, 
+        map: texture, 
+        transparent: true, 
         side: THREE.DoubleSide 
     });
     tileMaterials.set(canvas, material);
@@ -98,13 +98,17 @@ function getTileMaterial(canvas: HTMLCanvasElement) {
     return material;
 }
 
+const avatarMaterial = new THREE.MeshBasicMaterial({
+    map: new THREE.CanvasTexture(avatarImage.canvas),
+    transparent: true,
+    side: THREE.DoubleSide,
+})
+
 const avatarQuad = new THREE.PlaneGeometry(1 / 16, 1 / 16, 1, 1);
 const avatarMeshes: THREE.Mesh[] = [];
 function setAvatarCount(count: number) {
     while (avatarMeshes.length < count) {
-        const material = new THREE.MeshBasicMaterial({ transparent: true, side: THREE.DoubleSide });
-        const mesh = new THREE.Mesh(avatarQuad, material);
-        avatarMeshes.push(mesh);
+        avatarMeshes.push(new THREE.Mesh(avatarQuad, avatarMaterial));
     }
 }
 
@@ -162,11 +166,9 @@ export class ZoneSceneRenderer {
         mediaMesh.translateZ(-3 / 16 + 1 / 512);
         brickMesh.translateZ(-3 / 16);
     
-        const avatarGroup = new THREE.Group();
-    
         this.scene.add(brickMesh);
         this.scene.add(floorMesh);
-        this.scene.add(avatarGroup);
+        this.scene.add(this.avatarGroup);
         this.scene.add(mediaMesh);
     
         this.renderer.setSize(container.clientWidth, container.clientHeight);
@@ -223,9 +225,10 @@ export class ZoneSceneRenderer {
             const tile = this.getTile(user.avatar).canvas;
             const material = getTileMaterial(tile);
             material.color.set(`rgb(${r}, ${g}, ${b})`);
-
             mesh.material = material;
+
             mesh.position.set(x / 16 + dx / 512, y / 16 + dy / 512, z / 16);
+
             this.avatarGroup.add(mesh);
         });
     }
