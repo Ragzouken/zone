@@ -51,7 +51,8 @@ export async function media(videoId: string): Promise<Media> {
 
 export async function search(query: string): Promise<YoutubeVideo[]> {
     const results = await ytsr(query, { limit: 5 });
-    return results.items.map((item) => {
+    const videos = results.items.filter((item) => item.type === 'video');
+    return videos.map((item) => {
         const videoId = new URL(item.link).searchParams.get('v')!;
         const duration = timeToSeconds(item.duration) * 1000;
         const title = item.title;
