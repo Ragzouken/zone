@@ -14,13 +14,6 @@ export function secondsToTime(seconds: number) {
     return h > 0 ? `${pad2(h)}:${pad2(m)}:${pad2(s)}` : `${pad2(m)}:${pad2(s)}`;
 }
 
-export function recolor(context: CanvasRenderingContext2D) {
-    withPixels(context, (pixels) => {
-        for (let i = 0; i < pixels.length; ++i)
-            if (pixels[i] === 0xffffffff) pixels[i] = rgbaToColor({ r: 128, g: 159, b: 255, a: 255 });
-    });
-}
-
 // source : https://gist.github.com/mjackson/5311256
 export function hue2rgb(p: number, q: number, t: number) {
     if (t < 0) t += 1;

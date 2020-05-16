@@ -7,8 +7,9 @@ export async function getCacheFile(prefix: string, postfix: string): Promise<str
     return new Promise((resolve, reject) => {
         const options = {
             discardDescriptor: true,
-            mode: 0o644, 
-            prefix, postfix,
+            mode: 0o644,
+            prefix,
+            postfix,
         };
 
         tmp.file(options, (err, path, _, remove) => {

@@ -1,92 +1,16 @@
 import * as blitsy from 'blitsy';
-import {
-    num2hex,
-    rgb2num,
-    recolor,
-    hslToRgb,
-    secondsToTime,
-    fakedownToTag,
-    eventToElementPixel,
-    withPixels,
-} from './utility';
+import { secondsToTime, fakedownToTag, eventToElementPixel, withPixels } from './utility';
 import { sleep, randomInt, clamp } from '../common/utility';
 import { scriptToPages, PageRenderer, getPageHeight } from './text';
-import { loadYoutube, YoutubePlayer } from './youtube';
 import { ChatPanel, animatePage } from './chat';
-import { UserId } from '../common/zone';
 
 import ZoneClient from '../common/client';
 import { YoutubeVideo } from '../server/youtube';
+import { ZoneSceneRenderer, avatarImage } from './scene';
 
 window.addEventListener('load', () => load());
 
 export const client = new ZoneClient();
-
-const avatarImage = blitsy.decodeAsciiTexture(
-    `
-___XX___
-___XX___
-___XX___
-__XXXX__
-_XXXXXX_
-X_XXXX_X
-__X__X__
-__X__X__
-`,
-    'X',
-);
-
-const floorTile = blitsy.decodeAsciiTexture(
-    `
-________
-_X_X_X_X
-________
-__X_____
-________
-X_X_X_X_
-________
-_____X__
-`,
-    'X',
-);
-
-const brickTile = blitsy.decodeAsciiTexture(
-    `
-###_####
-###_####
-###_####
-________
-#######_
-#######_
-#######_
-________
-`,
-    '#',
-);
-
-recolor(floorTile);
-recolor(brickTile);
-
-const roomBackground = blitsy.createContext2D(128, 128);
-drawRoomBackground(roomBackground);
-
-function drawRoomBackground(room: CanvasRenderingContext2D) {
-    room.fillStyle = 'rgb(0, 82, 204)';
-    room.fillRect(0, 0, 128, 128);
-
-    for (let x = 0; x < 16; ++x) {
-        for (let y = 0; y < 10; ++y) {
-            room.drawImage(brickTile.canvas, x * 8, y * 8);
-        }
-        for (let y = 10; y < 16; ++y) {
-            room.drawImage(floorTile.canvas, x * 8, y * 8);
-        }
-    }
-
-    room.fillStyle = 'rgb(0, 0, 0)';
-    room.globalAlpha = 0.75;
-    room.fillRect(0, 0, 128, 128);
-}
 
 const avatarTiles = new Map<string | undefined, CanvasRenderingContext2D>();
 avatarTiles.set(undefined, avatarImage);
@@ -102,8 +26,8 @@ function decodeBase64(data: string) {
     return blitsy.decodeTexture(texture);
 }
 
-function getTile(base64: string | undefined): CanvasRenderingContext2D | undefined {
-    if (!base64) return;
+function getTile(base64: string | undefined): CanvasRenderingContext2D {
+    if (!base64) return avatarImage;
     let tile = avatarTiles.get(base64);
     if (!tile) {
         try {
@@ -113,19 +37,7 @@ function getTile(base64: string | undefined): CanvasRenderingContext2D | undefin
             console.log('fucked up avatar', base64);
         }
     }
-    return tile;
-}
-
-const recolorBuffer = blitsy.createContext2D(8, 8);
-
-function recolored(tile: CanvasRenderingContext2D, color: number) {
-    recolorBuffer.clearRect(0, 0, 8, 8);
-    recolorBuffer.fillStyle = num2hex(color);
-    recolorBuffer.fillRect(0, 0, 8, 8);
-    recolorBuffer.globalCompositeOperation = 'destination-in';
-    recolorBuffer.drawImage(tile.canvas, 0, 0);
-    recolorBuffer.globalCompositeOperation = 'source-over';
-    return recolorBuffer;
+    return tile || avatarImage;
 }
 
 function notify(title: string, body: string, tag: string) {
@@ -229,23 +141,6 @@ function textToYoutubeVideoId(text: string) {
     return new URL(text).searchParams.get('v');
 }
 
-let youtubePlayer: YoutubePlayer | undefined;
-async function getYoutubePlayer() {
-    if (!youtubePlayer) {
-        const insert = document.getElementById('insert')!;
-        const container = document.createElement('div');
-        container.id = "youtube";
-        container.classList.add('player');
-        insert.appendChild(container);
-
-        youtubePlayer = await loadYoutube('youtube', 448, 252);
-        youtubePlayer.volume = parseInt(localStorage.getItem('volume') || '100', 10);
-        youtubePlayer.on('error', () => client.unplayable('youtube:' + youtubePlayer!.video));
-    }
-
-    return youtubePlayer;
-}
-
 export async function load() {
     const videoPlayer = document.createElement('video');
     const zoneLogo = document.createElement('img');
@@ -258,7 +153,6 @@ export async function load() {
     videoPlayer.height = 252;
 
     function setVolume(volume: number) {
-        if (youtubePlayer) youtubePlayer.volume = volume;
         videoPlayer.volume = volume / 100;
         localStorage.setItem('volume', volume.toString());
     }
@@ -273,10 +167,6 @@ export async function load() {
         return performance.now() - currentPlayStart;
     }
 
-    function getUsername(userId: UserId) {
-        return client.zone.getUser(userId).name || userId;
-    }
-
     let showQueue = false;
 
     client.on('disconnect', async ({ clean }) => {
@@ -287,7 +177,8 @@ export async function load() {
 
     client.on('queue', ({ item }) => {
         const { title, duration } = item.media;
-        const username = getUsername(item.info.userId ?? 'server');
+        const user = item.info.userId ? client.zone.users.get(item.info.userId) : undefined;
+        const username = user?.name || 'server';
         const time = secondsToTime(duration / 1000);
         chat.log(`{clr=#00FFFF}+ ${title} (${time}) added by {clr=#FF0000}${username}`);
     });
@@ -303,7 +194,6 @@ export async function load() {
 
     client.on('play', async ({ message }) => {
         if (!message.item) {
-            youtubePlayer?.stop();
             videoPlayer.pause();
             videoPlayer.src = '';
             return;
@@ -315,10 +205,8 @@ export async function load() {
         currentPlayStart = performance.now() - time;
 
         const success = await attemptLoadVideo(source, getCurrentPlayTime() / 1000);
-        if (!success && source.startsWith('youtube/')) {
-            const videoId = source.slice(8);
-            (await getYoutubePlayer()).playVideoById(videoId, getCurrentPlayTime() / 1000);
-        }
+
+        if (!success) chat.status('slow loading video...');
     });
 
     async function attemptLoadVideo(source: string, seconds: number): Promise<boolean> {
@@ -478,6 +366,7 @@ export async function load() {
     gameKeys.set('1', () => toggleEmote('wvy'));
     gameKeys.set('2', () => toggleEmote('shk'));
     gameKeys.set('3', () => toggleEmote('rbw'));
+    gameKeys.set('4', () => toggleEmote('spn'));
     gameKeys.set('q', () => (showQueue = !showQueue));
     gameKeys.set('ArrowLeft', () => move(-1, 0));
     gameKeys.set('ArrowRight', () => move(1, 0));
@@ -531,62 +420,6 @@ export async function load() {
 
     const pageRenderer = new PageRenderer(256, 256);
 
-    function drawZone() {
-        sceneContext.clearRect(0, 0, 512, 512);
-        sceneContext.drawImage(roomBackground.canvas, 0, 0, 512, 512);
-
-        sceneContext.save();
-        sceneContext.globalCompositeOperation = 'screen';
-        sceneContext.drawImage(videoPlayer, 32, 32, 448, 252);
-        if (!client.zone.lastPlayedItem || videoPlayer.src?.endsWith('.mp3')) {
-            sceneContext.globalAlpha = .35;
-            sceneContext.drawImage(zoneLogo, 32, 32, 448, 252);
-        }
-        sceneContext.restore();
-
-        client.zone.users.forEach((user) => {
-            const { position, emotes, avatar } = user;
-            if (!position) return;
-
-            let dx = 0;
-            let dy = 0;
-
-            if (emotes && emotes.includes('shk')) {
-                dx += randomInt(-8, 8);
-                dy += randomInt(-8, 8);
-            }
-
-            if (emotes && emotes.includes('wvy')) {
-                dy += Math.sin(performance.now() / 250 - position[0] / 2) * 4;
-            }
-
-            let [r, g, b] = [255, 255, 255];
-
-            const x = position[0] * 32 + dx;
-            const y = position[1] * 32 + dy;
-
-            let image = getTile(avatar) || avatarImage;
-
-            if (emotes && emotes.includes('rbw')) {
-                const h = Math.abs(Math.sin(performance.now() / 600 - position[0] / 8));
-                [r, g, b] = hslToRgb(h, 1, 0.5);
-                image = recolored(image, rgb2num(r, g, b));
-            }
-
-            sceneContext.drawImage(image.canvas, x, y, 32, 32);
-        });
-
-        const socket = (client.messaging as any).socket;
-        const state = socket ? socket.readyState : 0;
-
-        if (state !== WebSocket.OPEN) {
-            const status = scriptToPages('connecting...', layout)[0];
-            animatePage(status);
-            pageRenderer.renderPage(status, 0, 0);
-            sceneContext.drawImage(pageRenderer.pageImage, 16, 16, 512, 512);
-        }
-    }
-
     function drawQueue() {
         const lines: string[] = [];
         const cols = 40;
@@ -632,11 +465,6 @@ export async function load() {
     }
 
     function redraw() {
-        const playing = !!client.zone.lastPlayedItem;
-        if (youtubePlayer) youtubePlayer.player. youtube.hidden = !youtubePlayer?.playing;
-
-        drawZone();
-
         chatContext.fillStyle = 'rgb(0, 0, 0)';
         chatContext.fillRect(0, 0, 512, 512);
 
@@ -650,6 +478,34 @@ export async function load() {
     redraw();
 
     setupEntrySplash();
+
+    function connecting() {
+        const socket = (client.messaging as any).socket;
+        const state = socket ? socket.readyState : 0;
+
+        return state !== WebSocket.OPEN;
+    }
+
+    function showLogo() {
+        return !client.zone.lastPlayedItem || videoPlayer.src?.endsWith('.mp3');
+    }
+
+    const sceneRenderer = new ZoneSceneRenderer(
+        document.getElementById('three-container')!,
+        client.zone,
+        getTile,
+        connecting,
+    );
+
+    function renderScene() {
+        requestAnimationFrame(renderScene);
+
+        sceneRenderer.mediaElement = showLogo() ? zoneLogo : videoPlayer;
+        sceneRenderer.update();
+        sceneRenderer.render();
+    }
+
+    renderScene();
 }
 
 function setupEntrySplash() {

@@ -7,7 +7,7 @@ MESSAGE_SCHEMAS.set(
     Joi.object({
         name: Joi.string(),
         avatar: Joi.string().base64(),
-        emotes: Joi.array().items(Joi.string().valid('shk', 'wvy', 'rbw')),
+        emotes: Joi.array().items(Joi.string().valid('shk', 'wvy', 'rbw', 'spn')),
         position: Joi.array().ordered(Joi.number().required(), Joi.number().required()),
     }),
 );
