@@ -4,28 +4,35 @@ import { ZoneState } from '../common/zone';
 import { hslToRgb } from './utility';
 import { randomInt } from '../common/utility';
 
+const tileMaterials = new Map<HTMLCanvasElement, THREE.MeshBasicMaterial>();
+function getTileMaterial(canvas: HTMLCanvasElement) {
+    const existing = tileMaterials.get(canvas);
+    if (existing) return existing;
+
+    const texture = new THREE.CanvasTexture(canvas);
+    const material = new THREE.MeshBasicMaterial({ map: texture, transparent: true, side: THREE.DoubleSide });
+    tileMaterials.set(canvas, material);
+
+    texture.minFilter = THREE.NearestFilter;
+    texture.magFilter = THREE.NearestFilter;
+    texture.wrapS = THREE.RepeatWrapping;
+    texture.wrapT = THREE.RepeatWrapping;
+
+    return material;
+}
+
 const avatarQuad = new THREE.PlaneGeometry(1 / 16, 1 / 16, 1, 1);
 type AvatarStuff = {
-    texture: THREE.CanvasTexture;
-    context: CanvasRenderingContext2D;
     material: THREE.MeshBasicMaterial;
     mesh: THREE.Mesh;
 };
 const avatarStuffs: AvatarStuff[] = [];
 function setAvatarCount(count: number) {
     while (avatarStuffs.length < count) {
-        const context = createContext2D(8, 8);
-        const texture = new THREE.CanvasTexture(context.canvas);
-
-        texture.minFilter = THREE.NearestFilter;
-        texture.magFilter = THREE.NearestFilter;
-        texture.wrapS = THREE.RepeatWrapping;
-        texture.wrapT = THREE.RepeatWrapping;
-
-        const material = new THREE.MeshBasicMaterial({ map: texture, transparent: true, side: THREE.DoubleSide });
+        const material = new THREE.MeshBasicMaterial({ transparent: true, side: THREE.DoubleSide });
         const mesh = new THREE.Mesh(avatarQuad, material);
 
-        avatarStuffs.push({ context, texture, material, mesh });
+        avatarStuffs.push({ material, mesh });
     }
 }
 
@@ -174,10 +181,10 @@ export function init(
             g = Math.round(g);
             b = Math.round(b);
 
-            stuff.context.clearRect(0, 0, 8, 8);
-            stuff.context.drawImage(getTile(user.avatar).canvas, 0, 0);
-            stuff.texture.needsUpdate = true;
+            const tile = getTile(user.avatar).canvas;
+            const material = getTileMaterial(tile);
 
+            stuff.mesh.material = material;
             stuff.mesh.position.set(x / 16 + dx / 512, y / 16 + dy / 512, z / 16);
             stuff.material.color.set(`rgb(${r}, ${g}, ${b})`);
             avatarGroup.add(stuff.mesh);
