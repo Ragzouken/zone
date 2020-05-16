@@ -5,10 +5,16 @@ export class Player extends EventEmitter {
     private item?: QueueItem;
     private itemPlayStart = 0;
 
+    private retry = false;
+
     constructor(private readonly element: HTMLVideoElement) {
         super();
 
         this.element.addEventListener('loadeddata', () => this.reseek());
+        
+        setInterval(() => {
+            if (this.retry) this.reloadSource();
+        }, 200);
     }
 
     get playingItem() {
@@ -54,17 +60,20 @@ export class Player extends EventEmitter {
     }
 
     private reseek() {
-        this.element.currentTime = this.elapsed / 1000;
+        const target = this.elapsed / 1000;
+        const error = Math.abs(this.element.currentTime - target);
+        if (error > .1) this.element.currentTime = target;
     }
 
     private reloadSource() {
+        this.retry = false;
         if (!this.item) return;
 
         this.element.pause();
         this.element.src = this.item.media.source;
         this.element.load();
         this.reseek();
-        this.element.play().catch(() => setTimeout(() => this.reloadSource(), 200));
+        this.element.play().catch(() => this.retry = true);
     }
 
     private removeSource() {
