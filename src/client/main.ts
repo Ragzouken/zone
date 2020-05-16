@@ -1,79 +1,16 @@
 import * as blitsy from 'blitsy';
-import { num2hex, recolor, secondsToTime, fakedownToTag, eventToElementPixel, withPixels } from './utility';
+import { secondsToTime, fakedownToTag, eventToElementPixel, withPixels } from './utility';
 import { sleep, randomInt, clamp } from '../common/utility';
 import { scriptToPages, PageRenderer, getPageHeight } from './text';
 import { ChatPanel, animatePage } from './chat';
-import { UserId } from '../common/zone';
 
 import ZoneClient from '../common/client';
 import { YoutubeVideo } from '../server/youtube';
-import { init } from './three-test';
+import { ZoneSceneRenderer, avatarImage } from './scene';
 
 window.addEventListener('load', () => load());
 
 export const client = new ZoneClient();
-
-const avatarImage = blitsy.decodeAsciiTexture(
-    `
-___XX___
-___XX___
-___XX___
-__XXXX__
-_XXXXXX_
-X_XXXX_X
-__X__X__
-__X__X__
-`,
-    'X',
-);
-
-const floorTile = blitsy.decodeAsciiTexture(
-    `
-________
-_X_X_X_X
-________
-__X_____
-________
-X_X_X_X_
-________
-_____X__
-`,
-    'X',
-);
-
-const brickTile = blitsy.decodeAsciiTexture(
-    `
-###_####
-###_####
-###_####
-________
-#######_
-#######_
-#######_
-________
-`,
-    '#',
-);
-
-recolor(floorTile);
-recolor(brickTile);
-
-const roomBackground = blitsy.createContext2D(128, 128);
-drawRoomBackground(roomBackground);
-
-function drawRoomBackground(room: CanvasRenderingContext2D) {
-    room.fillStyle = '#001533';
-    room.fillRect(0, 0, 128, 128);
-
-    for (let x = 0; x < 16; ++x) {
-        for (let y = 0; y < 10; ++y) {
-            room.drawImage(brickTile.canvas, x * 8, y * 8);
-        }
-        for (let y = 10; y < 16; ++y) {
-            room.drawImage(floorTile.canvas, x * 8, y * 8);
-        }
-    }
-}
 
 const avatarTiles = new Map<string | undefined, CanvasRenderingContext2D>();
 avatarTiles.set(undefined, avatarImage);
@@ -553,17 +490,22 @@ export async function load() {
         return !client.zone.lastPlayedItem || videoPlayer.src?.endsWith('.mp3');
     }
 
-    init(
+    const sceneRenderer = new ZoneSceneRenderer(
         document.getElementById('three-container')!,
-        videoPlayer,
-        brickTile.canvas,
-        floorTile.canvas,
-        zoneLogo,
         client.zone,
         getTile,
         connecting,
-        showLogo,
-    )();
+    );
+
+    function renderScene() {
+        requestAnimationFrame(renderScene);
+
+        sceneRenderer.mediaElement = showLogo() ? zoneLogo : videoPlayer;
+        sceneRenderer.update();
+        sceneRenderer.render();
+    }
+
+    renderScene();
 }
 
 function setupEntrySplash() {
