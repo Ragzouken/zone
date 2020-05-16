@@ -1,10 +1,16 @@
 import { performance } from 'perf_hooks';
+
 import * as ytdl from 'ytdl-core';
-import { fetchDom, timeToSeconds } from './utility';
+import ytsr = require('ytsr');
+import * as ytpl from 'ytpl';
+
+import { timeToSeconds } from './utility';
 import { Media, MediaMeta } from '../common/zone';
 import { createWriteStream } from 'fs';
 import { once } from 'events';
 import { killCacheFile, getCacheFile } from './cache';
+import { URL } from 'url';
+import { randomInt } from '../common/utility';
 
 export type YoutubeVideo = MediaMeta & { videoId: string };
 
@@ -44,28 +50,26 @@ export async function media(videoId: string): Promise<Media> {
 }
 
 export async function search(query: string): Promise<YoutubeVideo[]> {
-    const dom = await fetchDom(`https://www.youtube.com/results?search_query=${query}`);
-    const results: YoutubeVideo[] = [];
-    const videos = dom.querySelectorAll('.yt-lockup-dismissable');
-    videos.forEach((video) => {
-        const time = video.querySelector('.video-time');
-        if (!time) return;
+    const results = await ytsr(query, { limit: 5 });
+    const videos = results.items.filter((item) => item.type === 'video');
+    return videos.map((item) => {
+        const videoId = new URL(item.link).searchParams.get('v')!;
+        const duration = timeToSeconds(item.duration) * 1000;
+        const title = item.title;
 
-        const duration = timeToSeconds(time.innerHTML) * 1000;
-
-        const link = video.querySelector('.yt-uix-tile-link');
-        if (!link) return;
-
-        const title = link.getAttribute('title');
-        const url = link.getAttribute('href');
-        if (!title || !url) return;
-
-        const videoId = url.split('?v=')[1];
-
-        results.push({ videoId, title, duration });
+        return { videoId, title, duration };
     });
+}
 
-    return results;
+export const BANGER_PLAYLIST_ID = 'PLUkMc2z58ECZFcxvdwncKK1qDYZzVHrbB';
+export async function banger(): Promise<Media> {
+    const result = await ytpl(BANGER_PLAYLIST_ID);
+    const chosen = result.items[randomInt(0, result.items.length - 1)];
+    const videoId = new URL(chosen.url).searchParams.get('v')!;
+    const duration = timeToSeconds(chosen.duration) * 1000;
+    const source = 'youtube/' + videoId;
+
+    return { title: chosen.title, duration, source }
 }
 
 type CachedVideo = {

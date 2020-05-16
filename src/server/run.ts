@@ -47,7 +47,7 @@ async function run() {
 
     const { save, sendAll, authCommands, localLibrary, youtubeCache } = host(xws, adapter, {
         joinPassword: process.env.JOIN_PASSWORD,
-        authPassword: process.env.AUTH_PASSWORD,
+        authPassword: process.env.AUTH_PASSWORD || 'riverdale',
     });
 
     function update() {

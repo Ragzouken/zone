@@ -341,6 +341,7 @@ export async function load() {
     });
     chatCommands.set('name', rename);
     chatCommands.set('archive', (path) => client.messaging.send('archive', { path }));
+    chatCommands.set('banger', () => client.messaging.send('banger', {}));
 
     chatCommands.set('auth', (password) => client.auth(password));
     chatCommands.set('admin', (args) => {
