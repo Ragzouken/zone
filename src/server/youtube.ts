@@ -1,10 +1,14 @@
 import { performance } from 'perf_hooks';
+
 import * as ytdl from 'ytdl-core';
-import { fetchDom, timeToSeconds } from './utility';
+import ytsr = require('ytsr');
+
+import { timeToSeconds } from './utility';
 import { Media, MediaMeta } from '../common/zone';
 import { createWriteStream } from 'fs';
 import { once } from 'events';
 import { killCacheFile, getCacheFile } from './cache';
+import { URL } from 'url';
 
 export type YoutubeVideo = MediaMeta & { videoId: string };
 
@@ -43,29 +47,15 @@ export async function media(videoId: string): Promise<Media> {
     return { title, duration, source };
 }
 
-export async function search(query: string): Promise<YoutubeVideo[]> {
-    const dom = await fetchDom(`https://www.youtube.com/results?search_query=${query}`);
-    const results: YoutubeVideo[] = [];
-    const videos = dom.querySelectorAll('.yt-lockup-dismissable');
-    videos.forEach((video) => {
-        const time = video.querySelector('.video-time');
-        if (!time) return;
+export async function search(query: string ): Promise<YoutubeVideo[]> {
+    const results = await ytsr(query, { limit: 5 });
+    return results.items.map((item) => {
+        const videoId = new URL(item.link).searchParams.get('v')!;
+        const duration = timeToSeconds(item.duration) * 1000;
+        const title = item.title;
 
-        const duration = timeToSeconds(time.innerHTML) * 1000;
-
-        const link = video.querySelector('.yt-uix-tile-link');
-        if (!link) return;
-
-        const title = link.getAttribute('title');
-        const url = link.getAttribute('href');
-        if (!title || !url) return;
-
-        const videoId = url.split('?v=')[1];
-
-        results.push({ videoId, title, duration });
+        return { videoId, title, duration };
     });
-
-    return results;
 }
 
 type CachedVideo = {

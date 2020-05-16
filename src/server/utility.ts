@@ -1,5 +1,4 @@
-import fetch, { RequestInit } from 'node-fetch';
-import * as HTMLParser from 'node-html-parser';
+import fetch from 'node-fetch';
 
 export function timeToSeconds(time: string): number {
     const parts = time.split(':');
@@ -13,11 +12,4 @@ export function timeToSeconds(time: string): number {
 
 export async function fetchJson(url: string) {
     return await fetch(url).then((r) => r.json());
-}
-
-export async function fetchDom(url: string, init?: RequestInit): Promise<HTMLParser.HTMLElement> {
-    const address = encodeURI(url);
-    const response = await fetch(address, init);
-    const html = await response.text();
-    return HTMLParser.parse(html) as HTMLParser.HTMLElement;
 }
