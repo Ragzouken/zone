@@ -7,6 +7,7 @@ import { ChatPanel, animatePage } from './chat';
 import ZoneClient from '../common/client';
 import { YoutubeVideo } from '../server/youtube';
 import { ZoneSceneRenderer, avatarImage } from './scene';
+import { Player } from './player';
 
 window.addEventListener('load', () => load());
 
@@ -142,30 +143,25 @@ function textToYoutubeVideoId(text: string) {
 }
 
 export async function load() {
-    const videoPlayer = document.createElement('video');
+    const video = document.createElement('video');
+    video.width = 448;
+    video.height = 252;
+    const player = new Player(video);
+
     const zoneLogo = document.createElement('img');
     zoneLogo.src = 'zone-logo.png';
 
     const joinName = document.querySelector('#join-name') as HTMLInputElement;
     const chatInput = document.querySelector('#chat-input') as HTMLInputElement;
 
-    videoPlayer.width = 448;
-    videoPlayer.height = 252;
-
     function setVolume(volume: number) {
-        videoPlayer.volume = volume / 100;
+        player.volume = volume / 100;
         localStorage.setItem('volume', volume.toString());
     }
 
     setVolume(parseInt(localStorage.getItem('volume') || '100', 10));
 
     joinName.value = localName;
-
-    let currentPlayStart: number | undefined;
-    function getCurrentPlayTime() {
-        if (!currentPlayStart) return 0;
-        return performance.now() - currentPlayStart;
-    }
 
     let showQueue = false;
 
@@ -183,42 +179,16 @@ export async function load() {
         chat.log(`{clr=#00FFFF}+ ${title} (${time}) added by {clr=#FF0000}${username}`);
     });
 
-    let retryTimeout = performance.now();
-
-    videoPlayer.addEventListener('waiting', async () => {
-        if (performance.now() < retryTimeout) return;
-        retryTimeout = performance.now() + 100;
-        console.log('auto resync');
-        await client.resync();
-    });
-
-    client.on('play', async ({ message }) => {
-        if (!message.item) {
-            videoPlayer.pause();
-            videoPlayer.src = '';
-            return;
+    client.on('play', async ({ message: { item, time } }) => {
+        if (!item) {
+            player.stopPlaying();
+        } else {
+            player.setPlaying(item, time || 0);
+            
+            const { title, duration } = item.media;
+            chat.log(`{clr=#00FFFF}> ${title} (${secondsToTime(duration / 1000)})`);
         }
-        const { title, duration, source } = message.item.media;
-        chat.log(`{clr=#00FFFF}> ${title} (${secondsToTime(duration / 1000)})`);
-
-        const time = message.time || 0;
-        currentPlayStart = performance.now() - time;
-
-        const success = await attemptLoadVideo(source, getCurrentPlayTime() / 1000);
-
-        if (!success) chat.status('slow loading video...');
     });
-
-    async function attemptLoadVideo(source: string, seconds: number): Promise<boolean> {
-        return new Promise((resolve) => {
-            setTimeout(() => resolve(false), 2000);
-            retryTimeout = performance.now() + 100;
-            videoPlayer.src = source;
-            videoPlayer.currentTime = seconds;
-            videoPlayer.play();
-            videoPlayer.addEventListener('loadedmetadata', () => resolve(true), { once: true });
-        });
-    }
 
     client.on('join', (event) => chat.status(`{clr=#FF0000}${event.user.name} {clr=#FF00FF}joined`));
     client.on('leave', (event) => chat.status(`{clr=#FF0000}${event.user.name}{clr=#FF00FF} left`));
@@ -433,17 +403,17 @@ export async function load() {
 
         let remaining = 0;
 
-        if (client.zone.lastPlayedItem) {
-            if (videoPlayer.src && videoPlayer.currentTime > 0) {
-                remaining = videoPlayer.duration - videoPlayer.currentTime;
-            } else {
-                const duration = client.zone.lastPlayedItem.media.duration;
-                const elapsed = performance.now() - currentPlayStart!;
-                remaining = Math.max(0, duration - elapsed) / 1000;
-            }
-        }
+        const item = player.playingItem;
 
-        if (client.zone.lastPlayedItem && remaining > 0) line(client.zone.lastPlayedItem.media.title, remaining);
+        if (item) {
+            if (video.src && video.currentTime > 0) {
+                remaining = video.duration - video.currentTime;
+            } else {
+                remaining = Math.max(0, player.duration - player.elapsed) / 1000;
+            }
+
+            if (remaining > 0) line(item.media.title, remaining);
+        }
 
         let total = remaining;
 
@@ -487,10 +457,6 @@ export async function load() {
         return state !== WebSocket.OPEN;
     }
 
-    function showLogo() {
-        return !client.zone.lastPlayedItem || videoPlayer.src?.endsWith('.mp3');
-    }
-
     const sceneRenderer = new ZoneSceneRenderer(
         document.getElementById('three-container')!,
         client.zone,
@@ -501,7 +467,7 @@ export async function load() {
     function renderScene() {
         requestAnimationFrame(renderScene);
 
-        sceneRenderer.mediaElement = showLogo() ? zoneLogo : videoPlayer;
+        sceneRenderer.mediaElement = player.hasVideo ? video : zoneLogo;
         sceneRenderer.update();
         sceneRenderer.render();
     }
