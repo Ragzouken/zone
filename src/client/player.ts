@@ -18,10 +18,6 @@ export class Player extends EventEmitter {
 
     constructor(private readonly element: HTMLVideoElement) {
         super();
-
-        setInterval(() => {
-            console.log(NETWORK[this.element.networkState], READY[this.element.readyState]);
-        }, 500);
     }
 
     get playingItem() {
@@ -42,10 +38,6 @@ export class Player extends EventEmitter {
 
     get elapsed() {
         return this.hasItem ? performance.now() - this.itemPlayStart : 0;
-    }
-
-    get perfect() {
-        return !this.hasItem || this.element.readyState === HTMLMediaElement.HAVE_ENOUGH_DATA;
     }
 
     set volume(value: number) {
@@ -71,7 +63,8 @@ export class Player extends EventEmitter {
     }
 
     forceRetry() {
-        
+        console.log(NETWORK[this.element.networkState], READY[this.element.readyState]);
+        this.reloadSource();
     }
 
     private reseek() {
