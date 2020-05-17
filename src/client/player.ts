@@ -11,6 +11,7 @@ export class Player extends EventEmitter {
         super();
 
         this.element.addEventListener('loadeddata', () => this.reseek());
+        this.element.addEventListener('error', () => this.retry = true);
         
         setInterval(() => {
             if (this.retry) this.reloadSource();
@@ -70,7 +71,7 @@ export class Player extends EventEmitter {
         if (!this.item) return;
 
         this.element.pause();
-        this.element.src = this.item.media.source;
+        this.element.src = this.item.media.source + "#t=" + this.elapsed / 1000;
         this.element.load();
         this.reseek();
         this.element.play().catch(() => this.retry = true);
