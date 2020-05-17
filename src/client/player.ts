@@ -1,5 +1,5 @@
-import { QueueItem } from "../server/playback";
-import { EventEmitter } from "events";
+import { QueueItem } from '../server/playback';
+import { EventEmitter } from 'events';
 
 export class Player extends EventEmitter {
     private item?: QueueItem;
@@ -11,8 +11,8 @@ export class Player extends EventEmitter {
         super();
 
         this.element.addEventListener('loadeddata', () => this.reseek());
-        this.element.addEventListener('error', () => this.retry = true);
-        
+        this.element.addEventListener('error', () => (this.retry = true));
+
         setInterval(() => {
             if (this.retry) this.reloadSource();
         }, 200);
@@ -63,7 +63,7 @@ export class Player extends EventEmitter {
     private reseek() {
         const target = this.elapsed / 1000;
         const error = Math.abs(this.element.currentTime - target);
-        if (error > .1) this.element.currentTime = target;
+        if (error > 0.1) this.element.currentTime = target;
     }
 
     private reloadSource() {
@@ -71,10 +71,10 @@ export class Player extends EventEmitter {
         if (!this.item) return;
 
         this.element.pause();
-        this.element.src = this.item.media.source + "#t=" + this.elapsed / 1000;
+        this.element.src = this.item.media.source + '#t=' + this.elapsed / 1000;
         this.element.load();
         this.reseek();
-        this.element.play().catch(() => this.retry = true);
+        this.element.play().catch(() => (this.retry = true));
     }
 
     private removeSource() {

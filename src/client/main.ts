@@ -184,7 +184,7 @@ export async function load() {
             player.stopPlaying();
         } else {
             player.setPlaying(item, time || 0);
-            
+
             const { title, duration } = item.media;
             chat.log(`{clr=#00FFFF}> ${title} (${secondsToTime(duration / 1000)})`);
         }
