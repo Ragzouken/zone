@@ -15,7 +15,9 @@ export class Player extends EventEmitter {
         this.element.addEventListener('ended', () => (this.retry = true));
 
         const test = (name: string) => {
-            this.element.addEventListener(name, (e: any) => console.log(name, this.element.networkState, e));
+            this.element.addEventListener(name, (e: any) => {
+                console.log(name, this.element.networkState, this.element.readyState, e);
+            });
         }
 
         test('error');
