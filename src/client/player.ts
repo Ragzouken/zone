@@ -1,6 +1,9 @@
 import { QueueItem } from '../server/playback';
 import { EventEmitter } from 'events';
 
+export const NETWORK = ['NETWORK_EMPTY', 'NETWORK_IDLE', 'NETWORK_LOADING', 'NETWORK_NO_SOURCE']; 
+export const READY = ['HAVE_NOTHING', 'HAVE_METADATA', 'HAVE_CURRENT_DATA', 'HAVE_FUTURE_DATA', 'HAVE_ENOUGH_DATA'];
+
 export class Player extends EventEmitter {
     private item?: QueueItem;
     private itemPlayStart = 0;
@@ -16,18 +19,21 @@ export class Player extends EventEmitter {
 
         const test = (name: string) => {
             this.element.addEventListener(name, (e: any) => {
-                console.log(name, this.element.networkState, this.element.readyState, e);
+                console.log(name, NETWORK[this.element.networkState], READY[this.element.readyState], e);
             });
         }
 
         test('error');
         test('ended');
-        test('suspend');
         test('waiting');
 
         setInterval(() => {
             if (this.retry) this.reloadSource();
         }, 200);
+
+        setInterval(() => {
+            console.log(NETWORK[this.element.networkState], READY[this.element.readyState]);
+        }, 500);
     }
 
     get playingItem() {
@@ -86,11 +92,15 @@ export class Player extends EventEmitter {
         this.retry = false;
         if (!this.item) return;
 
+        console.log('reloading source');
         this.element.pause();
         this.element.src = this.item.media.source + '#t=' + this.elapsed / 1000;
         this.element.load();
         this.reseek();
-        this.element.play().catch(() => (this.retry = true));
+        this.element.play().catch(() => {
+            console.log('play failed', NETWORK[this.element.networkState], READY[this.element.readyState]);
+            (this.retry = true);
+        });
     }
 
     private removeSource() {
