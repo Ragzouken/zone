@@ -342,8 +342,6 @@ export function host(xws: expressWs.Instance, adapter: low.AdapterSync, options:
             sendAll('chat', { text, userId: user.userId });
         });
 
-        messaging.messages.on('resync', () => sendCurrent(user));
-
         async function tryQueueLocalByPath(path: string) {
             const media = localLibrary.get(path);
             if (media) tryQueueMedia(media);

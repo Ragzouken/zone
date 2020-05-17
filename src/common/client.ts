@@ -133,13 +133,6 @@ export class ZoneClient extends EventEmitter {
         this.messaging.send('command', { name, args });
     }
 
-    async resync() {
-        return new Promise<PlayMessage>((resolve, reject) => {
-            this.expect('play', this.options.quickResponseTimeout).then(resolve, reject);
-            this.messaging.send('resync');
-        });
-    }
-
     async rename(name: string): Promise<UserState> {
         return new Promise((resolve, reject) => {
             setTimeout(() => reject('timeout'), this.options.quickResponseTimeout);
