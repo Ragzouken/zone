@@ -122,13 +122,6 @@ body {
     width: 128px; height: 128px;
 }
 
-#insert {
-    position: absolute;
-    left: 32px; top: 32px;
-    width: 448px; height: 252px;
-    pointer-events: none;
-}
-
 #three-container {
     position: absolute;
     width: 512px; height: 512px;
