@@ -184,7 +184,7 @@ export async function load() {
             player.stopPlaying();
         } else {
             player.setPlaying(item, time || 0);
-            
+
             const { title, duration } = item.media;
             chat.log(`{clr=#00FFFF}> ${title} (${secondsToTime(duration / 1000)})`);
         }
@@ -385,9 +385,6 @@ export async function load() {
 
     const chatContext = document.querySelector<HTMLCanvasElement>('#chat-canvas')!.getContext('2d')!;
     chatContext.imageSmoothingEnabled = false;
-
-    const sceneContext = document.querySelector<HTMLCanvasElement>('#scene-canvas')!.getContext('2d')!;
-    sceneContext.imageSmoothingEnabled = false;
 
     const pageRenderer = new PageRenderer(256, 256);
 

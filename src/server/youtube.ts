@@ -69,7 +69,7 @@ export async function banger(): Promise<Media> {
     const duration = timeToSeconds(chosen.duration) * 1000;
     const source = 'youtube/' + videoId;
 
-    return { title: chosen.title, duration, source }
+    return { title: chosen.title, duration, source };
 }
 
 type CachedVideo = {
