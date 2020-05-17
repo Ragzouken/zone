@@ -12,6 +12,16 @@ export class Player extends EventEmitter {
 
         this.element.addEventListener('loadeddata', () => this.reseek());
         this.element.addEventListener('error', () => (this.retry = true));
+        this.element.addEventListener('ended', () => (this.retry = true));
+
+        const test = (name: string) => {
+            this.element.addEventListener(name, (e: any) => console.log(name, e));
+        }
+
+        test('error');
+        test('ended');
+        test('suspend');
+        test('waiting');
 
         setInterval(() => {
             if (this.retry) this.reloadSource();
@@ -58,6 +68,10 @@ export class Player extends EventEmitter {
         this.itemPlayStart = performance.now();
 
         this.removeSource();
+    }
+
+    forceRetry() {
+        this.retry = true;
     }
 
     private reseek() {
