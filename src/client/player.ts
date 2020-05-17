@@ -88,11 +88,11 @@ export class Player extends EventEmitter {
             this.reseek();
             await this.element.play();
             console.log('played', NETWORK[this.element.networkState], READY[this.element.readyState]);
-        } catch (e) {
-            console.log('failed', NETWORK[this.element.networkState], READY[this.element.readyState]);
-            this.reloadSource();
-        } finally {
             this.reloading = false;
+        } catch (e) {
+            console.log('source failed', NETWORK[this.element.networkState], READY[this.element.readyState]);
+            this.reloading = false;
+            this.reloadSource();
         }
     }
 
