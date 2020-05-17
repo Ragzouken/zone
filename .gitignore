@@ -3,4 +3,7 @@ lib
 coverage
 .data
 media
+
+public/index.html
+public/style.css
 public/script.js
