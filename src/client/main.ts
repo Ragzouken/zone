@@ -144,9 +144,6 @@ function textToYoutubeVideoId(text: string) {
 
 export async function load() {
     const video = document.createElement('video');
-    video.style.objectFit = 'contain';
-    // video.width = 448;
-    // video.height = 252;
     const player = new Player(video);
 
     const zoneLogo = document.createElement('img');
