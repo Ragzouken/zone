@@ -422,6 +422,7 @@ export async function load() {
             line('*** END ***', total);
             lines[lines.length - 1] = '{clr=#FF00FF}' + lines[lines.length - 1];
         }
+        lines.push("{clr=#FF00FF}" + player.status);
 
         const queuePage = scriptToPages(lines.join('\n'), layout)[0];
         animatePage(queuePage);

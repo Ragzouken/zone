@@ -40,6 +40,12 @@ export class Player extends EventEmitter {
         return this.hasItem ? performance.now() - this.itemPlayStart : 0;
     }
 
+    get status() {
+        const network = NETWORK[this.element.networkState];
+        const ready = READY[this.element.readyState];
+        return `${network} / ${ready}`;
+    }
+
     set volume(value: number) {
         this.element.volume = value;
     }
@@ -84,15 +90,15 @@ export class Player extends EventEmitter {
 
         try {
             await expectMetadata(this.element);
-            console.log('loaded metadata', NETWORK[this.element.networkState], READY[this.element.readyState]);
             this.reseek();
             await this.element.play();
-            console.log('played', NETWORK[this.element.networkState], READY[this.element.readyState]);
             this.reloading = false;
         } catch (e) {
-            console.log('source failed', NETWORK[this.element.networkState], READY[this.element.readyState]);
             this.reloading = false;
+            console.log('source failed', NETWORK[this.element.networkState], READY[this.element.readyState], e);
             this.reloadSource();
+        } finally {
+            this.reloading = false;
         }
     }
 
