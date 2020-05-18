@@ -66,6 +66,7 @@ export class Player extends EventEmitter {
 
         if (item !== this.item) {
             this.item = item;
+            this.removeSource();
             this.reloadSource();
         } else {
             this.reseek();
@@ -116,6 +117,7 @@ export class Player extends EventEmitter {
     }
 
     private removeSource() {
+        this.reloading = false;
         this.element.pause();
         this.element.removeAttribute('src');
         this.element.load();
