@@ -80,7 +80,7 @@ export class Player extends EventEmitter {
     }
 
     forceRetry() {
-        console.log(NETWORK[this.element.networkState], READY[this.element.readyState]);
+        console.log(this.status);
         this.reloadSource();
     }
 
@@ -94,7 +94,7 @@ export class Player extends EventEmitter {
         if (!this.item || this.reloading) return;
         this.reloading = true;
 
-        console.log('reloading source', NETWORK[this.element.networkState], READY[this.element.readyState]);
+        console.log('reloading source', this.status);
         this.element.pause();
         this.element.src = this.item.media.source + '#t=' + this.elapsed / 1000;
         this.element.load();
@@ -106,7 +106,7 @@ export class Player extends EventEmitter {
             this.reloading = false;
         } catch (e) {
             this.reloading = false;
-            console.log('source failed', NETWORK[this.element.networkState], READY[this.element.readyState], e);
+            console.log('source failed', this.status, e);
             this.reloadSource();
         } finally {
             this.reloading = false;
