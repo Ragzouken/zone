@@ -116,15 +116,18 @@ export function host(xws: expressWs.Instance, adapter: low.AdapterSync, options:
 
     function cacheYoutubes() {
         const item = playback.currentItem;
+        const HALFHOUR = 30 * 60 * 60 * 1000;
 
-        if (item) {
+        if (item && item.media.duration < HALFHOUR) {
             const videoId = sourceToVideoId(item.media.source);
             if (videoId) youtubeCache.renewCachedVideo(videoId);
         }
 
         playback.queue.slice(0, 3).forEach((item) => {
-            const videoId = sourceToVideoId(item.media.source);
-            if (videoId) youtubeCache.renewCachedVideo(videoId);
+            if (item.media.duration < HALFHOUR) {
+                const videoId = sourceToVideoId(item.media.source);
+                if (videoId) youtubeCache.renewCachedVideo(videoId);
+            }
         });
     }
 

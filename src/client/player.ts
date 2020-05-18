@@ -101,7 +101,6 @@ export class Player extends EventEmitter {
             if (this.reloading === token) this.reloading = undefined; 
         }
 
-        console.log('reloading source', this.status);
         this.element.pause();
         const waiter = expectMetadata(this.element);
         this.element.src = this.item.media.source + '#t=' + this.elapsed / 1000;
