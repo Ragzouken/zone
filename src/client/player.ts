@@ -81,7 +81,7 @@ export class Player extends EventEmitter {
     }
 
     forceRetry() {
-        console.log(this.status);
+        this.removeSource();
         this.reloadSource();
     }
 
@@ -117,9 +117,11 @@ export class Player extends EventEmitter {
     }
 
     private removeSource() {
+        console.log('removing source:', this.status);
         this.reloading = false;
         this.element.pause();
         this.element.removeAttribute('src');
         this.element.load();
+        console.log('source removed:', this.status);
     }
 }
