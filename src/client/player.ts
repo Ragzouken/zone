@@ -18,6 +18,17 @@ export class Player extends EventEmitter {
 
     constructor(private readonly element: HTMLVideoElement) {
         super();
+
+        let lastUnstall = performance.now();
+        setInterval(() => {
+            if (this.reloading || !this.hasItem) return;
+            
+            if (this.element.readyState >= HTMLMediaElement.HAVE_FUTURE_DATA) {
+                lastUnstall = performance.now();
+            } else if (performance.now() - lastUnstall > 500) {
+                this.reloadSource();
+            }
+        }, 100);
     }
 
     get playingItem() {
