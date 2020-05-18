@@ -95,12 +95,13 @@ export class Player extends EventEmitter {
         this.reloading = true;
 
         console.log('reloading source', this.status);
+        const waiter = expectMetadata(this.element);
         this.element.pause();
         this.element.src = this.item.media.source + '#t=' + this.elapsed / 1000;
         this.element.load();
 
         try {
-            await expectMetadata(this.element);
+            await waiter;
             this.reseek();
             await this.element.play();
             this.reloading = false;
