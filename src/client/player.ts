@@ -107,7 +107,6 @@ export class Player extends EventEmitter {
         this.element.load();
 
         try {
-            console.log('about to wait metadata', this.status);
             await waiter;
             this.reseek();
             await this.element.play();
