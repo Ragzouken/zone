@@ -14,7 +14,7 @@ export async function expectMetadata(element: HTMLMediaElement) {
 export class Player extends EventEmitter {
     private item?: QueueItem;
     private itemPlayStart = 0;
-    private reloading = false;
+    private reloading?: object;
 
     constructor(private readonly element: HTMLVideoElement) {
         super();
@@ -26,7 +26,7 @@ export class Player extends EventEmitter {
             if (this.element.readyState >= HTMLMediaElement.HAVE_FUTURE_DATA) {
                 lastUnstall = performance.now();
             } else if (performance.now() - lastUnstall > 500) {
-                this.reloadSource();
+                this.forceRetry('stalling');
             }
         }, 100);
     }
@@ -80,7 +80,8 @@ export class Player extends EventEmitter {
         this.removeSource();
     }
 
-    forceRetry() {
+    forceRetry(reason: string) {
+        console.log('forcing retry', reason, this.status);
         this.removeSource();
         this.reloadSource();
     }
@@ -92,12 +93,17 @@ export class Player extends EventEmitter {
     }
 
     private async reloadSource() {
-        if (!this.item || this.reloading) return;
-        this.reloading = true;
+        if (!this.item || !!this.reloading) return;
+        const token = {};
+        this.reloading = token;
+
+        const done = () => { 
+            if (this.reloading === token) this.reloading = undefined; 
+        }
 
         console.log('reloading source', this.status);
-        const waiter = expectMetadata(this.element);
         this.element.pause();
+        const waiter = expectMetadata(this.element);
         this.element.src = this.item.media.source + '#t=' + this.elapsed / 1000;
         this.element.load();
 
@@ -106,22 +112,22 @@ export class Player extends EventEmitter {
             await waiter;
             this.reseek();
             await this.element.play();
-            this.reloading = false;
+            done();
         } catch (e) {
-            this.reloading = false;
             console.log('source failed', this.status, e);
-            this.reloadSource();
+            if (this.reloading === token) {
+                done();
+                this.reloadSource();
+            }
         } finally {
-            this.reloading = false;
+            done();
         }
     }
 
     private removeSource() {
-        console.log('removing source:', this.status);
-        this.reloading = false;
+        this.reloading = undefined;
         this.element.pause();
         this.element.removeAttribute('src');
         this.element.load();
-        console.log('source removed:', this.status);
     }
 }

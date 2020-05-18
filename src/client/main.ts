@@ -304,7 +304,7 @@ export async function load() {
         client.avatar(data);
     });
     chatCommands.set('volume', (args) => setVolume(parseInt(args.trim(), 10)));
-    chatCommands.set('resync', () => player.forceRetry());
+    chatCommands.set('resync', () => player.forceRetry('user request'));
     chatCommands.set('notify', async () => {
         const permission = await Notification.requestPermission();
         chat.status(`notifications ${permission}`);
