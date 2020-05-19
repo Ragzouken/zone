@@ -328,19 +328,19 @@ export async function load() {
         }
     });
 
-    function toggleEmote(emote: string) {
-        const emotes = getLocalUser()!.emotes;
-        if (emotes.includes(emote)) client.emotes(emotes.filter((e: string) => e !== emote));
-        else client.emotes(emotes.concat([emote]));
+    const emoteToggles = new Map<string, Element>();
+    const toggleEmote = (emote: string) => setEmote(emote, !getEmote(emote));
+    const getEmote = (emote: string) => emoteToggles.get(emote)!.classList.contains('active');
+    const setEmote = (emote: string, value: boolean) => {
+        emoteToggles.get(emote)!.classList.toggle('active', value);
+        client.emotes(['wvy', 'shk', 'rbw', 'spn'].filter(getEmote));
     }
 
     document.querySelectorAll('[data-emote-toggle]').forEach((element) => {
         const emote = element.getAttribute('data-emote-toggle');
         if (!emote) return;
-        element.addEventListener('click', () => {
-            toggleEmote(emote);
-            element.classList.toggle('active');
-        });
+        emoteToggles.set(emote, element);
+        element.addEventListener('click', () => toggleEmote(emote));
     });
 
     const gameKeys = new Map<string, () => void>();
