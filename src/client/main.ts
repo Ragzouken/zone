@@ -94,6 +94,8 @@ async function connect(): Promise<void> {
 
     try {
         await client.join({ name: localName, password: joinPassword });
+        const data = localStorage.getItem('avatar');
+        if (data) client.avatar(data);
     } catch (e) {
         chat.status('enter server password with /password)');
         return;
@@ -119,7 +121,6 @@ function listUsers() {
 const help = [
     'press tab: toggle typing/controls',
     'press q: toggle queue',
-    'press 1/2/3: toggle emotes',
     '/youtube url',
     '/search search terms',
     '/lucky search terms',
@@ -332,6 +333,15 @@ export async function load() {
         if (emotes.includes(emote)) client.emotes(emotes.filter((e: string) => e !== emote));
         else client.emotes(emotes.concat([emote]));
     }
+
+    document.querySelectorAll('[data-emote-toggle]').forEach((element) => {
+        const emote = element.getAttribute('data-emote-toggle');
+        if (!emote) return;
+        element.addEventListener('click', () => {
+            toggleEmote(emote);
+            element.classList.toggle('active');
+        });
+    });
 
     const gameKeys = new Map<string, () => void>();
     gameKeys.set('Tab', () => chatInput.focus());

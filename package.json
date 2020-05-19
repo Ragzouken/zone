@@ -5,7 +5,7 @@
   "scripts": {
     "start": "node lib/server/run.js",
     "test": "jest --config jestconfig.json",
-    "build:client:script": "browserify src/client/main.ts -p [ tsify -p src/client/tsconfig.json ] -s zone | terser -c -m > public/script.js",
+    "build:client:script": "browserify src/client/main.ts -p [ tsify -p src/client/tsconfig.json ] -s zone | terser -c -m -o public/script.js",
     "build:client:html": "pug --pretty src/client/index.pug -o public",
     "build:client:css": "cp-cli src/client/style.css public/style.css",
     "build:client": "npm run build:client:css && npm run build:client:html && npm run build:client:script",
