@@ -13,14 +13,19 @@ html, body {
     padding: 0;
 }
 
+
 html {
     background: black;
     font-size: 1.2rem;
+    font-family: 'ascii_small_simple', monospace;
+}
+
+input {
+    font-family: 'ascii_small_simple', monospace;
 }
 
 #chat-inputs > input {
     font-size: 16px;
-    font-family: monospace;
     color: white;
 
     background: black;
