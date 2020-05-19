@@ -11,7 +11,11 @@ html
     body
         #scene
             #three-container
+            #bottom-toolbar
+                button#avatar-button(title="change appearance")
+                    img(src="icons/avatar.png")
             #avatar-panel(hidden)
+                input#avatar-name(type="text")
                 canvas#avatar-paint(width=8, height=8)
                 .controls
                     button#avatar-update update

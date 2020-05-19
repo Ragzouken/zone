@@ -124,9 +124,7 @@ const help = [
     '/search search terms',
     '/lucky search terms',
     '/skip',
-    '/avatar',
     '/users',
-    '/name',
     '/notify',
     '/volume 100',
     '/resync',
@@ -241,12 +239,14 @@ export async function load() {
     }
 
     const avatarPanel = document.querySelector('#avatar-panel') as HTMLElement;
+    const avatarName = document.querySelector('#avatar-name') as HTMLInputElement;
     const avatarPaint = document.querySelector('#avatar-paint') as HTMLCanvasElement;
     const avatarUpdate = document.querySelector('#avatar-update') as HTMLButtonElement;
     const avatarCancel = document.querySelector('#avatar-cancel') as HTMLButtonElement;
     const avatarContext = avatarPaint.getContext('2d')!;
 
     function openAvatarEditor() {
+        avatarName.value = getLocalUser()?.name || '';
         const avatar = getTile(getLocalUser()!.avatar) || avatarImage;
         avatarContext.clearRect(0, 0, 8, 8);
         avatarContext.drawImage(avatar.canvas, 0, 0);
@@ -263,11 +263,14 @@ export async function load() {
     });
 
     avatarUpdate.addEventListener('click', () => {
+        if (avatarName.value !== getLocalUser()?.name) rename(avatarName.value);
         client.avatar(blitsy.encodeTexture(avatarContext, 'M1').data);
     });
     avatarCancel.addEventListener('click', () => (avatarPanel.hidden = true));
 
     let lastSearchResults: YoutubeVideo[] = [];
+
+    document.getElementById('avatar-button')?.addEventListener('click', () => openAvatarEditor());
 
     const chatCommands = new Map<string, (args: string) => void>();
     chatCommands.set('search', async (query) => {

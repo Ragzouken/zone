@@ -1,7 +1,12 @@
 [hidden] { display: none !important; }
 * { box-sizing: border-box; }
 
-canvas {
+:root {
+    --button-color: #0052cc;
+    --ascii-small: 'ascii_small_simple', monospace;
+}
+
+canvas, img {
     image-rendering: -moz-crisp-edges;
     image-rendering: -webkit-crisp-edges;
     image-rendering: pixelated;
@@ -17,11 +22,11 @@ html, body {
 html {
     background: black;
     font-size: 1.2rem;
-    font-family: 'ascii_small_simple', monospace;
+    font-family: var(--ascii-small);
 }
 
-input {
-    font-family: 'ascii_small_simple', monospace;
+input, button {
+    font-family: var(--ascii-small);
 }
 
 #chat-inputs > input {
@@ -35,6 +40,50 @@ input {
 
 #chat-inputs > input:focus {
     border-bottom: solid red 3px;
+}
+
+#bottom-toolbar {
+    position: absolute;
+    bottom: 0; right: 0;
+
+    display: flex;
+    flex-direction: row;
+}
+
+#bottom-toolbar > button {
+    margin-right: 16px; margin-bottom: 16px;
+    width: 48px; height: 48px;
+    
+    padding: 6px;
+    background-color: var(--button-color);
+    border-color: var(--button-color);
+}
+
+#bottom-toolbar > button > img {
+    width: 100%; height: 100%;
+}
+
+
+#avatar-panel {
+    position: absolute;
+    right: 0; bottom: 0;
+    margin: 8px;
+
+    display: flex;
+    flex-direction: column;
+
+    padding: 8px;
+
+    background: black;
+}
+
+#avatar-panel > *:not(:first-child) {
+    margin-top: 8px;
+}
+
+#avatar-panel > .controls {
+    display: flex;
+    flex: 1;
 }
 
 html {
@@ -91,28 +140,6 @@ body {
     position: relative;
     width: 512px;
     height: 512px;
-}
-
-#avatar-panel {
-    position: absolute;
-    left: 50%; top: 50%;
-    transform: translate(-50%, -50%);
-
-    display: flex;
-    flex-direction: column;
-
-    padding: 8px;
-
-    background: black;
-}
-
-#avatar-panel > *:not(:first-child) {
-    margin-top: 8px;
-}
-
-#avatar-panel > .controls {
-    display: flex;
-    flex: 1;
 }
 
 .controls > button {
