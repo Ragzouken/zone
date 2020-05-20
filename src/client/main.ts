@@ -275,7 +275,7 @@ export async function load() {
 
     const chatCommands = new Map<string, (args: string) => void>();
     chatCommands.set('search', async (query) => {
-        ({ results: lastSearchResults } = await client.search(query));
+        lastSearchResults = await client.search(query);
         const lines = lastSearchResults
             .slice(0, 5)
             .map(({ title, duration }, i) => `${i + 1}. ${title} (${secondsToTime(duration / 1000)})`);
