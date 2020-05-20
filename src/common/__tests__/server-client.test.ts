@@ -262,22 +262,6 @@ describe('playback', () => {
         });
     });
 
-    it('sends currently playing on resync', async () => {
-        await zoneServer({}, async (server) => {
-            server.hosting.playback.queueMedia(DAY_MEDIA);
-
-            const client = await server.client();
-            const waiter = client.expect('play');
-            await client.join();
-            await waiter;
-
-            const play = await client.resync();
-
-            expect(play.time).toBeGreaterThan(0);
-            expect(play.item).toEqual(server.hosting.playback.currentItem);
-        });
-    });
-
     it('sends empty play when all playback ends', async () => {
         await zoneServer({ playbackPaddingTime: 0 }, async (server) => {
             const client = await server.client();

@@ -1,7 +1,12 @@
 [hidden] { display: none !important; }
 * { box-sizing: border-box; }
 
-canvas {
+:root {
+    --button-color: #0052cc;
+    --ascii-small: 'ascii_small_simple', monospace;
+}
+
+canvas, img {
     image-rendering: -moz-crisp-edges;
     image-rendering: -webkit-crisp-edges;
     image-rendering: pixelated;
@@ -13,14 +18,19 @@ html, body {
     padding: 0;
 }
 
+
 html {
     background: black;
     font-size: 1.2rem;
+    font-family: var(--ascii-small);
+}
+
+input, button {
+    font-family: var(--ascii-small);
 }
 
 #chat-inputs > input {
     font-size: 16px;
-    font-family: monospace;
     color: white;
 
     background: black;
@@ -30,6 +40,77 @@ html {
 
 #chat-inputs > input:focus {
     border-bottom: solid red 3px;
+}
+
+#top-toolbar {
+    position: absolute;
+    top: 0; left: 0;
+
+    display: flex;
+    flex-direction: row;
+}
+
+#top-toolbar > button {
+    margin-left: 16px; margin-top: 16px;
+    width: 32px; height: 32px;
+    
+    border: none;
+    padding: 4px;
+    background-color: var(--button-color);
+    border-color: var(--button-color);
+}
+
+#top-toolbar > button > img {
+    width: 100%; height: 100%;
+}
+
+#bottom-toolbar {
+    position: absolute;
+    bottom: 0; right: 0;
+
+    display: flex;
+    flex-direction: row;
+}
+
+#bottom-toolbar > button {
+    margin-right: 16px; margin-bottom: 16px;
+    width: 32px; height: 32px;
+    
+    border: none;
+    padding: 4px;
+    background-color: var(--button-color);
+    border-color: var(--button-color);
+}
+
+#bottom-toolbar > button > img {
+    width: 100%; height: 100%;
+}
+
+#bottom-toolbar > button.active {
+    filter: invert();
+}
+
+
+#avatar-panel {
+    position: absolute;
+    right: 0; bottom: 0;
+    margin: 8px;
+
+    display: flex;
+    flex-direction: column;
+
+    padding: 8px;
+
+    background: black;
+}
+
+#avatar-panel > *:not(:first-child) {
+    margin-top: 8px;
+}
+
+#avatar-panel > .controls {
+    display: flex;
+    flex: 1;
 }
 
 html {
@@ -88,28 +169,6 @@ body {
     height: 512px;
 }
 
-#avatar-panel {
-    position: absolute;
-    left: 50%; top: 50%;
-    transform: translate(-50%, -50%);
-
-    display: flex;
-    flex-direction: column;
-
-    padding: 8px;
-
-    background: black;
-}
-
-#avatar-panel > *:not(:first-child) {
-    margin-top: 8px;
-}
-
-#avatar-panel > .controls {
-    display: flex;
-    flex: 1;
-}
-
 .controls > button {
     flex: 1;
 }
@@ -125,19 +184,6 @@ body {
 #three-container {
     position: absolute;
     width: 512px; height: 512px;
-}
-
-#noyoutube {
-    position: absolute;
-    width: 100%; height: 100%;
-
-    z-index: -2;
-    
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    color: white;
-    font-size: 1.5em;
 }
 
 .player {

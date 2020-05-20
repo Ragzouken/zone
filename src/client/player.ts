@@ -14,10 +14,21 @@ export async function expectMetadata(element: HTMLMediaElement) {
 export class Player extends EventEmitter {
     private item?: QueueItem;
     private itemPlayStart = 0;
-    private reloading = false;
+    private reloading?: object;
 
     constructor(private readonly element: HTMLVideoElement) {
         super();
+
+        let lastUnstall = performance.now();
+        setInterval(() => {
+            if (this.reloading || !this.hasItem) return;
+            
+            if (this.element.readyState >= HTMLMediaElement.HAVE_FUTURE_DATA) {
+                lastUnstall = performance.now();
+            } else if (performance.now() - lastUnstall > 500) {
+                this.forceRetry('stalling');
+            }
+        }, 100);
     }
 
     get playingItem() {
@@ -40,6 +51,12 @@ export class Player extends EventEmitter {
         return this.hasItem ? performance.now() - this.itemPlayStart : 0;
     }
 
+    get status() {
+        const network = NETWORK[this.element.networkState];
+        const ready = READY[this.element.readyState];
+        return `${network} / ${ready}`;
+    }
+
     set volume(value: number) {
         this.element.volume = value;
     }
@@ -49,6 +66,7 @@ export class Player extends EventEmitter {
 
         if (item !== this.item) {
             this.item = item;
+            this.removeSource();
             this.reloadSource();
         } else {
             this.reseek();
@@ -62,8 +80,9 @@ export class Player extends EventEmitter {
         this.removeSource();
     }
 
-    forceRetry() {
-        console.log(NETWORK[this.element.networkState], READY[this.element.readyState]);
+    forceRetry(reason: string) {
+        console.log('forcing retry', reason, this.status);
+        this.removeSource();
         this.reloadSource();
     }
 
@@ -74,29 +93,37 @@ export class Player extends EventEmitter {
     }
 
     private async reloadSource() {
-        if (!this.item || this.reloading) return;
-        this.reloading = true;
+        if (!this.item || !!this.reloading) return;
+        const token = {};
+        this.reloading = token;
 
-        console.log('reloading source', NETWORK[this.element.networkState], READY[this.element.readyState]);
+        const done = () => { 
+            if (this.reloading === token) this.reloading = undefined; 
+        }
+
         this.element.pause();
+        const waiter = expectMetadata(this.element);
         this.element.src = this.item.media.source + '#t=' + this.elapsed / 1000;
         this.element.load();
 
         try {
-            await expectMetadata(this.element);
-            console.log('loaded metadata', NETWORK[this.element.networkState], READY[this.element.readyState]);
+            await waiter;
             this.reseek();
             await this.element.play();
-            console.log('played', NETWORK[this.element.networkState], READY[this.element.readyState]);
-            this.reloading = false;
+            done();
         } catch (e) {
-            console.log('source failed', NETWORK[this.element.networkState], READY[this.element.readyState]);
-            this.reloading = false;
-            this.reloadSource();
+            console.log('source failed', this.status, e);
+            if (this.reloading === token) {
+                done();
+                this.reloadSource();
+            }
+        } finally {
+            done();
         }
     }
 
     private removeSource() {
+        this.reloading = undefined;
         this.element.pause();
         this.element.removeAttribute('src');
         this.element.load();

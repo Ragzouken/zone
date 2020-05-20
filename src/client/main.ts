@@ -2,7 +2,7 @@ import * as blitsy from 'blitsy';
 import { secondsToTime, fakedownToTag, eventToElementPixel, withPixels } from './utility';
 import { sleep, randomInt, clamp } from '../common/utility';
 import { scriptToPages, PageRenderer, getPageHeight } from './text';
-import { ChatPanel, animatePage } from './chat';
+import { ChatPanel, animatePage, filterDrawable } from './chat';
 
 import ZoneClient from '../common/client';
 import { YoutubeVideo } from '../server/youtube';
@@ -94,6 +94,8 @@ async function connect(): Promise<void> {
 
     try {
         await client.join({ name: localName, password: joinPassword });
+        const data = localStorage.getItem('avatar');
+        if (data) client.avatar(data);
     } catch (e) {
         chat.status('enter server password with /password)');
         return;
@@ -119,17 +121,12 @@ function listUsers() {
 const help = [
     'press tab: toggle typing/controls',
     'press q: toggle queue',
-    'press 1/2/3: toggle emotes',
     '/youtube url',
     '/search search terms',
     '/lucky search terms',
-    '/skip',
-    '/avatar',
     '/users',
-    '/name',
     '/notify',
     '/volume 100',
-    '/resync',
 ].join('\n');
 
 function listHelp() {
@@ -144,8 +141,6 @@ function textToYoutubeVideoId(text: string) {
 
 export async function load() {
     const video = document.createElement('video');
-    video.width = 448;
-    video.height = 252;
     const player = new Player(video);
 
     const zoneLogo = document.createElement('img');
@@ -243,12 +238,14 @@ export async function load() {
     }
 
     const avatarPanel = document.querySelector('#avatar-panel') as HTMLElement;
+    const avatarName = document.querySelector('#avatar-name') as HTMLInputElement;
     const avatarPaint = document.querySelector('#avatar-paint') as HTMLCanvasElement;
     const avatarUpdate = document.querySelector('#avatar-update') as HTMLButtonElement;
     const avatarCancel = document.querySelector('#avatar-cancel') as HTMLButtonElement;
     const avatarContext = avatarPaint.getContext('2d')!;
 
     function openAvatarEditor() {
+        avatarName.value = getLocalUser()?.name || '';
         const avatar = getTile(getLocalUser()!.avatar) || avatarImage;
         avatarContext.clearRect(0, 0, 8, 8);
         avatarContext.drawImage(avatar.canvas, 0, 0);
@@ -265,11 +262,16 @@ export async function load() {
     });
 
     avatarUpdate.addEventListener('click', () => {
+        if (avatarName.value !== getLocalUser()?.name) rename(avatarName.value);
         client.avatar(blitsy.encodeTexture(avatarContext, 'M1').data);
     });
     avatarCancel.addEventListener('click', () => (avatarPanel.hidden = true));
 
     let lastSearchResults: YoutubeVideo[] = [];
+
+    document.getElementById('avatar-button')?.addEventListener('click', () => openAvatarEditor());
+    document.getElementById('skip-button')?.addEventListener('click', () => client.skip());
+    document.getElementById('resync-button')?.addEventListener('click', () => player.forceRetry('reload button'));
 
     const chatCommands = new Map<string, (args: string) => void>();
     chatCommands.set('search', async (query) => {
@@ -304,7 +306,7 @@ export async function load() {
         client.avatar(data);
     });
     chatCommands.set('volume', (args) => setVolume(parseInt(args.trim(), 10)));
-    chatCommands.set('resync', () => player.forceRetry());
+    chatCommands.set('resync', () => player.forceRetry('user request'));
     chatCommands.set('notify', async () => {
         const permission = await Notification.requestPermission();
         chat.status(`notifications ${permission}`);
@@ -326,11 +328,20 @@ export async function load() {
         }
     });
 
-    function toggleEmote(emote: string) {
-        const emotes = getLocalUser()!.emotes;
-        if (emotes.includes(emote)) client.emotes(emotes.filter((e: string) => e !== emote));
-        else client.emotes(emotes.concat([emote]));
+    const emoteToggles = new Map<string, Element>();
+    const toggleEmote = (emote: string) => setEmote(emote, !getEmote(emote));
+    const getEmote = (emote: string) => emoteToggles.get(emote)!.classList.contains('active');
+    const setEmote = (emote: string, value: boolean) => {
+        emoteToggles.get(emote)!.classList.toggle('active', value);
+        client.emotes(['wvy', 'shk', 'rbw', 'spn'].filter(getEmote));
     }
+
+    document.querySelectorAll('[data-emote-toggle]').forEach((element) => {
+        const emote = element.getAttribute('data-emote-toggle');
+        if (!emote) return;
+        emoteToggles.set(emote, element);
+        element.addEventListener('click', () => toggleEmote(emote));
+    });
 
     const gameKeys = new Map<string, () => void>();
     gameKeys.set('Tab', () => chatInput.focus());
@@ -391,7 +402,9 @@ export async function load() {
     function drawQueue() {
         const lines: string[] = [];
         const cols = 40;
+
         function line(title: string, seconds: number) {
+            title = filterDrawable(title);
             const time = secondsToTime(seconds);
             const limit = cols - time.length;
             const cut = title.length < limit ? title.padEnd(limit, ' ') : title.slice(0, limit - 4) + '... ';
@@ -422,6 +435,7 @@ export async function load() {
             line('*** END ***', total);
             lines[lines.length - 1] = '{clr=#FF00FF}' + lines[lines.length - 1];
         }
+        lines.push("{clr=#FF00FF}" + player.status);
 
         const queuePage = scriptToPages(lines.join('\n'), layout)[0];
         animatePage(queuePage);
@@ -474,8 +488,18 @@ export async function load() {
 
 function setupEntrySplash() {
     const entrySplash = document.getElementById('entry-splash') as HTMLElement;
+    const entryUsers = document.getElementById('entry-users') as HTMLParagraphElement;
     const entryButton = document.getElementById('entry-button') as HTMLInputElement;
     const entryForm = document.getElementById('entry') as HTMLFormElement;
+
+    fetch('./users').then((res) => res.json()).then((names: string[]) => {
+        if (names.length === 0) {
+            entryUsers.innerHTML = 'zone is currenty empty';
+        } else {
+            entryUsers.innerHTML = `${names.length} people are zoning: ` + names.join(', ');
+        }
+    });
+
     entryButton.disabled = false;
     entryForm.addEventListener('submit', (e) => {
         e.preventDefault();

@@ -76,6 +76,18 @@ function makeTileCanvasTexture(canvas: HTMLCanvasElement) {
     return texture;
 }
 
+function isVideo(element: HTMLElement | undefined): element is HTMLVideoElement {
+    return element?.nodeName === "VIDEO";
+}
+
+function isCanvas(element: HTMLElement | undefined): element is HTMLCanvasElement {
+    return element?.nodeName === "CANVAS";
+}
+
+function isImage(element: HTMLElement | undefined): element is HTMLImageElement {
+    return element?.nodeName === "IMG";
+}
+
 const tileMaterials = new Map<HTMLCanvasElement, THREE.MeshBasicMaterial>();
 function getTileMaterial(canvas: HTMLCanvasElement) {
     const existing = tileMaterials.get(canvas);
@@ -120,6 +132,7 @@ export class ZoneSceneRenderer {
 
     private readonly scene = new THREE.Scene();
     private readonly avatarGroup = new THREE.Group();
+    private readonly mediaMesh: THREE.Mesh;
 
     constructor(
         container: HTMLElement,
@@ -156,19 +169,19 @@ export class ZoneSceneRenderer {
             depthWrite: false,
         });
 
-        const mediaMesh = new THREE.Mesh(new THREE.PlaneGeometry(448 / 512, 252 / 512, 1, 1), mediaMaterial);
+        this.mediaMesh = new THREE.Mesh(new THREE.PlaneGeometry(1, 1, 1, 1), mediaMaterial);
         const brickMesh = new THREE.Mesh(new THREE.PlaneGeometry(1, 10 / 16, 1, 1), brickMaterial);
         const floorMesh = new THREE.Mesh(new THREE.PlaneGeometry(1, 6 / 16, 1, 1), floorMaterial);
 
         floorMesh.rotateX(Math.PI / 2);
         floorMesh.translateZ(5 / 16);
-        mediaMesh.translateZ(-3 / 16 + 1 / 512);
+        this.mediaMesh.translateZ(-3 / 16 + 1 / 512);
         brickMesh.translateZ(-3 / 16);
 
         this.scene.add(brickMesh);
         this.scene.add(floorMesh);
         this.scene.add(this.avatarGroup);
-        this.scene.add(mediaMesh);
+        this.scene.add(this.mediaMesh);
 
         this.renderer.setSize(container.clientWidth, container.clientHeight);
         container.appendChild(this.renderer.domElement);
@@ -178,6 +191,18 @@ export class ZoneSceneRenderer {
         this.renderer.setClearColor(this.connecting() ? red : black);
         this.mediaTexture.image = this.mediaElement;
         this.mediaTexture.needsUpdate = true;
+    
+        let mediaAspect = 1;
+
+        if (isVideo(this.mediaElement)) {
+            mediaAspect = this.mediaElement.videoWidth / this.mediaElement.videoHeight;
+        } else if (isImage(this.mediaElement)) {
+            mediaAspect = this.mediaElement.naturalWidth / this.mediaElement.naturalHeight;
+        } else if (isCanvas(this.mediaElement)) {
+            mediaAspect = this.mediaElement.width / this.mediaElement.height;
+        }
+
+        this.mediaMesh.scale.set(252 * mediaAspect / 512, 252 / 512, 1);
 
         setAvatarCount(this.zone.users.size);
         this.avatarGroup.children = [];

@@ -58,6 +58,12 @@ export function host(xws: expressWs.Instance, adapter: low.AdapterSync, options:
 
     // this zone's websocket endpoint
     xws.app.ws('/zone', (websocket, req) => waitJoin(websocket, req.ip));
+    
+    xws.app.get('/users', (req, res) => {
+        const users = Array.from(zone.users.values());
+        const names = users.map((user) => user.name).filter((name) => !!name);
+        res.json(names);
+    });
 
     function ping() {
         xws.getWss().clients.forEach((websocket) => {
@@ -116,15 +122,18 @@ export function host(xws: expressWs.Instance, adapter: low.AdapterSync, options:
 
     function cacheYoutubes() {
         const item = playback.currentItem;
+        const HALFHOUR = 30 * 60 * 60 * 1000;
 
-        if (item) {
+        if (item && item.media.duration < HALFHOUR) {
             const videoId = sourceToVideoId(item.media.source);
             if (videoId) youtubeCache.renewCachedVideo(videoId);
         }
 
         playback.queue.slice(0, 3).forEach((item) => {
-            const videoId = sourceToVideoId(item.media.source);
-            if (videoId) youtubeCache.renewCachedVideo(videoId);
+            if (item.media.duration < HALFHOUR) {
+                const videoId = sourceToVideoId(item.media.source);
+                if (videoId) youtubeCache.renewCachedVideo(videoId);
+            }
         });
     }
 
@@ -341,8 +350,6 @@ export function host(xws: expressWs.Instance, adapter: low.AdapterSync, options:
             text = text.substring(0, opts.chatLengthLimit);
             sendAll('chat', { text, userId: user.userId });
         });
-
-        messaging.messages.on('resync', () => sendCurrent(user));
 
         async function tryQueueLocalByPath(path: string) {
             const media = localLibrary.get(path);

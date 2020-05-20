@@ -4,17 +4,37 @@ html
         meta(charset="UTF-8")
         meta(name="viewport", content="width=600")
         title zone
-        link(rel="icon" type="image/png" href="icon.png")
-        link(rel="stylesheet" href="style.css")
+        link(rel="icon", type="image/png", href="icon.png")
+        link(rel="stylesheet", href="ascii_small_simple/ascii_small_simple.css", type="text/css", charset="utf-8")
+        link(rel="stylesheet", href="style.css")
         script(src="script.js")
     body
         #scene
             #three-container
+            #top-toolbar
+                button(hidden, title="")
+                    img(src="icons/search.png")
+                button#resync-button(title="reload this")
+                    img(src="icons/resync.png")
+                button#skip-button(title="vote to skip this")
+                    img(src="icons/skip.png")
+            #bottom-toolbar
+                button(title="toggle float emote (1)", data-emote-toggle="wvy")
+                    img(src="icons/wvy.png")
+                button(title="toggle shake emote (2)", data-emote-toggle="shk")
+                    img(src="icons/shk.png")
+                button(title="toggle rave emote (3)", data-emote-toggle="rbw")
+                    img(src="icons/rbw.png")
+                button(title="toggle spin emote (4)", data-emote-toggle="spn")
+                    img(src="icons/spn.png")
+                button#avatar-button(title="change appearance")
+                    img(src="icons/avatar.png")
             #avatar-panel(hidden)
+                input#avatar-name(type="text")
                 canvas#avatar-paint(width=8, height=8)
                 .controls
                     button#avatar-update update
-                    button#avatar-cancel cancel
+                    button#avatar-cancel close
         canvas#chat-canvas(width=512, height=512)
         #chat-inputs
             input#chat-input(type="text", placeholder="chat message...", maxlength="160")
@@ -22,5 +42,6 @@ html
             #entry-panel
                 form#entry
                     h1 you are about to enter a zone
+                    p#entry-users ...
                     input#join-name(type="text", placeholder="your name...", maxlength="16")
                     input#entry-button(type="submit" value="enter" disabled)
