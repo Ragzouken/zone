@@ -107,6 +107,22 @@ input[type="text"]:focus {
     filter: invert();
 }
 
+#popout-panel {
+    position: absolute;
+    width: 100%;
+    background: black;
+
+    padding: 16px;
+
+    display: flex;
+    align-items: center;
+    align-content: center;
+    justify-content: center;
+}
+
+#popout-panel > video {
+    width: 448px; height: 252px;
+}
 
 #avatar-panel {
     position: absolute;

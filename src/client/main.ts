@@ -140,9 +140,14 @@ function textToYoutubeVideoId(text: string) {
 }
 
 export async function load() {
+    const popoutButton = document.getElementById('popout-button') as HTMLButtonElement;
+    const popoutPanel = document.getElementById('popout-panel') as HTMLElement;
     const video = document.createElement('video');
+    popoutPanel.appendChild(video);
+    popoutButton.addEventListener('click', () => popoutPanel.hidden = false);
+    popoutPanel.addEventListener('click', () => popoutPanel.hidden = true);
+    
     const player = new Player(video);
-
     const zoneLogo = document.createElement('img');
     zoneLogo.src = 'zone-logo.png';
 

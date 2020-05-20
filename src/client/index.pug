@@ -18,6 +18,8 @@ html
                     img(src="icons/resync.png")
                 button#skip-button(title="vote to skip this")
                     img(src="icons/skip.png")
+                button#popout-button(title="pop out video")
+                    img(src="icons/popout.png")
             #bottom-toolbar
                 button(title="toggle float emote (1)", data-emote-toggle="wvy")
                     img(src="icons/wvy.png")
@@ -29,6 +31,7 @@ html
                     img(src="icons/spn.png")
                 button#avatar-button(title="change appearance")
                     img(src="icons/avatar.png")
+            #popout-panel(hidden)
             #avatar-panel(hidden)
                 input#avatar-name(type="text")
                 canvas#avatar-paint(width=8, height=8)
