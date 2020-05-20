@@ -124,11 +124,9 @@ const help = [
     '/youtube url',
     '/search search terms',
     '/lucky search terms',
-    '/skip',
     '/users',
     '/notify',
     '/volume 100',
-    '/resync',
 ].join('\n');
 
 function listHelp() {
@@ -272,6 +270,8 @@ export async function load() {
     let lastSearchResults: YoutubeVideo[] = [];
 
     document.getElementById('avatar-button')?.addEventListener('click', () => openAvatarEditor());
+    document.getElementById('skip-button')?.addEventListener('click', () => client.skip());
+    document.getElementById('resync-button')?.addEventListener('click', () => player.forceRetry('reload button'));
 
     const chatCommands = new Map<string, (args: string) => void>();
     chatCommands.set('search', async (query) => {
@@ -486,8 +486,18 @@ export async function load() {
 
 function setupEntrySplash() {
     const entrySplash = document.getElementById('entry-splash') as HTMLElement;
+    const entryUsers = document.getElementById('entry-users') as HTMLParagraphElement;
     const entryButton = document.getElementById('entry-button') as HTMLInputElement;
     const entryForm = document.getElementById('entry') as HTMLFormElement;
+
+    fetch('./users').then((res) => res.json()).then((names: string[]) => {
+        if (names.length === 0) {
+            entryUsers.innerHTML = 'zone is currenty empty';
+        } else {
+            entryUsers.innerHTML = `${names.length} people are zoning: ` + names.join(', ');
+        }
+    });
+
     entryButton.disabled = false;
     entryForm.addEventListener('submit', (e) => {
         e.preventDefault();

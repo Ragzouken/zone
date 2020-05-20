@@ -42,6 +42,28 @@ input, button {
     border-bottom: solid red 3px;
 }
 
+#top-toolbar {
+    position: absolute;
+    top: 0; left: 0;
+
+    display: flex;
+    flex-direction: row;
+}
+
+#top-toolbar > button {
+    margin-left: 16px; margin-top: 16px;
+    width: 32px; height: 32px;
+    
+    border: none;
+    padding: 4px;
+    background-color: var(--button-color);
+    border-color: var(--button-color);
+}
+
+#top-toolbar > button > img {
+    width: 100%; height: 100%;
+}
+
 #bottom-toolbar {
     position: absolute;
     bottom: 0; right: 0;

@@ -11,6 +11,13 @@ html
     body
         #scene
             #three-container
+            #top-toolbar
+                button(hidden, title="")
+                    img(src="icons/search.png")
+                button#resync-button(title="reload this")
+                    img(src="icons/resync.png")
+                button#skip-button(title="vote to skip this")
+                    img(src="icons/skip.png")
             #bottom-toolbar
                 button(title="toggle float emote (1)", data-emote-toggle="wvy")
                     img(src="icons/wvy.png")
@@ -35,5 +42,6 @@ html
             #entry-panel
                 form#entry
                     h1 you are about to enter a zone
+                    p#entry-users ...
                     input#join-name(type="text", placeholder="your name...", maxlength="16")
                     input#entry-button(type="submit" value="enter" disabled)
