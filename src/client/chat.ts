@@ -6,6 +6,10 @@ import { randomInt } from '../common/utility';
 const font = decodeFont(fonts['ascii-small']);
 const layout = { font, lineWidth: 240, lineCount: 9999 };
 
+export function filterDrawable(text: string) {
+    return [...text].map((char) => (char.codePointAt(0) || 0) < 256 ? char : '?').join('');
+}
+
 export class ChatPanel {
     public readonly context = createContext2D(256, 256);
     public chatPages: Page[] = [];
@@ -17,6 +21,7 @@ export class ChatPanel {
     }
 
     public log(text: string) {
+        text = filterDrawable(text);
         this.chatPages.push(scriptToPages(text, layout)[0]);
         this.chatPages = this.chatPages.slice(-32);
     }

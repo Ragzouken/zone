@@ -2,7 +2,7 @@ import * as blitsy from 'blitsy';
 import { secondsToTime, fakedownToTag, eventToElementPixel, withPixels } from './utility';
 import { sleep, randomInt, clamp } from '../common/utility';
 import { scriptToPages, PageRenderer, getPageHeight } from './text';
-import { ChatPanel, animatePage } from './chat';
+import { ChatPanel, animatePage, filterDrawable } from './chat';
 
 import ZoneClient from '../common/client';
 import { YoutubeVideo } from '../server/youtube';
@@ -402,7 +402,9 @@ export async function load() {
     function drawQueue() {
         const lines: string[] = [];
         const cols = 40;
+
         function line(title: string, seconds: number) {
+            title = filterDrawable(title);
             const time = secondsToTime(seconds);
             const limit = cols - time.length;
             const cut = title.length < limit ? title.padEnd(limit, ' ') : title.slice(0, limit - 4) + '... ';
