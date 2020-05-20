@@ -492,13 +492,17 @@ function setupEntrySplash() {
     const entryButton = document.getElementById('entry-button') as HTMLInputElement;
     const entryForm = document.getElementById('entry') as HTMLFormElement;
 
-    fetch('./users').then((res) => res.json()).then((names: string[]) => {
-        if (names.length === 0) {
-            entryUsers.innerHTML = 'zone is currenty empty';
-        } else {
-            entryUsers.innerHTML = `${names.length} people are zoning: ` + names.join(', ');
-        }
-    });
+    function updateEntryUsers() {
+        fetch('./users').then((res) => res.json()).then((names: string[]) => {
+            if (names.length === 0) {
+                entryUsers.innerHTML = 'zone is currenty empty';
+            } else {
+                entryUsers.innerHTML = `${names.length} people are zoning: ` + names.join(', ');
+            }
+        });
+    }
+    updateEntryUsers();
+    setInterval(updateEntryUsers, 5000);
 
     entryButton.disabled = false;
     entryForm.addEventListener('submit', (e) => {
