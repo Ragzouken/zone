@@ -21,7 +21,7 @@ html, body {
 
 html {
     background: black;
-    font-size: 1.2rem;
+    font-size: 16px;
     font-family: var(--ascii-small);
 }
 
@@ -29,17 +29,34 @@ input, button {
     font-family: var(--ascii-small);
 }
 
-#chat-inputs > input {
+input[type="text"] {
     font-size: 16px;
     color: white;
 
     background: black;
     border: solid black 3px;
+}
+
+input[type="text"]:focus {
+    border-bottom: solid red 3px;
+}
+
+#chat-inputs > input {
     width: 512px;
 }
 
-#chat-inputs > input:focus {
-    border-bottom: solid red 3px;
+#entry-panel {
+    width: 512px;
+}
+
+#entry {
+    padding: 16px 48px;
+    display: flex;
+}
+
+#entry-logo {
+    width: 512px;
+    margin-bottom: -64px;
 }
 
 #top-toolbar {
@@ -220,13 +237,13 @@ body {
 }
 
 #join-name {
-    font-size: 120%;
+    flex: 1;
     border-radius: 3px;
     padding: .4em .8em;
 }
 
 #entry-button {
-    font-size: 120%;
+    flex: 0;
     border-radius: 3px;
     padding: .4em .8em;
 }
