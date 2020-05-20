@@ -162,7 +162,8 @@ export class ZoneClient extends EventEmitter {
     }
 
     async search(query: string): Promise<YoutubeVideo[]> {
-        return fetch(this.options.urlRoot + '/youtube?q=' + query).then(async (res) => {
+        const url = this.options.urlRoot + '/youtube?q=' + encodeURIComponent(query);
+        return fetch(url).then(async (res) => {
             if (res.ok) return res.json();
             throw new Error(await res.text());
         });
