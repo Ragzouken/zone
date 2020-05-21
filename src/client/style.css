@@ -29,8 +29,11 @@ input, button {
     font-family: var(--ascii-small);
 }
 
-input[type="text"] {
+input {
     font-size: 16px;
+}
+
+input[type="text"] {
     color: white;
 
     background: black;
