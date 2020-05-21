@@ -122,7 +122,6 @@ const help = [
     'press tab: toggle typing/controls',
     'press q: toggle queue',
     '/youtube url',
-    '/search search terms',
     '/lucky search terms',
     '/users',
     '/notify',
