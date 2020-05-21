@@ -214,22 +214,22 @@ export async function load() {
 
     setInterval(() => client.heartbeat(), 30 * 1000);
 
-    function move(dx: number, dy: number) {
+    function moveTo(x: number, y: number) {
         const user = getLocalUser()!;
+        user.position = [x, y];
+        client.move(user.position);
+    }
+
+    function move(dx: number, dy: number) {
+        const user = getLocalUser()!; 
 
         if (user.position) {
-            user.position[0] = clamp(0, 15, user.position[0] + dx);
-            user.position[1] = clamp(0, 15, user.position[1] + dy);
+            moveTo(
+                clamp(0, 15, user.position[0] + dx),
+                clamp(0, 15, user.position[1] + dy),
+            );
         } else {
-            user.position = [randomInt(0, 15), 15];
-        }
-
-        client.move(user.position);
-
-        if (!user.avatar) {
-            // send saved avatar
-            const data = localStorage.getItem('avatar');
-            if (data) client.avatar(data);
+            moveTo(randomInt(0, 15), 15);
         }
     }
 
@@ -489,6 +489,8 @@ export async function load() {
     }
 
     renderScene();
+
+    sceneRenderer.on('pointerdown', (point) => moveTo(point.x, point.y));
 }
 
 function setupEntrySplash() {
