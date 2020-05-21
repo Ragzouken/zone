@@ -20,26 +20,44 @@ html, body {
 
 
 html {
+    color: white;
     background: black;
-    font-size: 1.2rem;
+    font-size: 16px;
     font-family: var(--ascii-small);
 }
 
 input, button {
     font-family: var(--ascii-small);
+    font-size: 16px;
 }
 
-#chat-inputs > input {
-    font-size: 16px;
+input[type="text"] {
     color: white;
 
     background: black;
     border: solid black 3px;
+}
+
+input[type="text"]:focus {
+    border-bottom: solid red 3px;
+}
+
+#chat-inputs > input {
     width: 512px;
 }
 
-#chat-inputs > input:focus {
-    border-bottom: solid red 3px;
+#entry-panel {
+    width: 512px;
+}
+
+#entry {
+    padding: 16px 48px;
+    display: flex;
+}
+
+#entry-logo {
+    width: 512px;
+    margin-bottom: -64px;
 }
 
 #top-toolbar {
@@ -90,6 +108,61 @@ input, button {
     filter: invert();
 }
 
+#search-panel {
+    position: absolute;
+    width: 100%;
+    background: black;
+
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+}
+
+#search-form {
+    width: 100%;
+    display: flex;
+}
+
+#search-input {
+    flex: 1;
+}
+
+#search-form > button, #search-form > input[type="submit"] {
+    flex: 0;
+    margin-left: 16px;
+}
+
+#search-results {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+}
+
+.search-result {
+    padding: 8px;
+    cursor: pointer;
+}
+
+.search-result:hover {
+    background: orange;
+}
+
+#popout-panel {
+    position: absolute;
+    width: 100%;
+    background: black;
+
+    padding: 16px;
+
+    display: flex;
+    align-items: center;
+    align-content: center;
+    justify-content: center;
+}
+
+#popout-panel > video {
+    width: 448px; height: 252px;
+}
 
 #avatar-panel {
     position: absolute;
@@ -220,13 +293,13 @@ body {
 }
 
 #join-name {
-    font-size: 120%;
+    flex: 1;
     border-radius: 3px;
     padding: .4em .8em;
 }
 
 #entry-button {
-    font-size: 120%;
+    flex: 0;
     border-radius: 3px;
     padding: .4em .8em;
 }

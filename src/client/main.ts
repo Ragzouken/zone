@@ -5,7 +5,7 @@ import { scriptToPages, PageRenderer, getPageHeight } from './text';
 import { ChatPanel, animatePage, filterDrawable } from './chat';
 
 import ZoneClient from '../common/client';
-import { YoutubeVideo } from '../server/youtube';
+import { YoutubeVideo, search } from '../server/youtube';
 import { ZoneSceneRenderer, avatarImage } from './scene';
 import { Player } from './player';
 
@@ -119,14 +119,13 @@ function listUsers() {
 }
 
 const help = [
-    'press tab: toggle typing/controls',
-    'press q: toggle queue',
-    '/youtube url',
-    '/search search terms',
-    '/lucky search terms',
-    '/users',
-    '/notify',
-    '/volume 100',
+    'toggle typing/controls: press tab',
+    'toggle queue: press q',
+    'add specific video: /youtube url',
+    'random song: /banger',
+    'show user list: /users',
+    'video volume: /volume 100',
+    'chat notifications: /notify',
 ].join('\n');
 
 function listHelp() {
@@ -140,9 +139,14 @@ function textToYoutubeVideoId(text: string) {
 }
 
 export async function load() {
+    const popoutButton = document.getElementById('popout-button') as HTMLButtonElement;
+    const popoutPanel = document.getElementById('popout-panel') as HTMLElement;
     const video = document.createElement('video');
+    popoutPanel.appendChild(video);
+    popoutButton.addEventListener('click', () => popoutPanel.hidden = false);
+    popoutPanel.addEventListener('click', () => popoutPanel.hidden = true);
+    
     const player = new Player(video);
-
     const zoneLogo = document.createElement('img');
     zoneLogo.src = 'zone-logo.png';
 
@@ -157,6 +161,43 @@ export async function load() {
     setVolume(parseInt(localStorage.getItem('volume') || '100', 10));
 
     joinName.value = localName;
+
+    const searchPanel = document.getElementById('search-panel')!;
+    const searchInput = document.getElementById('search-input') as HTMLInputElement;
+    const searchSubmit = document.getElementById('search-submit') as HTMLButtonElement;
+    const searchResults = document.getElementById('search-results')!;
+
+    searchInput.addEventListener('input', () => searchSubmit.disabled = searchInput.value.length === 0);
+
+    document.getElementById('search-button')?.addEventListener('click', () => {      
+        searchInput.value = '';
+        searchPanel.hidden = false;
+        searchInput.focus();
+        searchResults.innerHTML = "";
+    });
+
+    const searchResultTemplate = document.getElementById('search-result-template')!;
+    searchResultTemplate.parentElement?.removeChild(searchResultTemplate);
+
+    document.getElementById('search-close')?.addEventListener('click', () => searchPanel.hidden = true);
+    document.getElementById('search-form')?.addEventListener('submit', (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+
+        searchResults.innerText = "searching...";
+        client.search(searchInput.value).then(results => {
+            searchResults.innerHTML = '';
+            results.forEach(({ title, duration, videoId }) => {
+                const row = searchResultTemplate.cloneNode(true) as HTMLElement;
+                row.addEventListener('click', () => {
+                    searchPanel.hidden = true;
+                    client.youtube(videoId);
+                });
+                row.innerHTML = `${title} (${secondsToTime(duration/1000)})`;
+                searchResults.appendChild(row);
+            });
+        });
+    });
 
     let showQueue = false;
 
@@ -209,22 +250,22 @@ export async function load() {
 
     setInterval(() => client.heartbeat(), 30 * 1000);
 
-    function move(dx: number, dy: number) {
+    function moveTo(x: number, y: number) {
         const user = getLocalUser()!;
+        user.position = [x, y];
+        client.move(user.position);
+    }
+
+    function move(dx: number, dy: number) {
+        const user = getLocalUser()!; 
 
         if (user.position) {
-            user.position[0] = clamp(0, 15, user.position[0] + dx);
-            user.position[1] = clamp(0, 15, user.position[1] + dy);
+            moveTo(
+                clamp(0, 15, user.position[0] + dx),
+                clamp(0, 15, user.position[1] + dy),
+            );
         } else {
-            user.position = [randomInt(0, 15), 15];
-        }
-
-        client.move(user.position);
-
-        if (!user.avatar) {
-            // send saved avatar
-            const data = localStorage.getItem('avatar');
-            if (data) client.avatar(data);
+            moveTo(randomInt(0, 15), 15);
         }
     }
 
@@ -275,7 +316,7 @@ export async function load() {
 
     const chatCommands = new Map<string, (args: string) => void>();
     chatCommands.set('search', async (query) => {
-        ({ results: lastSearchResults } = await client.search(query));
+        lastSearchResults = await client.search(query);
         const lines = lastSearchResults
             .slice(0, 5)
             .map(({ title, duration }, i) => `${i + 1}. ${title} (${secondsToTime(duration / 1000)})`);
@@ -484,6 +525,8 @@ export async function load() {
     }
 
     renderScene();
+
+    sceneRenderer.on('pointerdown', (point) => moveTo(point.x, point.y));
 }
 
 function setupEntrySplash() {
@@ -492,13 +535,17 @@ function setupEntrySplash() {
     const entryButton = document.getElementById('entry-button') as HTMLInputElement;
     const entryForm = document.getElementById('entry') as HTMLFormElement;
 
-    fetch('./users').then((res) => res.json()).then((names: string[]) => {
-        if (names.length === 0) {
-            entryUsers.innerHTML = 'zone is currenty empty';
-        } else {
-            entryUsers.innerHTML = `${names.length} people are zoning: ` + names.join(', ');
-        }
-    });
+    function updateEntryUsers() {
+        fetch('./users').then((res) => res.json()).then((names: string[]) => {
+            if (names.length === 0) {
+                entryUsers.innerHTML = 'zone is currenty empty';
+            } else {
+                entryUsers.innerHTML = `${names.length} people are zoning: ` + names.join(', ');
+            }
+        });
+    }
+    updateEntryUsers();
+    setInterval(updateEntryUsers, 5000);
 
     entryButton.disabled = false;
     entryForm.addEventListener('submit', (e) => {

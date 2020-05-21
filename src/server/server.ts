@@ -65,6 +65,18 @@ export function host(xws: expressWs.Instance, adapter: low.AdapterSync, options:
         res.json(names);
     });
 
+    xws.app.get('/youtube', (req, res) => {
+        const query = req.query.q;
+        if (!query || typeof query !== 'string') {
+            res.status(400).send('bad query');
+        } else {
+            youtube.search(query).then(
+                (results) => res.json(results),
+                (reason) => res.status(500).send('search failed'),
+            );
+        }
+    });
+
     function ping() {
         xws.getWss().clients.forEach((websocket) => {
             try {
@@ -373,10 +385,9 @@ export function host(xws: expressWs.Instance, adapter: low.AdapterSync, options:
         messaging.messages.on('local', (message: any) => tryQueueLocalByPath(message.path));
         messaging.messages.on('banger', () => tryQueueBanger());
 
-        messaging.messages.on('search', (message: any) => {
+        messaging.messages.on('lucky', (message: any) => {
             youtube.search(message.query).then(async (results) => {
-                if (message.lucky) tryQueueMedia(await youtube.media(results[0].videoId));
-                else sendUser('search', { results });
+                tryQueueMedia(await youtube.media(results[0].videoId));
             });
         });
 

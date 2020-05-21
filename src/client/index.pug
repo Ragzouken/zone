@@ -12,12 +12,14 @@ html
         #scene
             #three-container
             #top-toolbar
-                button(hidden, title="")
+                button#search-button(title="search for video")
                     img(src="icons/search.png")
                 button#resync-button(title="reload this")
                     img(src="icons/resync.png")
                 button#skip-button(title="vote to skip this")
                     img(src="icons/skip.png")
+                button#popout-button(title="pop out video")
+                    img(src="icons/popout.png")
             #bottom-toolbar
                 button(title="toggle float emote (1)", data-emote-toggle="wvy")
                     img(src="icons/wvy.png")
@@ -29,6 +31,14 @@ html
                     img(src="icons/spn.png")
                 button#avatar-button(title="change appearance")
                     img(src="icons/avatar.png")
+            #popout-panel(hidden)
+            #search-panel(hidden)
+                form#search-form
+                    input#search-input(type="text", placeholder="search for a video")
+                    input#search-submit(type="submit" value="search" disabled)
+                    button#search-close close
+                #search-results
+                    #search-result-template.search-result result
             #avatar-panel(hidden)
                 input#avatar-name(type="text")
                 canvas#avatar-paint(width=8, height=8)
@@ -40,8 +50,8 @@ html
             input#chat-input(type="text", placeholder="chat message...", maxlength="160")
         #entry-splash
             #entry-panel
+                img#entry-logo(src="./zone-logo.png")
+                p#entry-users ...
                 form#entry
-                    h1 you are about to enter a zone
-                    p#entry-users ...
                     input#join-name(type="text", placeholder="your name...", maxlength="16")
                     input#entry-button(type="submit" value="enter" disabled)

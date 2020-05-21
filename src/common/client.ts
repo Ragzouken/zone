@@ -4,6 +4,7 @@ import { EventEmitter } from 'events';
 import { YoutubeVideo } from '../server/youtube';
 import { specifically } from './utility';
 import { ZoneState, UserState, mediaEquals } from './zone';
+import fetch from 'node-fetch';
 
 export type StatusMesage = { text: string };
 export type JoinMessage = { name: string; token?: string; password?: string };
@@ -13,12 +14,9 @@ export type UsersMessage = { users: UserState[] };
 export type LeaveMessage = { userId: string };
 export type PlayMessage = { item: QueueItem; time: number };
 export type QueueMessage = { items: QueueItem[] };
-export type SearchMessage = { query: string };
 
 export type SendChat = { text: string };
 export type RecvChat = { text: string; userId: string };
-
-export type SearchResult = { results: YoutubeVideo[] };
 
 export type SendAuth = { password: string };
 export type SendCommand = { name: string; args: any[] };
@@ -31,19 +29,20 @@ export interface MessageMap {
     leave: LeaveMessage;
     play: PlayMessage;
     queue: QueueMessage;
-    search: SearchMessage;
 
     chat: SendChat;
     user: UserState;
 }
 
 export interface ClientOptions {
+    urlRoot: string;
     quickResponseTimeout: number;
     slowResponseTimeout: number;
     joinName?: string;
 }
 
 export const DEFAULT_OPTIONS: ClientOptions = {
+    urlRoot: '.',
     quickResponseTimeout: 1000,
     slowResponseTimeout: 5000,
 };
@@ -162,17 +161,18 @@ export class ZoneClient extends EventEmitter {
         this.messaging.send('user', { emotes });
     }
 
-    async search(query: string) {
-        return new Promise<SearchResult>((resolve, reject) => {
-            this.expect('search', this.options.slowResponseTimeout).then(resolve as any, reject);
-            this.messaging.send('search', { query });
+    async search(query: string): Promise<YoutubeVideo[]> {
+        const url = this.options.urlRoot + '/youtube?q=' + encodeURIComponent(query);
+        return fetch(url).then(async (res) => {
+            if (res.ok) return res.json();
+            throw new Error(await res.text());
         });
     }
 
     async lucky(query: string) {
         return new Promise<QueueMessage>((resolve, reject) => {
             this.expect('queue', this.options.slowResponseTimeout).then(resolve, reject);
-            this.messaging.send('search', { query, lucky: true });
+            this.messaging.send('lucky', { query });
         });
     }
 

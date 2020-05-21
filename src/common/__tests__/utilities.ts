@@ -53,6 +53,11 @@ export class ZoneServer {
     public hosting: { server: Server; playback: Playback; localLibrary: Map<string, Media> };
     private readonly sockets: WebSocket[] = [];
 
+    public get host() {
+        const address = this.hosting.server.address() as AddressInfo;
+        return `localhost:${address.port}`
+    }
+
     constructor(options?: Partial<HostOptions>) {
         const xws = expressWs(express());
         const server = xws.app.listen(0);
@@ -60,15 +65,14 @@ export class ZoneServer {
     }
 
     public async socket() {
-        const address = this.hosting.server.address() as AddressInfo;
-        const socket = new WebSocket(`ws://localhost:${address.port}/zone`);
+        const socket = new WebSocket(`ws://${this.host}/zone`);
         this.sockets.push(socket);
         await once(socket, 'open');
         return socket;
     }
 
     public async client(options: Partial<ClientOptions> = {}) {
-        options = Object.assign({}, TEST_CLIENT_OPTIONS, options);
+        options = Object.assign({ urlRoot: 'http://' + this.host }, TEST_CLIENT_OPTIONS, options);
         const client = new ZoneClient(options);
         client.messaging.setSocket(await this.socket());
         return client;

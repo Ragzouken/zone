@@ -1,8 +1,9 @@
 import * as THREE from 'three';
 import { ZoneState } from '../common/zone';
-import { hslToRgb, withPixels } from './utility';
+import { hslToRgb, withPixels, eventToElementPixel } from './utility';
 import { randomInt } from '../common/utility';
 import { rgbaToColor, decodeAsciiTexture } from 'blitsy';
+import { EventEmitter } from 'events';
 
 function recolor(context: CanvasRenderingContext2D) {
     withPixels(context, (pixels) => {
@@ -123,16 +124,24 @@ function setAvatarCount(count: number) {
     }
 }
 
-export class ZoneSceneRenderer {
+export interface ZoneSceneRenderer {
+    on(event: 'pointerdown', callback: (point: THREE.Vector3) => void): this;
+}
+
+export class ZoneSceneRenderer extends EventEmitter {
     mediaElement?: HTMLImageElement | HTMLCanvasElement | HTMLVideoElement;
 
     private readonly renderer = new THREE.WebGLRenderer({ antialias: false });
     private readonly camera: THREE.Camera;
+    private readonly raycaster = new THREE.Raycaster();
+
     private readonly mediaTexture = new THREE.VideoTexture(document.createElement('video'));
 
     private readonly scene = new THREE.Scene();
     private readonly avatarGroup = new THREE.Group();
     private readonly mediaMesh: THREE.Mesh;
+    private readonly floorMesh: THREE.Mesh;
+    private readonly brickMesh: THREE.Mesh;
 
     constructor(
         container: HTMLElement,
@@ -140,6 +149,7 @@ export class ZoneSceneRenderer {
         private readonly getTile: (base64: string | undefined) => CanvasRenderingContext2D,
         private readonly connecting: () => boolean,
     ) {
+        super();
         const aspect = container.clientWidth / container.clientHeight;
         const frustumSize = 1.1;
         this.camera = new THREE.OrthographicCamera(
@@ -170,21 +180,42 @@ export class ZoneSceneRenderer {
         });
 
         this.mediaMesh = new THREE.Mesh(new THREE.PlaneGeometry(1, 1, 1, 1), mediaMaterial);
-        const brickMesh = new THREE.Mesh(new THREE.PlaneGeometry(1, 10 / 16, 1, 1), brickMaterial);
-        const floorMesh = new THREE.Mesh(new THREE.PlaneGeometry(1, 6 / 16, 1, 1), floorMaterial);
+        this.brickMesh = new THREE.Mesh(new THREE.PlaneGeometry(1, 10 / 16, 1, 1), brickMaterial);
+        this.floorMesh = new THREE.Mesh(new THREE.PlaneGeometry(1, 6 / 16, 1, 1), floorMaterial);
 
-        floorMesh.rotateX(Math.PI / 2);
-        floorMesh.translateZ(5 / 16);
+        this.floorMesh.rotateX(Math.PI / 2);
+        this.floorMesh.translateZ(5 / 16);
         this.mediaMesh.translateZ(-3 / 16 + 1 / 512);
-        brickMesh.translateZ(-3 / 16);
+        this.brickMesh.translateZ(-3 / 16);
 
-        this.scene.add(brickMesh);
-        this.scene.add(floorMesh);
+        this.scene.add(this.brickMesh);
+        this.scene.add(this.floorMesh);
         this.scene.add(this.avatarGroup);
         this.scene.add(this.mediaMesh);
 
         this.renderer.setSize(container.clientWidth, container.clientHeight);
         container.appendChild(this.renderer.domElement);
+
+        this.renderer.domElement.addEventListener('pointerdown', (event) => {
+            const point = this.getPointUnderMouseEvent(event);
+            if (point) this.emit('pointerdown', point);
+        });
+        
+        /*
+        const testCube = new THREE.Mesh(
+            new THREE.BoxGeometry(1/16, 1/16, 1/16),
+            new THREE.MeshBasicMaterial({ color: 'red' }),
+        );
+        this.scene.add(testCube);
+
+        this.on('pointerdown', (point) => {
+            testCube.position.set(
+                point.x / 16 + .5/16 - .5,
+                point.y,
+                (point.z - 5) / 16 + .5/16 - .5,
+            );
+        });
+        */
     }
 
     update() {
@@ -259,5 +290,33 @@ export class ZoneSceneRenderer {
 
     render() {
         this.renderer.render(this.scene, this.camera);
+    }
+
+    getPointUnderMouseEvent(event: PointerEvent) {
+        const [cx, cy] = eventToElementPixel(event, this.renderer.domElement);
+
+        const point = new THREE.Vector2();
+        point.x =  (cx / this.renderer.domElement.clientWidth)  * 2 - 1;
+        point.y = -(cy / this.renderer.domElement.clientHeight) * 2 + 1;
+
+        this.raycaster.setFromCamera(point, this.camera);
+        const brickIntersects = this.raycaster.intersectObject(this.brickMesh);
+        const floorIntersects = this.raycaster.intersectObject(this.floorMesh);
+        
+        if (brickIntersects.length > 0) {
+            const intersection = brickIntersects[0].point;
+            const x = Math.floor((intersection.x + .5) * 16);
+            const y = 12 - Math.floor((intersection.y + .5) * 16);
+
+            return { x, y };
+        } else if (floorIntersects.length > 0) {
+            const intersection = floorIntersects[0].point;
+            const x = Math.floor((intersection.x + .5) * 16);
+            const y = 5 + Math.floor((intersection.z + .5) * 16);
+
+            return { x, y };
+        } else {
+            return undefined;
+        }
     }
 }
