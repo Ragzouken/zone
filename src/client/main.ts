@@ -119,13 +119,13 @@ function listUsers() {
 }
 
 const help = [
-    'press tab: toggle typing/controls',
-    'press q: toggle queue',
-    '/youtube url',
-    '/lucky search terms',
-    '/users',
-    '/notify',
-    '/volume 100',
+    'toggle typing/controls: press tab',
+    'toggle queue: press q',
+    'add specific video: /youtube url',
+    'random song: /banger',
+    'show user list: /users',
+    'video volume: /volume 100',
+    'chat notifications: /notify',
 ].join('\n');
 
 function listHelp() {
