@@ -5,7 +5,7 @@ import { scriptToPages, PageRenderer, getPageHeight } from './text';
 import { ChatPanel, animatePage, filterDrawable } from './chat';
 
 import ZoneClient from '../common/client';
-import { YoutubeVideo } from '../server/youtube';
+import { YoutubeVideo, search } from '../server/youtube';
 import { ZoneSceneRenderer, avatarImage } from './scene';
 import { Player } from './player';
 
@@ -162,6 +162,43 @@ export async function load() {
     setVolume(parseInt(localStorage.getItem('volume') || '100', 10));
 
     joinName.value = localName;
+
+    const searchPanel = document.getElementById('search-panel')!;
+    const searchInput = document.getElementById('search-input') as HTMLInputElement;
+    const searchSubmit = document.getElementById('search-submit') as HTMLButtonElement;
+    const searchResults = document.getElementById('search-results')!;
+
+    searchInput.addEventListener('input', () => searchSubmit.disabled = searchInput.value.length === 0);
+
+    document.getElementById('search-button')?.addEventListener('click', () => {      
+        searchInput.value = '';
+        searchPanel.hidden = false;
+        searchInput.focus();
+        searchResults.innerHTML = "";
+    });
+
+    const searchResultTemplate = document.getElementById('search-result-template')!;
+    searchResultTemplate.parentElement?.removeChild(searchResultTemplate);
+
+    document.getElementById('search-close')?.addEventListener('click', () => searchPanel.hidden = true);
+    document.getElementById('search-form')?.addEventListener('submit', (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+
+        searchResults.innerText = "searching...";
+        client.search(searchInput.value).then(results => {
+            searchResults.innerHTML = '';
+            results.forEach(({ title, duration, videoId }) => {
+                const row = searchResultTemplate.cloneNode(true) as HTMLElement;
+                row.addEventListener('click', () => {
+                    searchPanel.hidden = true;
+                    client.youtube(videoId);
+                });
+                row.innerHTML = `${title} (${secondsToTime(duration/1000)})`;
+                searchResults.appendChild(row);
+            });
+        });
+    });
 
     let showQueue = false;
 

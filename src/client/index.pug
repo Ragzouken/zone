@@ -12,7 +12,7 @@ html
         #scene
             #three-container
             #top-toolbar
-                button(hidden, title="")
+                button#search-button(title="search for video")
                     img(src="icons/search.png")
                 button#resync-button(title="reload this")
                     img(src="icons/resync.png")
@@ -32,6 +32,13 @@ html
                 button#avatar-button(title="change appearance")
                     img(src="icons/avatar.png")
             #popout-panel(hidden)
+            #search-panel(hidden)
+                form#search-form
+                    input#search-input(type="text", placeholder="search for a video")
+                    input#search-submit(type="submit" value="search" disabled)
+                    button#search-close close
+                #search-results
+                    #search-result-template.search-result result
             #avatar-panel(hidden)
                 input#avatar-name(type="text")
                 canvas#avatar-paint(width=8, height=8)

@@ -20,6 +20,7 @@ html, body {
 
 
 html {
+    color: white;
     background: black;
     font-size: 16px;
     font-family: var(--ascii-small);
@@ -27,9 +28,6 @@ html {
 
 input, button {
     font-family: var(--ascii-small);
-}
-
-input {
     font-size: 16px;
 }
 
@@ -108,6 +106,45 @@ input[type="text"]:focus {
 
 #bottom-toolbar > button.active {
     filter: invert();
+}
+
+#search-panel {
+    position: absolute;
+    width: 100%;
+    background: black;
+
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+}
+
+#search-form {
+    width: 100%;
+    display: flex;
+}
+
+#search-input {
+    flex: 1;
+}
+
+#search-form > button, #search-form > input[type="submit"] {
+    flex: 0;
+    margin-left: 16px;
+}
+
+#search-results {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+}
+
+.search-result {
+    padding: 8px;
+    cursor: pointer;
+}
+
+.search-result:hover {
+    background: orange;
 }
 
 #popout-panel {
