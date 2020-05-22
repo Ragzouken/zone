@@ -1,7 +1,7 @@
 import { QueueItem } from '../server/playback';
 import { EventEmitter } from 'events';
 
-export const NETWORK = ['NETWORK_EMPTY', 'NETWORK_IDLE', 'NETWORK_LOADING', 'NETWORK_NO_SOURCE']; 
+export const NETWORK = ['NETWORK_EMPTY', 'NETWORK_IDLE', 'NETWORK_LOADING', 'NETWORK_NO_SOURCE'];
 export const READY = ['HAVE_NOTHING', 'HAVE_METADATA', 'HAVE_CURRENT_DATA', 'HAVE_FUTURE_DATA', 'HAVE_ENOUGH_DATA'];
 
 export async function expectMetadata(element: HTMLMediaElement) {
@@ -22,7 +22,7 @@ export class Player extends EventEmitter {
         let lastUnstall = performance.now();
         setInterval(() => {
             if (this.reloading || !this.hasItem) return;
-            
+
             if (this.element.readyState >= HTMLMediaElement.HAVE_FUTURE_DATA) {
                 lastUnstall = performance.now();
             } else if (performance.now() - lastUnstall > 500) {
@@ -97,9 +97,9 @@ export class Player extends EventEmitter {
         const token = {};
         this.reloading = token;
 
-        const done = () => { 
-            if (this.reloading === token) this.reloading = undefined; 
-        }
+        const done = () => {
+            if (this.reloading === token) this.reloading = undefined;
+        };
 
         this.element.pause();
         const waiter = expectMetadata(this.element);

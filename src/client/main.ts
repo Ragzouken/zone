@@ -143,9 +143,9 @@ export async function load() {
     const popoutPanel = document.getElementById('popout-panel') as HTMLElement;
     const video = document.createElement('video');
     popoutPanel.appendChild(video);
-    popoutButton.addEventListener('click', () => popoutPanel.hidden = false);
-    popoutPanel.addEventListener('click', () => popoutPanel.hidden = true);
-    
+    popoutButton.addEventListener('click', () => (popoutPanel.hidden = false));
+    popoutPanel.addEventListener('click', () => (popoutPanel.hidden = true));
+
     const player = new Player(video);
     const zoneLogo = document.createElement('img');
     zoneLogo.src = 'zone-logo.png';
@@ -167,25 +167,25 @@ export async function load() {
     const searchSubmit = document.getElementById('search-submit') as HTMLButtonElement;
     const searchResults = document.getElementById('search-results')!;
 
-    searchInput.addEventListener('input', () => searchSubmit.disabled = searchInput.value.length === 0);
+    searchInput.addEventListener('input', () => (searchSubmit.disabled = searchInput.value.length === 0));
 
-    document.getElementById('search-button')?.addEventListener('click', () => {      
+    document.getElementById('search-button')?.addEventListener('click', () => {
         searchInput.value = '';
         searchPanel.hidden = false;
         searchInput.focus();
-        searchResults.innerHTML = "";
+        searchResults.innerHTML = '';
     });
 
     const searchResultTemplate = document.getElementById('search-result-template')!;
     searchResultTemplate.parentElement?.removeChild(searchResultTemplate);
 
-    document.getElementById('search-close')?.addEventListener('click', () => searchPanel.hidden = true);
+    document.getElementById('search-close')?.addEventListener('click', () => (searchPanel.hidden = true));
     document.getElementById('search-form')?.addEventListener('submit', (event) => {
         event.preventDefault();
         event.stopPropagation();
 
-        searchResults.innerText = "searching...";
-        client.search(searchInput.value).then(results => {
+        searchResults.innerText = 'searching...';
+        client.search(searchInput.value).then((results) => {
             searchResults.innerHTML = '';
             results.forEach(({ title, duration, videoId }) => {
                 const row = searchResultTemplate.cloneNode(true) as HTMLElement;
@@ -193,7 +193,7 @@ export async function load() {
                     searchPanel.hidden = true;
                     client.youtube(videoId);
                 });
-                row.innerHTML = `${title} (${secondsToTime(duration/1000)})`;
+                row.innerHTML = `${title} (${secondsToTime(duration / 1000)})`;
                 searchResults.appendChild(row);
             });
         });
@@ -257,13 +257,10 @@ export async function load() {
     }
 
     function move(dx: number, dy: number) {
-        const user = getLocalUser()!; 
+        const user = getLocalUser()!;
 
         if (user.position) {
-            moveTo(
-                clamp(0, 15, user.position[0] + dx),
-                clamp(0, 15, user.position[1] + dy),
-            );
+            moveTo(clamp(0, 15, user.position[0] + dx), clamp(0, 15, user.position[1] + dy));
         } else {
             moveTo(randomInt(0, 15), 15);
         }
@@ -375,7 +372,7 @@ export async function load() {
     const setEmote = (emote: string, value: boolean) => {
         emoteToggles.get(emote)!.classList.toggle('active', value);
         client.emotes(['wvy', 'shk', 'rbw', 'spn'].filter(getEmote));
-    }
+    };
 
     document.querySelectorAll('[data-emote-toggle]').forEach((element) => {
         const emote = element.getAttribute('data-emote-toggle');
@@ -476,7 +473,7 @@ export async function load() {
             line('*** END ***', total);
             lines[lines.length - 1] = '{clr=#FF00FF}' + lines[lines.length - 1];
         }
-        lines.push("{clr=#FF00FF}" + player.status);
+        lines.push('{clr=#FF00FF}' + player.status);
 
         const queuePage = scriptToPages(lines.join('\n'), layout)[0];
         animatePage(queuePage);
@@ -531,13 +528,12 @@ export async function load() {
     sceneRenderer.on('pointermove', (point) => {
         if (point) {
             const pos = [point.x, point.y];
-            const names = Array
-                .from(client.zone.users.values())
+            const names = Array.from(client.zone.users.values())
                 .filter((user) => user.position?.join(',') === pos.join(','))
                 .map((user) => user.name);
             tooltip.innerHTML = names.join(', ');
         } else {
-            tooltip.innerHTML = "";
+            tooltip.innerHTML = '';
         }
     });
 }
@@ -549,13 +545,15 @@ function setupEntrySplash() {
     const entryForm = document.getElementById('entry') as HTMLFormElement;
 
     function updateEntryUsers() {
-        fetch('./users').then((res) => res.json()).then((names: string[]) => {
-            if (names.length === 0) {
-                entryUsers.innerHTML = 'zone is currenty empty';
-            } else {
-                entryUsers.innerHTML = `${names.length} people are zoning: ` + names.join(', ');
-            }
-        });
+        fetch('./users')
+            .then((res) => res.json())
+            .then((names: string[]) => {
+                if (names.length === 0) {
+                    entryUsers.innerHTML = 'zone is currenty empty';
+                } else {
+                    entryUsers.innerHTML = `${names.length} people are zoning: ` + names.join(', ');
+                }
+            });
     }
     updateEntryUsers();
     setInterval(updateEntryUsers, 5000);

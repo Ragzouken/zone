@@ -58,7 +58,7 @@ export function host(xws: expressWs.Instance, adapter: low.AdapterSync, options:
 
     // this zone's websocket endpoint
     xws.app.ws('/zone', (websocket, req) => waitJoin(websocket, req.ip));
-    
+
     xws.app.get('/users', (req, res) => {
         const users = Array.from(zone.users.values());
         const names = users.map((user) => user.name).filter((name) => !!name);

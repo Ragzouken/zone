@@ -7,7 +7,7 @@ const font = decodeFont(fonts['ascii-small']);
 const layout = { font, lineWidth: 240, lineCount: 9999 };
 
 export function filterDrawable(text: string) {
-    return [...text].map((char) => (char.codePointAt(0) || 0) < 256 ? char : '?').join('');
+    return [...text].map((char) => ((char.codePointAt(0) || 0) < 256 ? char : '?')).join('');
 }
 
 export class ChatPanel {
