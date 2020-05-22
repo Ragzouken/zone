@@ -526,7 +526,20 @@ export async function load() {
 
     renderScene();
 
+    const tooltip = document.getElementById('tooltip')!;
     sceneRenderer.on('pointerdown', (point) => moveTo(point.x, point.y));
+    sceneRenderer.on('pointermove', (point) => {
+        if (point) {
+            const pos = [point.x, point.y];
+            const names = Array
+                .from(client.zone.users.values())
+                .filter((user) => user.position?.join(',') === pos.join(','))
+                .map((user) => user.name);
+            tooltip.innerHTML = names.join(', ');
+        } else {
+            tooltip.innerHTML = "";
+        }
+    });
 }
 
 function setupEntrySplash() {

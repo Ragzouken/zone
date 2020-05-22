@@ -126,6 +126,7 @@ function setAvatarCount(count: number) {
 
 export interface ZoneSceneRenderer {
     on(event: 'pointerdown', callback: (point: THREE.Vector3) => void): this;
+    on(event: 'pointermove', callback: (point?: THREE.Vector3) => void): this;
 }
 
 export class ZoneSceneRenderer extends EventEmitter {
@@ -200,22 +201,11 @@ export class ZoneSceneRenderer extends EventEmitter {
             const point = this.getPointUnderMouseEvent(event);
             if (point) this.emit('pointerdown', point);
         });
-        
-        /*
-        const testCube = new THREE.Mesh(
-            new THREE.BoxGeometry(1/16, 1/16, 1/16),
-            new THREE.MeshBasicMaterial({ color: 'red' }),
-        );
-        this.scene.add(testCube);
 
-        this.on('pointerdown', (point) => {
-            testCube.position.set(
-                point.x / 16 + .5/16 - .5,
-                point.y,
-                (point.z - 5) / 16 + .5/16 - .5,
-            );
+        this.renderer.domElement.addEventListener('pointermove', (event) => {
+            const point = this.getPointUnderMouseEvent(event);
+            this.emit('pointermove', point);
         });
-        */
     }
 
     update() {
