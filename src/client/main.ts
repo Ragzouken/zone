@@ -319,6 +319,9 @@ export async function load() {
             .map(({ title, duration }, i) => `${i + 1}. ${title} (${secondsToTime(duration / 1000)})`);
         chat.log('{clr=#FFFF00}? queue Search result with /result n\n{clr=#00FFFF}' + lines.join('\n'));
     });
+    chatCommands.set('result', playFromSearchResult);
+    chatCommands.set('s', chatCommands.get('search')!);
+    chatCommands.set('r', chatCommands.get('result')!);
     chatCommands.set('youtube', (args) => {
         const videoId = textToYoutubeVideoId(args)!;
         client.youtube(videoId).catch(() => chat.status("couldn't queue video :("));
@@ -328,7 +331,6 @@ export async function load() {
     chatCommands.set('password', (args) => (joinPassword = args));
     chatCommands.set('users', () => listUsers());
     chatCommands.set('help', () => listHelp());
-    chatCommands.set('result', playFromSearchResult);
     chatCommands.set('lucky', (query) => client.lucky(query));
     chatCommands.set('avatar', (data) => {
         if (data.trim().length === 0) {
