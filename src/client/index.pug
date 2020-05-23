@@ -36,14 +36,14 @@ html
                 button#avatar-button(title="change appearance")
                     img(src="icons/avatar.png")
             #popout-panel(hidden)
-            #search-panel(hidden)
+            #search-panel.menu-panel(hidden)
                 form#search-form
                     input#search-input(type="text", placeholder="search for a video")
                     input#search-submit(type="submit" value="search" disabled)
                     button#search-close close
                 #search-results
                     #search-result-template.search-result result
-            #avatar-panel.menu-panel(hidden)
+            #avatar-panel(hidden)
                 input#avatar-name(type="text")
                 canvas#avatar-paint(width=8, height=8)
                 .controls
@@ -55,7 +55,7 @@ html
                     button#menu-close close
                 div
                     label(for="volume-slider") volume
-                    input#volume-slider(type="range", min="0", max="100")
+                    input#volume-slider(type="range", min="0", max="1", step=".01")
                 div
                     button#play-banger queue random song
                     button#enable-notifications enable notifications
