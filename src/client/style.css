@@ -1,6 +1,7 @@
 [hidden] { display: none !important; }
 * { box-sizing: border-box; }
 input[type="submit"], button { cursor: pointer; }
+.spacer { flex: 1; }
 
 :root {
     --button-color: #0052cc;
@@ -18,7 +19,6 @@ html, body {
     margin: 0;
     padding: 0;
 }
-
 
 html {
     color: white;
@@ -65,9 +65,11 @@ input[type="text"]:focus {
 #top-toolbar {
     position: absolute;
     top: 0; left: 0;
+    width: 100%;
 
     display: flex;
     flex-direction: row;
+    align-items: stretch;
 }
 
 #top-toolbar > button {
@@ -118,14 +120,21 @@ input[type="text"]:focus {
     filter: invert();
 }
 
-#search-panel {
+.menu-panel {
     position: absolute;
     width: 100%;
     background: black;
 
-    padding: 16px;
     display: flex;
     flex-direction: column;
+}
+
+#menu-panel {
+    padding: 16px;
+}
+
+#search-panel {
+    padding: 16px;
 }
 
 #search-form {

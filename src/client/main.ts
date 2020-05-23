@@ -119,17 +119,16 @@ function listUsers() {
 }
 
 const help = [
+    'use the buttons on the top left to queue videos, and the buttons on the bottom right to change your appearance',
+    'display these instructions: /help',
     'toggle typing/controls: press tab',
     'toggle queue: press q',
     'add specific video: /youtube url',
-    'random song: /banger',
     'show user list: /users',
-    'video volume: /volume 100',
-    'chat notifications: /notify',
 ].join('\n');
 
 function listHelp() {
-    chat.log('{clr=#FFFF00}? /help\n' + help);
+    chat.log('{clr=#FFFF00}' + help);
 }
 
 function textToYoutubeVideoId(text: string) {
@@ -161,6 +160,23 @@ export async function load() {
     setVolume(parseInt(localStorage.getItem('volume') || '100', 10));
 
     joinName.value = localName;
+
+    const menuPanel = document.getElementById('menu-panel')!;
+    const volumeSlider = document.getElementById('volume-slider') as HTMLInputElement;
+
+    volumeSlider.addEventListener('input', () => player.volume = parseFloat(volumeSlider.value));
+    document.getElementById('menu-button')?.addEventListener('click', openMenu);
+    document.getElementById('menu-close')?.addEventListener('click', () => menuPanel.hidden = true);
+
+    function openMenu() {
+        menuPanel.hidden = false;
+        volumeSlider.value = player.volume.toString();
+    }
+
+    document.getElementById('enable-notifications')?.addEventListener('click', async () => {
+        const permission = await Notification.requestPermission();
+        chat.status(`notifications ${permission}`);
+    })
 
     const searchPanel = document.getElementById('search-panel')!;
     const searchInput = document.getElementById('search-input') as HTMLInputElement;
@@ -274,6 +290,8 @@ export async function load() {
             chat.status(`there is no #${index + 1} search result`);
         else client.youtube(lastSearchResults[index].videoId);
     }
+
+    document.getElementById('play-banger')?.addEventListener('click', () => client.messaging.send('banger', {}));
 
     const avatarPanel = document.querySelector('#avatar-panel') as HTMLElement;
     const avatarName = document.querySelector('#avatar-name') as HTMLInputElement;
