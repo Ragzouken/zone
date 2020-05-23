@@ -19,28 +19,3 @@ export const YOUTUBE_MEDIA: YoutubeTest[] = [
 ];
 
 export const FAKE_YOUTUBE_VIDEO: YoutubeVideo = { videoId: '', title: 'fake video', duration: 1000 };
-
-export const THREADS_ARCHIVE_VIDEO: Media = {
-    title: 'Threads 1984',
-    duration: 6749600,
-    source: 'archive/threads_201712/threads.mp4',
-};
-
-export const PRISONER_ARCHIVE_VIDEO: Media = {
-    title: 'The Prisoner 01 Arrival',
-    duration: 2935410,
-    source: 'archive/The_Prisoner/ThePrisoner01Arrival.mp4',
-};
-
-export const BAD_DURATION_ARCHIVE_MUSIC: Media = {
-    title: 'Ike Stubblefield',
-    duration: 498000,
-    source: 'archive/blr2020-05-01/bobby2020-05-01d01t01.mp3',
-};
-
-export const ARCHIVE_PATH_TO_MEDIA = [
-    { path: 'blr2020-05-01/bobby2020-05-01d01t01.mp3', media: BAD_DURATION_ARCHIVE_MUSIC },
-    { path: 'The_Prisoner/ThePrisoner01Arrival.mp4', media: PRISONER_ARCHIVE_VIDEO },
-    { path: 'threads_201712/threads.mp4', media: THREADS_ARCHIVE_VIDEO },
-    { path: 'threads_201712', media: THREADS_ARCHIVE_VIDEO },
-];

@@ -12,6 +12,7 @@ declare module 'ytsr' {
                 type: string;
                 title: string;
                 link: string;
+                live: boolean;
                 thumbnail: string;
                 author: {
                     name: string;

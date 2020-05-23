@@ -5,7 +5,7 @@ import { scriptToPages, PageRenderer, getPageHeight } from './text';
 import { ChatPanel, animatePage, filterDrawable } from './chat';
 
 import ZoneClient from '../common/client';
-import { YoutubeVideo, search } from '../server/youtube';
+import { YoutubeVideo } from '../server/youtube';
 import { ZoneSceneRenderer, avatarImage } from './scene';
 import { Player } from './player';
 
@@ -370,7 +370,6 @@ export async function load() {
         chat.status(`notifications ${permission}`);
     });
     chatCommands.set('name', rename);
-    chatCommands.set('archive', (path) => client.messaging.send('archive', { path }));
     chatCommands.set('banger', () => client.messaging.send('banger', {}));
 
     chatCommands.set('auth', (password) => client.auth(password));

@@ -1,6 +1,6 @@
 import { once } from 'events';
-import { copy, sleep } from '../utility';
-import { ARCHIVE_PATH_TO_MEDIA, YOUTUBE_MEDIA, TINY_MEDIA, DAY_MEDIA } from './media.data';
+import { sleep } from '../utility';
+import { YOUTUBE_MEDIA, TINY_MEDIA, DAY_MEDIA } from './media.data';
 import { zoneServer } from './utilities';
 
 const IMMEDIATE_REPLY_TIMEOUT = 50;
@@ -421,21 +421,6 @@ describe('event mode', () => {
 });
 
 describe('media sources', () => {
-    it('can play archive item', async () => {
-        await zoneServer({}, async (server) => {
-            const { path, media } = ARCHIVE_PATH_TO_MEDIA[0];
-
-            const client = await server.client();
-            await client.join();
-
-            const waiter = client.expect('play');
-            client.messaging.send('archive', { path });
-            const message = await waiter;
-
-            expect(message.item.media).toEqual(media);
-        });
-    });
-
     it('can queue youtube video', async () => {
         await zoneServer({}, async (server) => {
             const youtube = YOUTUBE_MEDIA[0];
