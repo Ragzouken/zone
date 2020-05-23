@@ -232,6 +232,7 @@ body {
 
 #chat-inputs {
     width: 512px;
+    margin-bottom: 16px;
 
     display: flex;
     flex-direction: column;
