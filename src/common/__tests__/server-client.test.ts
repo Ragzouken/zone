@@ -327,29 +327,6 @@ describe('playback', () => {
         });
     });
 
-    it('skips with sufficient unplayables', async () => {
-        await zoneServer({ voteSkipThreshold: 1 }, async (server) => {
-            const client1 = await server.client();
-            const client2 = await server.client();
-
-            server.hosting.playback.queueMedia(DAY_MEDIA);
-
-            const waiter1 = client1.expect('play');
-            const waiter2 = client2.expect('play');
-
-            await client1.join();
-            await client2.join();
-
-            await waiter1;
-            await waiter2;
-
-            const waiter = client1.expect('play');
-            client1.unplayable();
-            client2.unplayable();
-            await waiter;
-        });
-    });
-
     it('skips with skip command', async () => {
         const password = 'riverdale';
         await zoneServer({ authPassword: 'riverdale' }, async (server) => {
@@ -377,22 +354,6 @@ describe('playback', () => {
 
             const skipped = client.expect('play', IMMEDIATE_REPLY_TIMEOUT);
             client.skip();
-            await expect(skipped).rejects.toEqual('timeout');
-        });
-    });
-
-    it("doesn't skip with insufficient errors", async () => {
-        await zoneServer({ errorSkipThreshold: 2 }, async (server) => {
-            const client = await server.client();
-
-            server.hosting.playback.queueMedia(DAY_MEDIA);
-
-            const played = client.expect('play');
-            await client.join();
-            await played;
-
-            const skipped = client.expect('play', IMMEDIATE_REPLY_TIMEOUT);
-            client.unplayable();
             await expect(skipped).rejects.toEqual('timeout');
         });
     });

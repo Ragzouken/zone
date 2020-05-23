@@ -55,7 +55,7 @@ export class ZoneServer {
 
     public get host() {
         const address = this.hosting.server.address() as AddressInfo;
-        return `localhost:${address.port}`
+        return `localhost:${address.port}`;
     }
 
     constructor(options?: Partial<HostOptions>) {

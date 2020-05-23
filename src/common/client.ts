@@ -200,12 +200,6 @@ export class ZoneClient extends EventEmitter {
         this.messaging.send('skip', { source });
     }
 
-    async unplayable(source?: string) {
-        source = source || this.zone.lastPlayedItem?.media.source;
-        if (!source) return;
-        this.messaging.send('error', { source });
-    }
-
     private addStandardListeners() {
         this.messaging.on('close', (code) => {
             const clean = code <= 1001;

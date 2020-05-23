@@ -2,7 +2,7 @@ doctype html
 html
     head
         meta(charset="UTF-8")
-        meta(name="viewport", content="width=600")
+        meta(name="viewport", content="width=512")
         title zone
         link(rel="icon", type="image/png", href="icon.png")
         link(rel="stylesheet", href="ascii_small_simple/ascii_small_simple.css", type="text/css", charset="utf-8")
@@ -12,6 +12,8 @@ html
         #scene
             #three-container
             #top-toolbar
+                button#menu-button(title="open menu")
+                    img(src="icons/menu.png")
                 button#search-button(title="search for video")
                     img(src="icons/search.png")
                 button#resync-button(title="reload this")
@@ -20,7 +22,9 @@ html
                     img(src="icons/skip.png")
                 button#popout-button(title="pop out video")
                     img(src="icons/popout.png")
+                .spacer
             #bottom-toolbar
+                #tooltip
                 button(title="toggle float emote (1)", data-emote-toggle="wvy")
                     img(src="icons/wvy.png")
                 button(title="toggle shake emote (2)", data-emote-toggle="shk")
@@ -39,12 +43,22 @@ html
                     button#search-close close
                 #search-results
                     #search-result-template.search-result result
-            #avatar-panel(hidden)
+            #avatar-panel.menu-panel(hidden)
                 input#avatar-name(type="text")
                 canvas#avatar-paint(width=8, height=8)
                 .controls
                     button#avatar-update update
                     button#avatar-cancel close
+            #menu-panel.menu-panel(hidden)
+                div
+                    span menu
+                    button#menu-close close
+                div
+                    label(for="volume-slider") volume
+                    input#volume-slider(type="range", min="0", max="100")
+                div
+                    button#play-banger queue random song
+                    button#enable-notifications enable notifications
         canvas#chat-canvas(width=512, height=512)
         #chat-inputs
             input#chat-input(type="text", placeholder="chat message...", maxlength="160")

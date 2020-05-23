@@ -58,7 +58,7 @@ export function host(xws: expressWs.Instance, adapter: low.AdapterSync, options:
 
     // this zone's websocket endpoint
     xws.app.ws('/zone', (websocket, req) => waitJoin(websocket, req.ip));
-    
+
     xws.app.get('/users', (req, res) => {
         const users = Array.from(zone.users.values());
         const names = users.map((user) => user.name).filter((name) => !!name);
@@ -150,9 +150,7 @@ export function host(xws: expressWs.Instance, adapter: low.AdapterSync, options:
     }
 
     const skips = new Set<UserId>();
-    const errors = new Set<UserId>();
     playback.on('play', (item) => {
-        errors.clear();
         skips.clear();
 
         const videoId = sourceToVideoId(item.media.source);
@@ -191,15 +189,6 @@ export function host(xws: expressWs.Instance, adapter: low.AdapterSync, options:
         userToConnections.delete(user);
         authorised.delete(user);
         revokeUserToken(user);
-    }
-
-    function voteError(source: string, user: UserState) {
-        if (!playback.currentItem || playback.currentItem.media.source !== source) return;
-
-        errors.add(user.userId);
-        if (errors.size >= Math.floor(zone.users.size * opts.errorSkipThreshold)) {
-            skip(`skipping unplayable video ${playback.currentItem.media.title}`);
-        }
     }
 
     function voteSkip(source: string, user: UserState) {
@@ -391,8 +380,17 @@ export function host(xws: expressWs.Instance, adapter: low.AdapterSync, options:
             });
         });
 
-        messaging.messages.on('error', (message: any) => voteError(message.source, user));
-        messaging.messages.on('skip', (message: any) => voteSkip(message.source, user));
+        messaging.messages.on('skip', (message: any) => {
+            if (!playback.currentItem || playback.currentItem.media.source !== message.source) return;
+
+            if (!eventMode) {
+                voteSkip(message.source, user);
+            } else if (djs.has(user)) {
+                skip(`${user.name} skipped ${playback.currentItem!.media.title}`);
+            } else {
+                status(`can't skip during event mode`, user);
+            }
+        });
 
         messaging.messages.on('user', (changes: Partial<UserState>) => {
             const { value, error } = MESSAGE_SCHEMAS.get('user')!.validate(changes);

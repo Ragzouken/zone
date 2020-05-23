@@ -78,15 +78,15 @@ function makeTileCanvasTexture(canvas: HTMLCanvasElement) {
 }
 
 function isVideo(element: HTMLElement | undefined): element is HTMLVideoElement {
-    return element?.nodeName === "VIDEO";
+    return element?.nodeName === 'VIDEO';
 }
 
 function isCanvas(element: HTMLElement | undefined): element is HTMLCanvasElement {
-    return element?.nodeName === "CANVAS";
+    return element?.nodeName === 'CANVAS';
 }
 
 function isImage(element: HTMLElement | undefined): element is HTMLImageElement {
-    return element?.nodeName === "IMG";
+    return element?.nodeName === 'IMG';
 }
 
 const tileMaterials = new Map<HTMLCanvasElement, THREE.MeshBasicMaterial>();
@@ -126,6 +126,7 @@ function setAvatarCount(count: number) {
 
 export interface ZoneSceneRenderer {
     on(event: 'pointerdown', callback: (point: THREE.Vector3) => void): this;
+    on(event: 'pointermove', callback: (point?: THREE.Vector3) => void): this;
 }
 
 export class ZoneSceneRenderer extends EventEmitter {
@@ -200,29 +201,18 @@ export class ZoneSceneRenderer extends EventEmitter {
             const point = this.getPointUnderMouseEvent(event);
             if (point) this.emit('pointerdown', point);
         });
-        
-        /*
-        const testCube = new THREE.Mesh(
-            new THREE.BoxGeometry(1/16, 1/16, 1/16),
-            new THREE.MeshBasicMaterial({ color: 'red' }),
-        );
-        this.scene.add(testCube);
 
-        this.on('pointerdown', (point) => {
-            testCube.position.set(
-                point.x / 16 + .5/16 - .5,
-                point.y,
-                (point.z - 5) / 16 + .5/16 - .5,
-            );
+        this.renderer.domElement.addEventListener('pointermove', (event) => {
+            const point = this.getPointUnderMouseEvent(event);
+            this.emit('pointermove', point);
         });
-        */
     }
 
     update() {
         this.renderer.setClearColor(this.connecting() ? red : black);
         this.mediaTexture.image = this.mediaElement;
         this.mediaTexture.needsUpdate = true;
-    
+
         let mediaAspect = 1;
 
         if (isVideo(this.mediaElement)) {
@@ -233,7 +223,7 @@ export class ZoneSceneRenderer extends EventEmitter {
             mediaAspect = this.mediaElement.width / this.mediaElement.height;
         }
 
-        this.mediaMesh.scale.set(252 * mediaAspect / 512, 252 / 512, 1);
+        this.mediaMesh.scale.set((252 * mediaAspect) / 512, 252 / 512, 1);
 
         setAvatarCount(this.zone.users.size);
         this.avatarGroup.children = [];
@@ -296,23 +286,23 @@ export class ZoneSceneRenderer extends EventEmitter {
         const [cx, cy] = eventToElementPixel(event, this.renderer.domElement);
 
         const point = new THREE.Vector2();
-        point.x =  (cx / this.renderer.domElement.clientWidth)  * 2 - 1;
+        point.x = (cx / this.renderer.domElement.clientWidth) * 2 - 1;
         point.y = -(cy / this.renderer.domElement.clientHeight) * 2 + 1;
 
         this.raycaster.setFromCamera(point, this.camera);
         const brickIntersects = this.raycaster.intersectObject(this.brickMesh);
         const floorIntersects = this.raycaster.intersectObject(this.floorMesh);
-        
+
         if (brickIntersects.length > 0) {
             const intersection = brickIntersects[0].point;
-            const x = Math.floor((intersection.x + .5) * 16);
-            const y = 12 - Math.floor((intersection.y + .5) * 16);
+            const x = Math.floor((intersection.x + 0.5) * 16);
+            const y = 12 - Math.floor((intersection.y + 0.5) * 16);
 
             return { x, y };
         } else if (floorIntersects.length > 0) {
             const intersection = floorIntersects[0].point;
-            const x = Math.floor((intersection.x + .5) * 16);
-            const y = 5 + Math.floor((intersection.z + .5) * 16);
+            const x = Math.floor((intersection.x + 0.5) * 16);
+            const y = 5 + Math.floor((intersection.z + 0.5) * 16);
 
             return { x, y };
         } else {
