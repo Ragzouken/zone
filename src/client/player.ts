@@ -57,6 +57,10 @@ export class Player extends EventEmitter {
         return `${network} / ${ready}`;
     }
 
+    get volume() {
+        return this.element.volume;
+    }
+
     set volume(value: number) {
         this.element.volume = value;
     }
