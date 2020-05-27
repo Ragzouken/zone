@@ -8,9 +8,28 @@ import { timeToSeconds } from './utility';
 import { Media, MediaMeta } from '../common/zone';
 import { createWriteStream } from 'fs';
 import { once } from 'events';
-import { killCacheFile, getCacheFile } from './cache';
 import { URL } from 'url';
 import { randomInt } from '../common/utility';
+import * as tmp from 'tmp';
+import { unlink } from 'fs';
+
+tmp.setGracefulCleanup();
+
+async function getCacheFile(prefix: string, postfix: string): Promise<string> {
+    return new Promise((resolve, reject) => {
+        const options = {
+            discardDescriptor: true,
+            mode: 0o644,
+            prefix,
+            postfix,
+        };
+
+        tmp.file(options, (err, path, _, remove) => {
+            if (err) reject(err);
+            resolve(path);
+        });
+    });
+}
 
 export type YoutubeVideo = MediaMeta & { videoId: string };
 
@@ -121,7 +140,7 @@ export class YoutubeCache {
 
         expired.forEach((item) => {
             this.cached.delete(item.videoId);
-            killCacheFile(item.path);
+            unlink(item.path, console.log);
         });
     }
 
