@@ -4,7 +4,7 @@ import * as ytdl from 'ytdl-core';
 import ytsr = require('ytsr');
 import * as ytpl from 'ytpl';
 
-import { timeToSeconds } from './utility';
+import { timeToSeconds } from '../common/utility';
 import { Media, MediaMeta } from '../common/zone';
 import { createWriteStream } from 'fs';
 import { once } from 'events';

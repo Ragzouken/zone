@@ -14,6 +14,16 @@ export function getDefault<K, V>(map: Map<K, V>, key: K, factory: (key: K) => V)
     return value!;
 }
 
+export function timeToSeconds(time: string): number {
+    const parts = time.split(':');
+
+    const seconds = parseInt(parts.pop() || '0', 10);
+    const minutes = parseInt(parts.pop() || '0', 10);
+    const hours = parseInt(parts.pop() || '0', 10);
+
+    return seconds + minutes * 60 + hours * 3600;
+}
+
 export type EventMap = { [event: string]: (...args: any[]) => void };
 
 export interface TypedEventEmitter<TEventMap extends EventMap> {
