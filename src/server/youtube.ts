@@ -134,7 +134,7 @@ export class YoutubeCache {
         this.deleteExpiredCachedVideos();
     }
 
-    private async deleteExpiredCachedVideos() {
+    async deleteExpiredCachedVideos() {
         const now = performance.now();
         const expired = Array.from(this.cached.values()).filter((item) => item.expires < now);
 

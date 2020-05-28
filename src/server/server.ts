@@ -131,9 +131,10 @@ export function host(xws: expressWs.Instance, adapter: low.AdapterSync, options:
         return source.startsWith('youtube/') ? source.slice(8) : undefined;
     }
 
+    const HALFHOUR = 30 * 60 * 60 * 1000;
+    setInterval(() => youtubeCache.deleteExpiredCachedVideos(), HALFHOUR);
     function cacheYoutubes() {
         const item = playback.currentItem;
-        const HALFHOUR = 30 * 60 * 60 * 1000;
 
         if (item && item.media.duration < HALFHOUR) {
             const videoId = sourceToVideoId(item.media.source);

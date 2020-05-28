@@ -459,6 +459,16 @@ describe('media sources', () => {
             await client.lucky('hello');
         });
     });
+
+    test('can queue banger', async () => {
+        await zoneServer({}, async (server) => {
+            const client = await server.client({ slowResponseTimeout: 5000 });
+            await client.join();
+            const waiter = client.expect('play');
+            client.messaging.send('banger', {});
+            await waiter;
+        });
+    });
 });
 
 test('server sends leave on clean quit', async () => {
