@@ -7,7 +7,7 @@ export const READY = ['HAVE_NOTHING', 'HAVE_METADATA', 'HAVE_CURRENT_DATA', 'HAV
 
 export async function expectMetadata(element: HTMLMediaElement) {
     return new Promise((resolve, reject) => {
-        setTimeout(() => reject('timeout'), 10 * 1000);
+        setTimeout(() => reject('timeout'), 30 * 1000);
         element.addEventListener('loadedmetadata', resolve, { once: true });
         element.addEventListener('error', reject, { once: true });
     });
@@ -122,6 +122,7 @@ export class Player extends EventEmitter {
             console.log('source failed', this.status, e);
             if (this.reloading === token) {
                 done();
+                await sleep(100);
                 this.reloadSource();
             }
         } finally {
