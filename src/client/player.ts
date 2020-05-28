@@ -7,7 +7,7 @@ export const READY = ['HAVE_NOTHING', 'HAVE_METADATA', 'HAVE_CURRENT_DATA', 'HAV
 
 export async function expectMetadata(element: HTMLMediaElement) {
     return new Promise((resolve, reject) => {
-        setTimeout(() => reject('timeout'), 2000);
+        setTimeout(() => reject('timeout'), 10 * 1000);
         element.addEventListener('loadedmetadata', resolve, { once: true });
     });
 }
