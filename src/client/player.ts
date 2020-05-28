@@ -108,7 +108,7 @@ export class Player extends EventEmitter {
 
         this.element.pause();
         const waiter = expectMetadata(this.element);
-        this.element.src = this.item.media.source + '#t=' + this.elapsed / 1000;
+        this.element.src = this.item.media.source;
         this.element.load();
 
         try {
