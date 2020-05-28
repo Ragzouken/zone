@@ -9,6 +9,7 @@ export async function expectMetadata(element: HTMLMediaElement) {
     return new Promise((resolve, reject) => {
         setTimeout(() => reject('timeout'), 10 * 1000);
         element.addEventListener('loadedmetadata', resolve, { once: true });
+        element.addEventListener('error', reject, { once: true });
     });
 }
 
