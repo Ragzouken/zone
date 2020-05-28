@@ -375,6 +375,18 @@ describe('playback', () => {
             await expect(skip).rejects.toEqual('timeout');
         });
     });
+
+    it("silently ignores skipping nothing", async () => {
+        await zoneServer({}, async (server) => {
+            const client = await server.client();
+            await client.join();
+
+            const skip = client.expect('play', IMMEDIATE_REPLY_TIMEOUT);
+            client.skip();
+
+            await expect(skip).rejects.toEqual('timeout');
+        });
+    });
 });
 
 describe('event mode', () => {
