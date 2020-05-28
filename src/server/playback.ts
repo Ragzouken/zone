@@ -70,7 +70,7 @@ export class Playback extends EventEmitter {
     }
 
     private playMedia(media: QueueItem) {
-        this.setMedia(media, 0);
+        this.setMedia(media, -this.paddingTime);
     }
 
     private clearMedia() {

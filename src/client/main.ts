@@ -164,9 +164,9 @@ export async function load() {
     const menuPanel = document.getElementById('menu-panel')!;
     const volumeSlider = document.getElementById('volume-slider') as HTMLInputElement;
 
-    volumeSlider.addEventListener('input', () => player.volume = parseFloat(volumeSlider.value));
+    volumeSlider.addEventListener('input', () => (player.volume = parseFloat(volumeSlider.value)));
     document.getElementById('menu-button')?.addEventListener('click', openMenu);
-    document.getElementById('menu-close')?.addEventListener('click', () => menuPanel.hidden = true);
+    document.getElementById('menu-close')?.addEventListener('click', () => (menuPanel.hidden = true));
 
     function openMenu() {
         menuPanel.hidden = false;
@@ -176,7 +176,7 @@ export async function load() {
     document.getElementById('enable-notifications')?.addEventListener('click', async () => {
         const permission = await Notification.requestPermission();
         chat.status(`notifications ${permission}`);
-    })
+    });
 
     const searchPanel = document.getElementById('search-panel')!;
     const searchInput = document.getElementById('search-input') as HTMLInputElement;

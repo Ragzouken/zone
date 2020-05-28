@@ -1,5 +1,6 @@
 import { QueueItem } from '../server/playback';
 import { EventEmitter } from 'events';
+import { sleep } from '../common/utility';
 
 export const NETWORK = ['NETWORK_EMPTY', 'NETWORK_IDLE', 'NETWORK_LOADING', 'NETWORK_NO_SOURCE'];
 export const READY = ['HAVE_NOTHING', 'HAVE_METADATA', 'HAVE_CURRENT_DATA', 'HAVE_FUTURE_DATA', 'HAVE_ENOUGH_DATA'];
@@ -112,6 +113,7 @@ export class Player extends EventEmitter {
 
         try {
             await waiter;
+            if (this.elapsed < 0) await sleep(-this.elapsed);
             this.reseek();
             await this.element.play();
             done();

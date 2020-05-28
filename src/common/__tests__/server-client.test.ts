@@ -376,7 +376,7 @@ describe('playback', () => {
         });
     });
 
-    it("silently ignores skipping nothing", async () => {
+    it('silently ignores skipping nothing', async () => {
         await zoneServer({}, async (server) => {
             const client = await server.client();
             await client.join();

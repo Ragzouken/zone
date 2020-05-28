@@ -44,6 +44,8 @@ export const DEFAULT_OPTIONS: HostOptions = {
     playbackPaddingTime: 1 * SECONDS,
 };
 
+const HALFHOUR = 30 * 60 * 60 * 1000;
+
 export function host(xws: expressWs.Instance, adapter: low.AdapterSync, options: Partial<HostOptions> = {}) {
     const opts = Object.assign({}, DEFAULT_OPTIONS, options);
 
@@ -131,7 +133,6 @@ export function host(xws: expressWs.Instance, adapter: low.AdapterSync, options:
         return source.startsWith('youtube/') ? source.slice(8) : undefined;
     }
 
-    const HALFHOUR = 30 * 60 * 60 * 1000;
     setInterval(() => youtubeCache.deleteExpiredCachedVideos(), HALFHOUR);
     function cacheYoutubes() {
         const item = playback.currentItem;
