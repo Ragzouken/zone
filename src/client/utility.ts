@@ -1,5 +1,3 @@
-import { rgbaToColor } from 'blitsy';
-
 export function fakedownToTag(text: string, fd: string, tag: string) {
     const pattern = new RegExp(`${fd}([^${fd}]+)${fd}`, 'g');
     return text.replace(pattern, `{+${tag}}$1{-${tag}}`);

@@ -5,7 +5,7 @@ import { scriptToPages, PageRenderer, getPageHeight } from './text';
 import { ChatPanel, animatePage, filterDrawable } from './chat';
 
 import ZoneClient from '../common/client';
-import { YoutubeVideo, search } from '../server/youtube';
+import { YoutubeVideo } from '../server/youtube';
 import { ZoneSceneRenderer, avatarImage } from './scene';
 import { Player } from './player';
 
@@ -164,9 +164,9 @@ export async function load() {
     const menuPanel = document.getElementById('menu-panel')!;
     const volumeSlider = document.getElementById('volume-slider') as HTMLInputElement;
 
-    volumeSlider.addEventListener('input', () => player.volume = parseFloat(volumeSlider.value));
+    volumeSlider.addEventListener('input', () => (player.volume = parseFloat(volumeSlider.value)));
     document.getElementById('menu-button')?.addEventListener('click', openMenu);
-    document.getElementById('menu-close')?.addEventListener('click', () => menuPanel.hidden = true);
+    document.getElementById('menu-close')?.addEventListener('click', () => (menuPanel.hidden = true));
 
     function openMenu() {
         menuPanel.hidden = false;
@@ -176,7 +176,7 @@ export async function load() {
     document.getElementById('enable-notifications')?.addEventListener('click', async () => {
         const permission = await Notification.requestPermission();
         chat.status(`notifications ${permission}`);
-    })
+    });
 
     const searchPanel = document.getElementById('search-panel')!;
     const searchInput = document.getElementById('search-input') as HTMLInputElement;
@@ -370,7 +370,6 @@ export async function load() {
         chat.status(`notifications ${permission}`);
     });
     chatCommands.set('name', rename);
-    chatCommands.set('archive', (path) => client.messaging.send('archive', { path }));
     chatCommands.set('banger', () => client.messaging.send('banger', {}));
 
     chatCommands.set('auth', (password) => client.auth(password));

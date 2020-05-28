@@ -4,13 +4,32 @@ import * as ytdl from 'ytdl-core';
 import ytsr = require('ytsr');
 import * as ytpl from 'ytpl';
 
-import { timeToSeconds } from './utility';
+import { timeToSeconds } from '../common/utility';
 import { Media, MediaMeta } from '../common/zone';
 import { createWriteStream } from 'fs';
 import { once } from 'events';
-import { killCacheFile, getCacheFile } from './cache';
 import { URL } from 'url';
 import { randomInt } from '../common/utility';
+import * as tmp from 'tmp';
+import { unlink } from 'fs';
+
+tmp.setGracefulCleanup();
+
+async function getCacheFile(prefix: string, postfix: string): Promise<string> {
+    return new Promise((resolve, reject) => {
+        const options = {
+            discardDescriptor: true,
+            mode: 0o644,
+            prefix,
+            postfix,
+        };
+
+        tmp.file(options, (err, path, _, remove) => {
+            if (err) reject(err);
+            resolve(path);
+        });
+    });
+}
 
 export type YoutubeVideo = MediaMeta & { videoId: string };
 
@@ -51,7 +70,7 @@ export async function media(videoId: string): Promise<Media> {
 
 export async function search(query: string): Promise<YoutubeVideo[]> {
     const results = await ytsr(query, { limit: 5 });
-    const videos = results.items.filter((item) => item.type === 'video');
+    const videos = results.items.filter((item) => item.type === 'video' && !item.live);
     return videos.map((item) => {
         const videoId = new URL(item.link).searchParams.get('v')!;
         const duration = timeToSeconds(item.duration) * 1000;
@@ -115,13 +134,13 @@ export class YoutubeCache {
         this.deleteExpiredCachedVideos();
     }
 
-    private async deleteExpiredCachedVideos() {
+    async deleteExpiredCachedVideos() {
         const now = performance.now();
         const expired = Array.from(this.cached.values()).filter((item) => item.expires < now);
 
         expired.forEach((item) => {
             this.cached.delete(item.videoId);
-            killCacheFile(item.path);
+            unlink(item.path, console.log);
         });
     }
 

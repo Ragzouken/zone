@@ -1,6 +1,5 @@
 import { EventEmitter } from 'events';
 
-export const objEqual = (a: any, b: any) => JSON.stringify(a) === JSON.stringify(b);
 export const randomInt = (min: number, max: number) => Math.floor(Math.random() * (max - min + 1)) + min;
 export const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 export const clamp = (min: number, max: number, value: number) => Math.max(min, Math.min(max, value));
@@ -13,6 +12,16 @@ export function getDefault<K, V>(map: Map<K, V>, key: K, factory: (key: K) => V)
         map.set(key, value);
     }
     return value!;
+}
+
+export function timeToSeconds(time: string): number {
+    const parts = time.split(':');
+
+    const seconds = parseInt(parts.pop() || '0', 10);
+    const minutes = parseInt(parts.pop() || '0', 10);
+    const hours = parseInt(parts.pop() || '0', 10);
+
+    return seconds + minutes * 60 + hours * 3600;
 }
 
 export type EventMap = { [event: string]: (...args: any[]) => void };

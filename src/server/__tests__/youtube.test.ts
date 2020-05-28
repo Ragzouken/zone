@@ -1,8 +1,12 @@
 import * as youtube from '../youtube';
-import { YOUTUBE_MEDIA, FAKE_YOUTUBE_VIDEO } from '../../common/__tests__/media.data';
+import { YOUTUBE_MEDIA } from '../../common/__tests__/media.data';
 
 test('search', async () => {
     await youtube.search("let's daba daba");
+});
+
+test('banger', async () => {
+    await youtube.banger();
 });
 
 test.each(YOUTUBE_MEDIA)('media', async ({ videoId, ...expected }) => {

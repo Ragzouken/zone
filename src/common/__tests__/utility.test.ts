@@ -1,6 +1,6 @@
 import { performance } from 'perf_hooks';
 import { timeToSeconds } from '../utility';
-import { copy, sleep } from '../../common/utility';
+import { copy, sleep } from '../utility';
 
 const TIMES: [string, number][] = [
     ['1:32:10', 5530],

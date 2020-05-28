@@ -1,5 +1,6 @@
 import { echoServer, timeout } from './utilities';
 import { once } from 'events';
+import Messaging from '../messaging';
 
 describe('messaging', () => {
     it('emits close event when closed', async () => {
@@ -62,6 +63,13 @@ describe('messaging', () => {
             messaging.send('test', {});
             await error;
         });
+    });
+
+    it('emits error when sending without socket', async () => {
+        const messaging = new Messaging();
+        const error = once(messaging, 'error');
+        messaging.send('test');
+        await error;
     });
 
     it('echoes after reconnect', async () => {

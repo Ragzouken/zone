@@ -1,6 +1,6 @@
 import { once } from 'events';
-import { copy, sleep } from '../utility';
-import { ARCHIVE_PATH_TO_MEDIA, YOUTUBE_MEDIA, TINY_MEDIA, DAY_MEDIA } from './media.data';
+import { sleep } from '../utility';
+import { YOUTUBE_MEDIA, TINY_MEDIA, DAY_MEDIA } from './media.data';
 import { zoneServer } from './utilities';
 
 const IMMEDIATE_REPLY_TIMEOUT = 50;
@@ -249,7 +249,7 @@ describe('user presence', () => {
 
 describe('playback', () => {
     it('sends currently playing on join', async () => {
-        await zoneServer({}, async (server) => {
+        await zoneServer({ playbackPaddingTime: 0 }, async (server) => {
             server.hosting.playback.queueMedia(DAY_MEDIA);
 
             const client = await server.client();
@@ -375,6 +375,18 @@ describe('playback', () => {
             await expect(skip).rejects.toEqual('timeout');
         });
     });
+
+    it('silently ignores skipping nothing', async () => {
+        await zoneServer({}, async (server) => {
+            const client = await server.client();
+            await client.join();
+
+            const skip = client.expect('play', IMMEDIATE_REPLY_TIMEOUT);
+            client.skip();
+
+            await expect(skip).rejects.toEqual('timeout');
+        });
+    });
 });
 
 describe('event mode', () => {
@@ -421,21 +433,6 @@ describe('event mode', () => {
 });
 
 describe('media sources', () => {
-    it('can play archive item', async () => {
-        await zoneServer({}, async (server) => {
-            const { path, media } = ARCHIVE_PATH_TO_MEDIA[0];
-
-            const client = await server.client();
-            await client.join();
-
-            const waiter = client.expect('play');
-            client.messaging.send('archive', { path });
-            const message = await waiter;
-
-            expect(message.item.media).toEqual(media);
-        });
-    });
-
     it('can queue youtube video', async () => {
         await zoneServer({}, async (server) => {
             const youtube = YOUTUBE_MEDIA[0];
@@ -460,6 +457,16 @@ describe('media sources', () => {
             const client = await server.client({ slowResponseTimeout: 5000 });
             await client.join();
             await client.lucky('hello');
+        });
+    });
+
+    test('can queue banger', async () => {
+        await zoneServer({}, async (server) => {
+            const client = await server.client({ slowResponseTimeout: 5000 });
+            await client.join();
+            const waiter = client.expect('play');
+            client.messaging.send('banger', {});
+            await waiter;
         });
     });
 });

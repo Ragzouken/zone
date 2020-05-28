@@ -7,7 +7,6 @@ import Playback, { QueueItem } from './playback';
 import Messaging from '../common/messaging';
 import { ZoneState, UserId, UserState, mediaEquals, Media } from '../common/zone';
 import { nanoid } from 'nanoid';
-import { archiveOrgToMedia } from './archiveorg';
 import { copy } from '../common/utility';
 import { MESSAGE_SCHEMAS } from './protocol';
 import { JoinMessage, SendAuth, SendCommand } from '../common/client';
@@ -44,6 +43,8 @@ export const DEFAULT_OPTIONS: HostOptions = {
 
     playbackPaddingTime: 1 * SECONDS,
 };
+
+const HALFHOUR = 30 * 60 * 60 * 1000;
 
 export function host(xws: expressWs.Instance, adapter: low.AdapterSync, options: Partial<HostOptions> = {}) {
     const opts = Object.assign({}, DEFAULT_OPTIONS, options);
@@ -132,9 +133,9 @@ export function host(xws: expressWs.Instance, adapter: low.AdapterSync, options:
         return source.startsWith('youtube/') ? source.slice(8) : undefined;
     }
 
+    setInterval(() => youtubeCache.deleteExpiredCachedVideos(), HALFHOUR);
     function cacheYoutubes() {
         const item = playback.currentItem;
-        const HALFHOUR = 30 * 60 * 60 * 1000;
 
         if (item && item.media.duration < HALFHOUR) {
             const videoId = sourceToVideoId(item.media.source);
@@ -357,10 +358,6 @@ export function host(xws: expressWs.Instance, adapter: low.AdapterSync, options:
             if (media) tryQueueMedia(media);
         }
 
-        async function tryQueueArchiveByPath(path: string) {
-            tryQueueMedia(await archiveOrgToMedia(path));
-        }
-
         async function tryQueueYoutubeById(videoId: string) {
             tryQueueMedia(await youtube.media(videoId));
         }
@@ -370,7 +367,6 @@ export function host(xws: expressWs.Instance, adapter: low.AdapterSync, options:
         }
 
         messaging.messages.on('youtube', (message: any) => tryQueueYoutubeById(message.videoId));
-        messaging.messages.on('archive', (message: any) => tryQueueArchiveByPath(message.path));
         messaging.messages.on('local', (message: any) => tryQueueLocalByPath(message.path));
         messaging.messages.on('banger', () => tryQueueBanger());
 
