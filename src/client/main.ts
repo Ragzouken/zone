@@ -138,11 +138,10 @@ function textToYoutubeVideoId(text: string) {
 }
 
 export async function load() {
-    const popoutButton = document.getElementById('popout-button') as HTMLButtonElement;
     const popoutPanel = document.getElementById('popout-panel') as HTMLElement;
     const video = document.createElement('video');
     popoutPanel.appendChild(video);
-    popoutButton.addEventListener('click', () => (popoutPanel.hidden = false));
+    document.getElementById('popout-button')?.addEventListener('click', () => (popoutPanel.hidden = false));
     popoutPanel.addEventListener('click', () => (popoutPanel.hidden = true));
 
     const player = new Player(video);
@@ -541,6 +540,8 @@ export async function load() {
     }
 
     renderScene();
+
+    document.getElementById('camera-button')!.addEventListener('click', () => sceneRenderer.cycleCamera());
 
     const tooltip = document.getElementById('tooltip')!;
     sceneRenderer.on('pointerdown', (point) => moveTo(point.x, point.y));

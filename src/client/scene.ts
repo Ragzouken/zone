@@ -133,7 +133,7 @@ export class ZoneSceneRenderer extends EventEmitter {
     mediaElement?: HTMLImageElement | HTMLCanvasElement | HTMLVideoElement;
 
     private readonly renderer = new THREE.WebGLRenderer({ antialias: false });
-    private readonly camera: THREE.Camera;
+    private readonly cameras: THREE.Camera[] = [];
     private readonly raycaster = new THREE.Raycaster();
 
     private readonly mediaTexture = new THREE.VideoTexture(document.createElement('video'));
@@ -144,6 +144,12 @@ export class ZoneSceneRenderer extends EventEmitter {
     private readonly floorMesh: THREE.Mesh;
     private readonly brickMesh: THREE.Mesh;
 
+    private cameraIndex = 0;
+
+    private get camera() {
+        return this.cameras[this.cameraIndex];
+    }
+
     constructor(
         container: HTMLElement,
         private readonly zone: ZoneState,
@@ -151,9 +157,11 @@ export class ZoneSceneRenderer extends EventEmitter {
         private readonly connecting: () => boolean,
     ) {
         super();
+
         const aspect = container.clientWidth / container.clientHeight;
         const frustumSize = 1.1;
-        this.camera = new THREE.OrthographicCamera(
+        
+        const isoCamera = new THREE.OrthographicCamera(
             (frustumSize * aspect) / -2,
             (frustumSize * aspect) / 2,
             frustumSize / 2,
@@ -161,9 +169,29 @@ export class ZoneSceneRenderer extends EventEmitter {
             0.01,
             10,
         );
-        // const camera = new THREE.PerspectiveCamera(70, aspect, 0.01, 10);
-        this.camera.position.set(-1 / 8, 4.5 / 8, 4.5 / 8);
-        this.camera.lookAt(0, 0, 0);
+        isoCamera.position.set(-1 / 8, 4.5 / 8, 4.5 / 8);
+        isoCamera.lookAt(0, 0, 0);
+
+        const factor = Math.sqrt(2);
+
+        const flatCamera = new THREE.OrthographicCamera(
+            (frustumSize * aspect) / -2,
+            (frustumSize * aspect) / 2,
+            frustumSize /  2 / factor,
+            frustumSize / -2 / factor,
+            0.01,
+            10,
+        );
+        flatCamera.position.set(0, 1, 1);
+        flatCamera.lookAt(0, 0, 0);
+
+        const cinemaCamera = new THREE.PerspectiveCamera(70, aspect, 0.01, 10);
+        cinemaCamera.position.set(0, 0, .8);
+        cinemaCamera.lookAt(0, 0, 0);
+
+        this.cameras.push(isoCamera);
+        this.cameras.push(flatCamera);
+        this.cameras.push(cinemaCamera);
 
         this.mediaTexture.minFilter = THREE.NearestFilter;
         this.mediaTexture.magFilter = THREE.NearestFilter;
@@ -206,6 +234,10 @@ export class ZoneSceneRenderer extends EventEmitter {
             const point = this.getPointUnderMouseEvent(event);
             this.emit('pointermove', point);
         });
+    }
+
+    cycleCamera() {
+        this.cameraIndex = (this.cameraIndex + 1) % this.cameras.length;
     }
 
     update() {

@@ -20,8 +20,8 @@ html
                     img(src="icons/resync.png")
                 button#skip-button(title="vote to skip this")
                     img(src="icons/skip.png")
-                button#popout-button(title="pop out video")
-                    img(src="icons/popout.png")
+                button#camera-button(title="switch view")
+                    img(src="icons/look.png")
                 .spacer
             #bottom-toolbar
                 #tooltip
@@ -59,6 +59,7 @@ html
                 div
                     button#play-banger queue random song
                     button#enable-notifications enable notifications
+                    button#popout-button pop out video
         canvas#chat-canvas(width=512, height=512)
         #chat-inputs
             input#chat-input(type="text", placeholder="chat message...", maxlength="160")
