@@ -140,7 +140,7 @@ export class YoutubeCache {
 
         expired.forEach((item) => {
             this.cached.delete(item.videoId);
-            unlink(item.path, console.log);
+            unlink(item.path, (err) => { if (err) console.log(err); });
         });
     }
 
