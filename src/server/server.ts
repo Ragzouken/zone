@@ -27,7 +27,7 @@ export type HostOptions = {
     joinPassword?: string;
     authPassword?: string;
 
-    playbackPaddingTime: number;
+    playbackStartDelay: number;
 };
 
 export const DEFAULT_OPTIONS: HostOptions = {
@@ -41,7 +41,7 @@ export const DEFAULT_OPTIONS: HostOptions = {
     voteSkipThreshold: 0.6,
     errorSkipThreshold: 0.4,
 
-    playbackPaddingTime: 1 * SECONDS,
+    playbackStartDelay: 3 * SECONDS,
 };
 
 const HALFHOUR = 30 * 60 * 60 * 1000;
@@ -109,8 +109,7 @@ export function host(xws: expressWs.Instance, adapter: low.AdapterSync, options:
     const authorised = new Set<UserState>();
 
     const zone = new ZoneState();
-    const playback = new Playback();
-    playback.paddingTime = opts.playbackPaddingTime;
+    const playback = new Playback(opts.playbackStartDelay);
 
     let eventMode = false;
     const djs = new Set<UserState>();

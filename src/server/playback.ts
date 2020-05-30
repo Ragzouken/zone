@@ -20,13 +20,12 @@ export interface Playback {
 export class Playback extends EventEmitter {
     public currentItem?: QueueItem;
     public queue: QueueItem[] = [];
-    public paddingTime = 0;
 
     private currentBeginTime: number = 0;
     private currentEndTime: number = 0;
     private checkTimeout: NodeJS.Timeout | undefined;
 
-    constructor() {
+    constructor(public startDelay = 0) {
         super();
         this.clearMedia();
     }
@@ -70,7 +69,7 @@ export class Playback extends EventEmitter {
     }
 
     private playMedia(media: QueueItem) {
-        this.setMedia(media, -this.paddingTime);
+        this.setMedia(media, -this.startDelay);
     }
 
     private clearMedia() {
@@ -82,7 +81,7 @@ export class Playback extends EventEmitter {
     private check() {
         if (this.playing) {
             if (this.checkTimeout) clearTimeout(this.checkTimeout);
-            this.checkTimeout = setTimeout(() => this.check(), this.remainingTime + this.paddingTime);
+            this.checkTimeout = setTimeout(() => this.check(), this.remainingTime);
         } else {
             this.skip();
         }
