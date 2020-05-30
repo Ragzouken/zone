@@ -122,7 +122,7 @@ export function host(xws: expressWs.Instance, adapter: low.AdapterSync, options:
     load();
 
     playback.on('queue', (item: QueueItem) => sendAll('queue', { items: [item] }));
-    playback.on('play', (item: QueueItem) => sendAll('play', { item: sanitiseItem(item) }));
+    playback.on('play', (item: QueueItem) => sendAll('play', { item: sanitiseItem(item), time: playback.currentTime }));
     playback.on('stop', () => sendAll('play', {}));
 
     playback.on('queue', save);
