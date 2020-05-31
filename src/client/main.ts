@@ -450,6 +450,7 @@ export async function load() {
         }
     });
 
+    const playerStatus = document.getElementById('player-status')!;
     const chatContext = document.querySelector<HTMLCanvasElement>('#chat-canvas')!.getContext('2d')!;
     chatContext.imageSmoothingEnabled = false;
 
@@ -491,7 +492,6 @@ export async function load() {
             line('*** END ***', total);
             lines[lines.length - 1] = '{clr=#FF00FF}' + lines[lines.length - 1];
         }
-        lines.push('{clr=#FF00FF}' + player.status);
 
         const queuePage = scriptToPages(lines.join('\n'), layout)[0];
         animatePage(queuePage);
@@ -503,6 +503,8 @@ export async function load() {
     }
 
     function redraw() {
+        playerStatus.innerHTML = player.status;
+
         chatContext.fillStyle = 'rgb(0, 0, 0)';
         chatContext.fillRect(0, 0, 512, 512);
 

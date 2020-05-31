@@ -62,9 +62,8 @@ input[type="text"]:focus {
     margin-bottom: -64px;
 }
 
-#top-toolbar {
+.toolbar {
     position: absolute;
-    top: 0; left: 0;
     width: 100%;
 
     display: flex;
@@ -72,7 +71,7 @@ input[type="text"]:focus {
     align-items: stretch;
 }
 
-#top-toolbar > button {
+.toolbar > button {
     margin-left: 16px; margin-top: 16px;
     width: 32px; height: 32px;
     
@@ -82,18 +81,24 @@ input[type="text"]:focus {
     border-color: var(--button-color);
 }
 
-#top-toolbar > button > img {
+.toolbar > button > img {
     width: 100%; height: 100%;
 }
 
-#bottom-toolbar {
-    width: 100%;
-    position: absolute;
-    bottom: 0; right: 0;
+#top-toolbar {
+    top: 0; left: 0;
+}
 
-    display: flex;
-    flex-direction: row;
-    align-items: flex-end;
+
+#bottom-toolbar {
+    bottom: 0; right: 0;
+}
+
+#player-status {
+    flex: 1;
+    margin: 16px;
+    margin-bottom: 0px;
+    text-align: right;
 }
 
 #tooltip {
@@ -102,21 +107,7 @@ input[type="text"]:focus {
     margin-top: 0px;
 }
 
-#bottom-toolbar > button {
-    margin-right: 16px; margin-bottom: 16px;
-    width: 32px; height: 32px;
-    
-    border: none;
-    padding: 4px;
-    background-color: var(--button-color);
-    border-color: var(--button-color);
-}
-
-#bottom-toolbar > button > img {
-    width: 100%; height: 100%;
-}
-
-#bottom-toolbar > button.active {
+.toolbar > button.active {
     filter: invert();
 }
 

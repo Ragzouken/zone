@@ -54,9 +54,19 @@ export class Player extends EventEmitter {
     }
 
     get status() {
-        const network = NETWORK[this.element.networkState];
-        const ready = READY[this.element.readyState];
-        return `${network} / ${ready}`;
+        if (!this.item) {
+            return 'done';
+        } else if (this.element.networkState === HTMLMediaElement.NETWORK_NO_SOURCE) {
+            return 'no source';
+        } else if (this.element.readyState === HTMLMediaElement.HAVE_ENOUGH_DATA) {
+            return this.elapsed < 0 ? 'ready' : 'playing';
+        } else if (this.element.readyState >= HTMLMediaElement.HAVE_METADATA) {
+            return 'loading video';
+        } else if (this.element.readyState === HTMLMediaElement.HAVE_NOTHING) {
+            return 'loading metadata';
+        } else {
+            return 'loading video';
+        }
     }
 
     get volume() {

@@ -11,7 +11,7 @@ html
     body
         #scene
             #three-container
-            #top-toolbar
+            #top-toolbar.toolbar
                 button#menu-button(title="open menu")
                     img(src="icons/menu.png")
                 button#search-button(title="search for video")
@@ -22,8 +22,8 @@ html
                     img(src="icons/skip.png")
                 button#camera-button(title="switch view")
                     img(src="icons/look.png")
-                .spacer
-            #bottom-toolbar
+                #player-status
+            #bottom-toolbar.toolbar
                 #tooltip
                 button(title="toggle float emote (1)", data-emote-toggle="wvy")
                     img(src="icons/wvy.png")
