@@ -15,7 +15,7 @@ export type Media = {
     title: string;
     duration: number;
     source: string;
-    image?: string;
+    thumbnail?: string;
 };
 
 export type MediaMeta = Omit<Media, 'source'>;

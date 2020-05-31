@@ -202,13 +202,18 @@ export async function load() {
         searchResults.innerText = 'searching...';
         client.search(searchInput.value).then((results) => {
             searchResults.innerHTML = '';
-            results.forEach(({ title, duration, videoId }) => {
+            results.forEach(({ title, duration, videoId, thumbnail }) => {
                 const row = searchResultTemplate.cloneNode(true) as HTMLElement;
                 row.addEventListener('click', () => {
                     searchPanel.hidden = true;
                     client.youtube(videoId);
                 });
-                row.innerHTML = `${title} (${secondsToTime(duration / 1000)})`;
+
+                const div = row.querySelector('div')!;
+                const img = row.querySelector('img')!;
+
+                div.innerHTML = `${title} (${secondsToTime(duration / 1000)})`;
+                img.src = thumbnail || '';
                 searchResults.appendChild(row);
             });
         });

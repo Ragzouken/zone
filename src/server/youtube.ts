@@ -61,11 +61,11 @@ export async function direct(videoId: string): Promise<string> {
 }
 
 export async function media(videoId: string): Promise<Media> {
-    const { title, length_seconds } = await getCachedInfo(videoId);
+    const { title, length_seconds, thumbnail_url } = await getCachedInfo(videoId);
     const duration = parseInt(length_seconds, 10) * 1000;
     const source = 'youtube/' + videoId;
 
-    return { title, duration, source };
+    return { title, duration, source, thumbnail: thumbnail_url };
 }
 
 export async function search(query: string): Promise<YoutubeVideo[]> {
@@ -75,8 +75,9 @@ export async function search(query: string): Promise<YoutubeVideo[]> {
         const videoId = new URL(item.link).searchParams.get('v')!;
         const duration = timeToSeconds(item.duration) * 1000;
         const title = item.title;
+        const thumbnail = item.thumbnail;
 
-        return { videoId, title, duration };
+        return { videoId, title, duration, thumbnail };
     });
 }
 

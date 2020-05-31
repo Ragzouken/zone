@@ -149,12 +149,26 @@ input[type="text"]:focus {
 }
 
 .search-result {
-    padding: 8px;
     cursor: pointer;
+    display: flex;
+    flex-direction: row;
+    align-items: stretch;
 }
 
 .search-result:hover {
     background: orange;
+}
+
+.search-result > div {
+    flex: 1;
+    padding: 8px;
+}
+
+.search-result > img {
+    flex: 0;
+    width: 128px;
+    min-height: 64px;
+    object-fit: cover;
 }
 
 #popout-panel {
