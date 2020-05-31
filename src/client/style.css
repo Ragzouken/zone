@@ -72,7 +72,6 @@ input[type="text"]:focus {
 }
 
 .toolbar > button {
-    margin-left: 16px; margin-top: 16px;
     width: 32px; height: 32px;
     
     border: none;
@@ -89,16 +88,24 @@ input[type="text"]:focus {
     top: 0; left: 0;
 }
 
+#top-toolbar > button {
+    margin-left: 16px; margin-top: 16px;
+}
 
 #bottom-toolbar {
     bottom: 0; right: 0;
 }
 
+#bottom-toolbar > button {
+    margin-right: 16px; margin-bottom: 16px;
+}
+
 #player-status {
+    position: absolute;
+    left: 0; top: 100%;
+
     flex: 1;
     margin: 16px;
-    margin-bottom: 0px;
-    text-align: right;
 }
 
 #tooltip {
