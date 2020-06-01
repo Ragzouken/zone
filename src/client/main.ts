@@ -119,12 +119,7 @@ function listUsers() {
 }
 
 const help = [
-    'use the buttons on the top left to queue videos, and the buttons on the bottom right to change your appearance',
-    'display these instructions: /help',
-    'toggle typing/controls: press tab',
-    'toggle queue: press q',
-    'add specific video: /youtube url',
-    'show user list: /users',
+    'use the buttons on the top left to queue videos, and the buttons on the bottom right to change your appearance. press tab to switch between typing and moving',
 ].join('\n');
 
 function listHelp() {
@@ -175,6 +170,32 @@ export async function load() {
     document.getElementById('enable-notifications')?.addEventListener('click', async () => {
         const permission = await Notification.requestPermission();
         chat.status(`notifications ${permission}`);
+    });
+
+    const queuePanel = document.getElementById('queue-panel')!;
+    const queueItemContainer = document.getElementById('queue-items')!;
+    const queueItemTemplate = document.getElementById('queue-item-template')!;
+    queueItemTemplate.parentElement!.removeChild(queueItemTemplate);
+
+    const queueElements: HTMLElement[] = [];
+
+    function refreshQueue() {
+        queueElements.forEach((item) => item.parentElement!.removeChild(item));
+        queueElements.length = 0;
+
+        client.zone.queue.forEach((item) => {
+            const element = queueItemTemplate.cloneNode(true) as HTMLElement;
+            element.querySelector('.queue-item-title')!.innerHTML = item.media.title;
+            element.querySelector('.queue-item-time')!.innerHTML = secondsToTime(item.media.duration / 1000);
+            queueItemContainer.appendChild(element);
+            queueElements.push(element);
+        });
+    }
+
+    document.getElementById('queue-close')!.addEventListener('click', () => (queuePanel.hidden = true));
+    document.getElementById('queue-button')!.addEventListener('click',  () => {
+        refreshQueue();
+        queuePanel.hidden = false;
     });
 
     const searchPanel = document.getElementById('search-panel')!;
@@ -233,6 +254,8 @@ export async function load() {
         const username = user?.name || 'server';
         const time = secondsToTime(duration / 1000);
         chat.log(`{clr=#00FFFF}+ ${title} (${time}) added by {clr=#FF0000}${username}`);
+
+        refreshQueue();
     });
 
     client.on('play', async ({ message: { item, time } }) => {
@@ -244,6 +267,8 @@ export async function load() {
             const { title, duration } = item.media;
             chat.log(`{clr=#00FFFF}> ${title} (${secondsToTime(duration / 1000)})`);
         }
+
+        refreshQueue();
     });
 
     client.on('join', (event) => chat.status(`{clr=#FF0000}${event.user.name} {clr=#FF00FF}joined`));

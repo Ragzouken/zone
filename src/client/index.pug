@@ -16,6 +16,8 @@ html
                     img(src="icons/menu.png")
                 button#search-button(title="search for video")
                     img(src="icons/search.png")
+                button#queue-button(title="view queue")
+                    img(src="icons/list.png")
                 button#resync-button(title="reload this")
                     img(src="icons/resync.png")
                 button#skip-button(title="vote to skip this")
@@ -45,6 +47,14 @@ html
                     #search-result-template.search-result
                         div title
                         img
+            #queue-panel.menu-panel(hidden)
+                .menu-title
+                    div play queue
+                    button#queue-close close
+                #queue-items
+                    .queue-item#queue-item-template
+                        .queue-item-title title
+                        .queue-item-time 00:00
             #avatar-panel(hidden)
                 input#avatar-name(type="text")
                 canvas#avatar-paint(width=8, height=8)
