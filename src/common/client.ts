@@ -233,8 +233,8 @@ export class ZoneClient extends EventEmitter {
             this.emit('play', { message });
         });
         this.messaging.messages.on('queue', (message: QueueMessage) => {
-            if (message.items.length === 1) this.emit('queue', { item: message.items[0] });
             this.zone.queue.push(...message.items);
+            if (message.items.length === 1) this.emit('queue', { item: message.items[0] });
         });
         this.messaging.messages.on('user', (message: UserState) => {
             const user = this.zone.getUser(message.userId);
