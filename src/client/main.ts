@@ -193,7 +193,7 @@ export async function load() {
     }
 
     document.getElementById('queue-close')!.addEventListener('click', () => (queuePanel.hidden = true));
-    document.getElementById('queue-button')!.addEventListener('click',  () => {
+    document.getElementById('queue-button')!.addEventListener('click', () => {
         refreshQueue();
         queuePanel.hidden = false;
     });

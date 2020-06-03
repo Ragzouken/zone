@@ -1,6 +1,6 @@
-import { QueueItem } from '../server/playback';
 import { EventEmitter } from 'events';
 import { sleep } from '../common/utility';
+import { QueueItem } from '../common/zone';
 
 export const NETWORK = ['NETWORK_EMPTY', 'NETWORK_IDLE', 'NETWORK_LOADING', 'NETWORK_NO_SOURCE'];
 export const READY = ['HAVE_NOTHING', 'HAVE_METADATA', 'HAVE_CURRENT_DATA', 'HAVE_FUTURE_DATA', 'HAVE_ENOUGH_DATA'];

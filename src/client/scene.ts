@@ -160,7 +160,7 @@ export class ZoneSceneRenderer extends EventEmitter {
 
         const aspect = container.clientWidth / container.clientHeight;
         const frustumSize = 1.1;
-        
+
         const isoCamera = new THREE.OrthographicCamera(
             (frustumSize * aspect) / -2,
             (frustumSize * aspect) / 2,
@@ -177,7 +177,7 @@ export class ZoneSceneRenderer extends EventEmitter {
         const flatCamera = new THREE.OrthographicCamera(
             (frustumSize * aspect) / -2,
             (frustumSize * aspect) / 2,
-            frustumSize /  2 / factor,
+            frustumSize / 2 / factor,
             frustumSize / -2 / factor,
             0.01,
             10,
@@ -186,7 +186,7 @@ export class ZoneSceneRenderer extends EventEmitter {
         flatCamera.lookAt(0, 0, 0);
 
         const cinemaCamera = new THREE.PerspectiveCamera(70, aspect, 0.01, 10);
-        cinemaCamera.position.set(0, 0, .8);
+        cinemaCamera.position.set(0, 0, 0.8);
         cinemaCamera.lookAt(0, 0, 0);
 
         this.cameras.push(isoCamera);
