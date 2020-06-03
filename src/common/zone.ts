@@ -18,7 +18,7 @@ export type Media = {
 };
 
 export type QueueInfo = { userId?: UserId; ip?: unknown };
-export type QueueItem = { media: Media; info: QueueInfo, itemId: number };
+export type QueueItem = { media: Media; info: QueueInfo; itemId: number };
 
 export type MediaMeta = Omit<Media, 'source'>;
 

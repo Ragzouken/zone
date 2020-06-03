@@ -392,7 +392,7 @@ export function host(xws: expressWs.Instance, adapter: low.AdapterSync, options:
         messaging.messages.on('unqueue', ({ itemId }) => {
             const item = playback.queue.find((item) => item.itemId === itemId);
             if (!item) return;
-            
+
             const dj = eventMode && djs.has(user);
             const own = item.info.userId === user.userId;
             const auth = authorised.has(user);

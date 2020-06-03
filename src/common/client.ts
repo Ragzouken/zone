@@ -218,7 +218,7 @@ export class ZoneClient extends EventEmitter {
                 this.zone.queue.splice(index, 1);
                 this.emit('unqueue', { item });
             }
-        }
+        };
 
         this.messaging.on('close', (code) => {
             const clean = code <= 1001;
@@ -245,7 +245,7 @@ export class ZoneClient extends EventEmitter {
         });
         this.messaging.messages.on('play', (message: PlayMessage) => {
             this.zone.lastPlayedItem = message.item;
-            unqueue(message.item.itemId);
+            if (message.item) unqueue(message.item.itemId);
             this.emit('play', { message });
         });
         this.messaging.messages.on('queue', (message: QueueMessage) => {
