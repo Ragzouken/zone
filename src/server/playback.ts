@@ -10,7 +10,7 @@ export type PlaybackState = {
 };
 
 export interface Playback {
-    on(event: 'play' | 'queue', callback: (media: QueueItem) => void): this;
+    on(event: 'play' | 'queue' | 'unqueue', callback: (media: QueueItem) => void): this;
     on(event: 'stop', callback: () => void): this;
 }
 
@@ -21,6 +21,8 @@ export class Playback extends EventEmitter {
     private currentBeginTime: number = 0;
     private currentEndTime: number = 0;
     private checkTimeout: NodeJS.Timeout | undefined;
+
+    private nextId = 0;
 
     constructor(public startDelay = 0) {
         super();
@@ -41,10 +43,21 @@ export class Playback extends EventEmitter {
     }
 
     queueMedia(media: Media, info: QueueInfo = {}) {
-        const queued = { media, info };
+        const itemId = this.nextId;
+        this.nextId += 1;
+
+        const queued = { media, info, itemId };
         this.queue.push(queued);
         this.emit('queue', queued);
         this.check();
+    }
+
+    unqueue(item: QueueItem) {
+        const index = this.queue.indexOf(item);
+        if (index >= 0) {
+            this.queue.splice(index, 1);
+            this.emit('unqueue', item);
+        }
     }
 
     get playing() {

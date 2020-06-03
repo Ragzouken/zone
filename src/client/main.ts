@@ -257,6 +257,7 @@ export async function load() {
 
         refreshQueue();
     });
+    client.on('unqueue', () => refreshQueue());
 
     client.on('play', async ({ message: { item, time } }) => {
         if (!item) {
@@ -267,8 +268,6 @@ export async function load() {
             const { title, duration } = item.media;
             chat.log(`{clr=#00FFFF}> ${title} (${secondsToTime(duration / 1000)})`);
         }
-
-        refreshQueue();
     });
 
     client.on('join', (event) => chat.status(`{clr=#FF0000}${event.user.name} {clr=#FF00FF}joined`));
@@ -411,6 +410,15 @@ export async function load() {
             client.command(name, JSON.parse(json));
         } else {
             client.command(args);
+        }
+    });
+
+    chatCommands.set('cancel', (index) => {
+        const item = client.zone.queue[parseInt(index, 10)];
+        if (item) {
+            client.unqueue(item);
+        } else {
+            chat.status('no queue item ' + index);
         }
     });
 

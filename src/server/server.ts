@@ -124,8 +124,10 @@ export function host(xws: expressWs.Instance, adapter: low.AdapterSync, options:
     playback.on('queue', (item: QueueItem) => sendAll('queue', { items: [item] }));
     playback.on('play', (item: QueueItem) => sendAll('play', { item: sanitiseItem(item), time: playback.currentTime }));
     playback.on('stop', () => sendAll('play', {}));
+    playback.on('unqueue', ({ itemId }) => sendAll('unqueue', { itemId }));
 
     playback.on('queue', save);
+    playback.on('unqueue', save);
     playback.on('play', save);
 
     function sourceToVideoId(source: string) {
@@ -385,6 +387,17 @@ export function host(xws: expressWs.Instance, adapter: low.AdapterSync, options:
             } else {
                 status(`can't skip during event mode`, user);
             }
+        });
+
+        messaging.messages.on('unqueue', ({ itemId }) => {
+            const item = playback.queue.find((item) => item.itemId === itemId);
+            if (!item) return;
+            
+            const dj = eventMode && djs.has(user);
+            const own = item.info.userId === user.userId;
+            const auth = authorised.has(user);
+
+            if (dj || own || auth) playback.unqueue(item);
         });
 
         messaging.messages.on('user', (changes: Partial<UserState>) => {
