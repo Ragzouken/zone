@@ -1,5 +1,4 @@
 import { getDefault } from './utility';
-import { QueueItem } from '../server/playback';
 
 export type UserId = string;
 
@@ -17,6 +16,9 @@ export type Media = {
     source: string;
     thumbnail?: string;
 };
+
+export type QueueInfo = { userId?: UserId; ip?: unknown };
+export type QueueItem = { media: Media; info: QueueInfo };
 
 export type MediaMeta = Omit<Media, 'source'>;
 

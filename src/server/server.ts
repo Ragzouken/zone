@@ -3,9 +3,9 @@ import * as expressWs from 'express-ws';
 import * as low from 'lowdb';
 
 import * as youtube from './youtube';
-import Playback, { QueueItem } from './playback';
+import Playback from './playback';
 import Messaging from '../common/messaging';
-import { ZoneState, UserId, UserState, mediaEquals, Media } from '../common/zone';
+import { ZoneState, UserId, UserState, mediaEquals, Media, QueueItem } from '../common/zone';
 import { nanoid } from 'nanoid';
 import { copy } from '../common/utility';
 import { MESSAGE_SCHEMAS } from './protocol';

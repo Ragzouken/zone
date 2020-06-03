@@ -1,10 +1,7 @@
 import { EventEmitter } from 'events';
 import { performance } from 'perf_hooks';
 import { copy } from '../common/utility';
-import { UserId, Media } from '../common/zone';
-
-export type QueueInfo = { userId?: UserId; ip?: unknown };
-export type QueueItem = { media: Media; info: QueueInfo };
+import { Media, QueueItem, QueueInfo } from '../common/zone';
 
 export type PlaybackState = {
     current?: QueueItem;

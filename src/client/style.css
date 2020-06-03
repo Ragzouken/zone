@@ -201,18 +201,20 @@ input[type="text"]:focus {
     display: flex;
     flex-direction: row;
     align-items: stretch;
+    padding: 4px;
+}
+
+.queue-item > * {
+    margin: 4px;
 }
 
 .queue-item-title {
     flex: 1;
-    margin: 8px;
 }
 
 .queue-item-time {
     width: 128px;
     flex: 0;
-    margin: 8px;
-    margin-left: 0;
     
     color: #00ffff;
 }

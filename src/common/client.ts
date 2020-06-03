@@ -1,9 +1,8 @@
 import Messaging from './messaging';
-import { QueueItem } from '../server/playback';
 import { EventEmitter } from 'events';
 import { YoutubeVideo } from '../server/youtube';
 import { specifically } from './utility';
-import { ZoneState, UserState, mediaEquals } from './zone';
+import { ZoneState, UserState, mediaEquals, QueueItem } from './zone';
 import fetch from 'node-fetch';
 
 export type StatusMesage = { text: string };

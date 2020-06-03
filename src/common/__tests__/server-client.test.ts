@@ -249,7 +249,7 @@ describe('user presence', () => {
 
 describe('playback', () => {
     it('sends currently playing on join', async () => {
-        await zoneServer({ playbackPaddingTime: 0 }, async (server) => {
+        await zoneServer({ playbackStartDelay: 0 }, async (server) => {
             server.hosting.playback.queueMedia(DAY_MEDIA);
 
             const client = await server.client();
@@ -263,7 +263,7 @@ describe('playback', () => {
     });
 
     it('sends empty play when all playback ends', async () => {
-        await zoneServer({ playbackPaddingTime: 0 }, async (server) => {
+        await zoneServer({ playbackStartDelay: 0 }, async (server) => {
             const client = await server.client();
             await client.join();
 
