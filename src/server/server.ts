@@ -329,10 +329,11 @@ export function host(xws: expressWs.Instance, adapter: low.AdapterSync, options:
 
         const existing = playback.queue.find((queued) => mediaEquals(queued.media, media))?.media;
         const count = playback.queue.filter((item) => item.info.ip === userIp).length;
+        const dj = eventMode && djs.has(user);
 
         if (existing) {
             status(`'${existing.title}' is already queued`, user);
-        } else if (count >= opts.perUserQueueLimit) {
+        } else if (!dj && count >= opts.perUserQueueLimit) {
             status(`you already have ${count} videos in the queue`, user);
         } else {
             playback.queueMedia(media, { userId: user.userId, ip: userIp });
