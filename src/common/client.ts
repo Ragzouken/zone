@@ -210,12 +210,10 @@ export class ZoneClient extends EventEmitter {
     }
 
     private addStandardListeners() {
-        const unqueue = (itemId?: number) => {
-            if (!itemId) return;
+        const unqueue = (itemId: number) => {
             const index = this.zone.queue.findIndex((item) => item.itemId === itemId);
             if (index >= 0) {
-                const item = this.zone.queue[index];
-                this.zone.queue.splice(index, 1);
+                const [item] = this.zone.queue.splice(index, 1);
                 this.emit('unqueue', { item });
             }
         };

@@ -17,13 +17,14 @@ export class Player extends EventEmitter {
     private item?: QueueItem;
     private itemPlayStart = 0;
     private reloading?: object;
+    private startedPlaying = false;
 
     constructor(private readonly element: HTMLVideoElement) {
         super();
 
         let lastUnstall = performance.now();
         setInterval(() => {
-            if (this.reloading || !this.hasItem) return;
+            if (!this.startedPlaying) return;
 
             if (this.element.readyState >= HTMLMediaElement.HAVE_FUTURE_DATA) {
                 lastUnstall = performance.now();
@@ -108,9 +109,10 @@ export class Player extends EventEmitter {
         if (error > 0.1) this.element.currentTime = target;
     }
 
-    private async reloadSource() {
-        if (!this.item || !!this.reloading) return;
+    private async reloadSource(force = false) {
+        if (!this.item || (!force && !!this.reloading)) return;
         const token = {};
+        this.startedPlaying = false;
         this.reloading = token;
 
         const done = () => {
@@ -127,13 +129,13 @@ export class Player extends EventEmitter {
             if (this.elapsed < 0) await sleep(-this.elapsed);
             this.reseek();
             await this.element.play();
+            this.startedPlaying = true;
             done();
         } catch (e) {
             console.log('source failed', this.status, e);
             if (this.reloading === token) {
-                done();
-                await sleep(100);
-                this.reloadSource();
+                await sleep(500);
+                this.reloadSource(true);
             }
         } finally {
             done();
