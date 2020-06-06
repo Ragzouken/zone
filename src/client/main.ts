@@ -185,8 +185,15 @@ export async function load() {
 
         client.zone.queue.forEach((item) => {
             const element = queueItemTemplate.cloneNode(true) as HTMLElement;
-            element.querySelector('.queue-item-title')!.innerHTML = item.media.title;
-            element.querySelector('.queue-item-time')!.innerHTML = secondsToTime(item.media.duration / 1000);
+            const titleElement = element.querySelector('.queue-item-title')!;
+            const timeElement = element.querySelector('.queue-item-time')!;
+            const cancelButton = element.querySelector('.queue-item-cancel') as HTMLButtonElement;
+
+            titleElement.innerHTML = item.media.title;
+            timeElement.innerHTML = secondsToTime(item.media.duration / 1000);
+            cancelButton.disabled = item.info.userId !== getLocalUser()?.userId;
+            cancelButton.addEventListener('click', () => client.unqueue(item));
+
             queueItemContainer.appendChild(element);
             queueElements.push(element);
         });

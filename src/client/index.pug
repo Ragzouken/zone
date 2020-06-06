@@ -55,6 +55,8 @@ html
                     .queue-item#queue-item-template
                         .queue-item-title title
                         .queue-item-time 00:00
+                        button.queue-item-cancel(title="unqueue this")
+                            img(src="icons/cancel.png")
             #avatar-panel(hidden)
                 input#avatar-name(type="text")
                 canvas#avatar-paint(width=8, height=8)
