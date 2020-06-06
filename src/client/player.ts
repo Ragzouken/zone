@@ -144,6 +144,7 @@ export class Player extends EventEmitter {
 
     private removeSource() {
         this.reloading = undefined;
+        this.startedPlaying = false;
         this.element.pause();
         this.element.removeAttribute('src');
         this.element.load();
