@@ -249,7 +249,7 @@ describe('user presence', () => {
 
 describe('playback', () => {
     it('sends currently playing on join', async () => {
-        await zoneServer({ playbackPaddingTime: 0 }, async (server) => {
+        await zoneServer({ playbackStartDelay: 0 }, async (server) => {
             server.hosting.playback.queueMedia(DAY_MEDIA);
 
             const client = await server.client();
@@ -263,7 +263,7 @@ describe('playback', () => {
     });
 
     it('sends empty play when all playback ends', async () => {
-        await zoneServer({ playbackPaddingTime: 0 }, async (server) => {
+        await zoneServer({ playbackStartDelay: 0 }, async (server) => {
             const client = await server.client();
             await client.join();
 
@@ -301,6 +301,33 @@ describe('playback', () => {
             const queued = client.local('DAY_MEDIA');
 
             await expect(queued).rejects.toEqual('timeout');
+        });
+    });
+
+    it("can unqueue own items", async () => {
+        await zoneServer({}, async (server) => {
+            const client = await server.client();
+
+            await client.join();
+            console.log(await client.local('DAY_MEDIA'));
+            const item = await client.local('TINY_MEDIA');
+
+            await client.unqueue(item);
+        });
+    });
+
+    it("can't unqueue another's items", async () => {
+        await zoneServer({}, async (server) => {
+            const client1 = await server.client();
+            const client2 = await server.client();
+            
+            await client1.join();
+            await client2.join();
+            await client1.local('DAY_MEDIA');
+            const item = await client1.local('TINY_MEDIA');
+            const unqueued = client2.unqueue(item);
+
+            await expect(unqueued).rejects.toEqual('timeout');
         });
     });
 

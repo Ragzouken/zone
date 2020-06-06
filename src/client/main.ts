@@ -119,12 +119,7 @@ function listUsers() {
 }
 
 const help = [
-    'use the buttons on the top left to queue videos, and the buttons on the bottom right to change your appearance',
-    'display these instructions: /help',
-    'toggle typing/controls: press tab',
-    'toggle queue: press q',
-    'add specific video: /youtube url',
-    'show user list: /users',
+    'use the buttons on the top left to queue videos, and the buttons on the bottom right to change your appearance. press tab to switch between typing and moving',
 ].join('\n');
 
 function listHelp() {
@@ -138,11 +133,10 @@ function textToYoutubeVideoId(text: string) {
 }
 
 export async function load() {
-    const popoutButton = document.getElementById('popout-button') as HTMLButtonElement;
     const popoutPanel = document.getElementById('popout-panel') as HTMLElement;
     const video = document.createElement('video');
     popoutPanel.appendChild(video);
-    popoutButton.addEventListener('click', () => (popoutPanel.hidden = false));
+    document.getElementById('popout-button')?.addEventListener('click', () => (popoutPanel.hidden = false));
     popoutPanel.addEventListener('click', () => (popoutPanel.hidden = true));
 
     const player = new Player(video);
@@ -178,6 +172,39 @@ export async function load() {
         chat.status(`notifications ${permission}`);
     });
 
+    const queuePanel = document.getElementById('queue-panel')!;
+    const queueItemContainer = document.getElementById('queue-items')!;
+    const queueItemTemplate = document.getElementById('queue-item-template')!;
+    queueItemTemplate.parentElement!.removeChild(queueItemTemplate);
+
+    const queueElements: HTMLElement[] = [];
+
+    function refreshQueue() {
+        queueElements.forEach((item) => item.parentElement!.removeChild(item));
+        queueElements.length = 0;
+
+        client.zone.queue.forEach((item) => {
+            const element = queueItemTemplate.cloneNode(true) as HTMLElement;
+            const titleElement = element.querySelector('.queue-item-title')!;
+            const timeElement = element.querySelector('.queue-item-time')!;
+            const cancelButton = element.querySelector('.queue-item-cancel') as HTMLButtonElement;
+
+            titleElement.innerHTML = item.media.title;
+            timeElement.innerHTML = secondsToTime(item.media.duration / 1000);
+            cancelButton.disabled = item.info.userId !== getLocalUser()?.userId;
+            cancelButton.addEventListener('click', () => client.unqueue(item));
+
+            queueItemContainer.appendChild(element);
+            queueElements.push(element);
+        });
+    }
+
+    document.getElementById('queue-close')!.addEventListener('click', () => (queuePanel.hidden = true));
+    document.getElementById('queue-button')!.addEventListener('click', () => {
+        refreshQueue();
+        queuePanel.hidden = false;
+    });
+
     const searchPanel = document.getElementById('search-panel')!;
     const searchInput = document.getElementById('search-input') as HTMLInputElement;
     const searchSubmit = document.getElementById('search-submit') as HTMLButtonElement;
@@ -203,13 +230,18 @@ export async function load() {
         searchResults.innerText = 'searching...';
         client.search(searchInput.value).then((results) => {
             searchResults.innerHTML = '';
-            results.forEach(({ title, duration, videoId }) => {
+            results.forEach(({ title, duration, videoId, thumbnail }) => {
                 const row = searchResultTemplate.cloneNode(true) as HTMLElement;
                 row.addEventListener('click', () => {
                     searchPanel.hidden = true;
                     client.youtube(videoId);
                 });
-                row.innerHTML = `${title} (${secondsToTime(duration / 1000)})`;
+
+                const div = row.querySelector('div')!;
+                const img = row.querySelector('img')!;
+
+                div.innerHTML = `${title} (${secondsToTime(duration / 1000)})`;
+                img.src = thumbnail || '';
                 searchResults.appendChild(row);
             });
         });
@@ -229,7 +261,10 @@ export async function load() {
         const username = user?.name || 'server';
         const time = secondsToTime(duration / 1000);
         chat.log(`{clr=#00FFFF}+ ${title} (${time}) added by {clr=#FF0000}${username}`);
+
+        refreshQueue();
     });
+    client.on('unqueue', () => refreshQueue());
 
     client.on('play', async ({ message: { item, time } }) => {
         if (!item) {
@@ -385,6 +420,15 @@ export async function load() {
         }
     });
 
+    chatCommands.set('cancel', (index) => {
+        const item = client.zone.queue[parseInt(index, 10)];
+        if (item) {
+            client.unqueue(item);
+        } else {
+            chat.status('no queue item ' + index);
+        }
+    });
+
     const emoteToggles = new Map<string, Element>();
     const toggleEmote = (emote: string) => setEmote(emote, !getEmote(emote));
     const getEmote = (emote: string) => emoteToggles.get(emote)!.classList.contains('active');
@@ -451,6 +495,7 @@ export async function load() {
         }
     });
 
+    const playerStatus = document.getElementById('player-status')!;
     const chatContext = document.querySelector<HTMLCanvasElement>('#chat-canvas')!.getContext('2d')!;
     chatContext.imageSmoothingEnabled = false;
 
@@ -492,7 +537,6 @@ export async function load() {
             line('*** END ***', total);
             lines[lines.length - 1] = '{clr=#FF00FF}' + lines[lines.length - 1];
         }
-        lines.push('{clr=#FF00FF}' + player.status);
 
         const queuePage = scriptToPages(lines.join('\n'), layout)[0];
         animatePage(queuePage);
@@ -504,6 +548,8 @@ export async function load() {
     }
 
     function redraw() {
+        playerStatus.innerHTML = player.status;
+
         chatContext.fillStyle = 'rgb(0, 0, 0)';
         chatContext.fillRect(0, 0, 512, 512);
 
@@ -541,6 +587,8 @@ export async function load() {
     }
 
     renderScene();
+
+    document.getElementById('camera-button')!.addEventListener('click', () => sceneRenderer.cycleCamera());
 
     const tooltip = document.getElementById('tooltip')!;
     sceneRenderer.on('pointerdown', (point) => moveTo(point.x, point.y));

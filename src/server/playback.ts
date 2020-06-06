@@ -1,32 +1,31 @@
 import { EventEmitter } from 'events';
 import { performance } from 'perf_hooks';
 import { copy } from '../common/utility';
-import { UserId, Media } from '../common/zone';
-
-export type QueueInfo = { userId?: UserId; ip?: unknown };
-export type QueueItem = { media: Media; info: QueueInfo };
+import { Media, QueueItem, QueueInfo } from '../common/zone';
 
 export type PlaybackState = {
     current?: QueueItem;
     queue: QueueItem[];
     time: number;
+    nextId: number,
 };
 
 export interface Playback {
-    on(event: 'play' | 'queue', callback: (media: QueueItem) => void): this;
+    on(event: 'play' | 'queue' | 'unqueue', callback: (media: QueueItem) => void): this;
     on(event: 'stop', callback: () => void): this;
 }
 
 export class Playback extends EventEmitter {
     public currentItem?: QueueItem;
     public queue: QueueItem[] = [];
-    public paddingTime = 0;
 
     private currentBeginTime: number = 0;
     private currentEndTime: number = 0;
     private checkTimeout: NodeJS.Timeout | undefined;
 
-    constructor() {
+    private nextId = 0;
+
+    constructor(public startDelay = 0) {
         super();
         this.clearMedia();
     }
@@ -36,19 +35,34 @@ export class Playback extends EventEmitter {
             current: this.currentItem,
             queue: this.queue,
             time: this.currentTime,
+            nextId: this.nextId, 
         };
     }
 
     loadState(data: PlaybackState) {
         if (data.current) this.setMedia(data.current, data.time);
-        data.queue.forEach((item) => this.queueMedia(item.media, item.info));
+        data.queue.forEach((item) => this.queueMedia(item.media, item.info, item.itemId));
+        this.nextId = data.nextId || 0;
     }
 
-    queueMedia(media: Media, info: QueueInfo = {}) {
-        const queued = { media, info };
+    queueMedia(media: Media, info: QueueInfo = {}, itemId?: number) {
+        if (itemId === undefined) {
+            itemId = this.nextId;
+            this.nextId += 1;
+        }
+
+        const queued = { media, info, itemId };
         this.queue.push(queued);
         this.emit('queue', queued);
         this.check();
+    }
+
+    unqueue(item: QueueItem) {
+        const index = this.queue.indexOf(item);
+        if (index >= 0) {
+            this.queue.splice(index, 1);
+            this.emit('unqueue', item);
+        }
     }
 
     get playing() {
@@ -70,7 +84,7 @@ export class Playback extends EventEmitter {
     }
 
     private playMedia(media: QueueItem) {
-        this.setMedia(media, -this.paddingTime);
+        this.setMedia(media, -this.startDelay);
     }
 
     private clearMedia() {
@@ -82,7 +96,7 @@ export class Playback extends EventEmitter {
     private check() {
         if (this.playing) {
             if (this.checkTimeout) clearTimeout(this.checkTimeout);
-            this.checkTimeout = setTimeout(() => this.check(), this.remainingTime + this.paddingTime);
+            this.checkTimeout = setTimeout(() => this.check(), this.remainingTime);
         } else {
             this.skip();
         }

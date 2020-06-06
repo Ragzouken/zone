@@ -11,19 +11,21 @@ html
     body
         #scene
             #three-container
-            #top-toolbar
+            #top-toolbar.toolbar
                 button#menu-button(title="open menu")
                     img(src="icons/menu.png")
                 button#search-button(title="search for video")
                     img(src="icons/search.png")
+                button#queue-button(title="view queue")
+                    img(src="icons/list.png")
                 button#resync-button(title="reload this")
                     img(src="icons/resync.png")
                 button#skip-button(title="vote to skip this")
                     img(src="icons/skip.png")
-                button#popout-button(title="pop out video")
-                    img(src="icons/popout.png")
-                .spacer
-            #bottom-toolbar
+                button#camera-button(title="switch view")
+                    img(src="icons/look.png")
+                #player-status
+            #bottom-toolbar.toolbar
                 #tooltip
                 button(title="toggle float emote (1)", data-emote-toggle="wvy")
                     img(src="icons/wvy.png")
@@ -42,7 +44,19 @@ html
                     input#search-submit(type="submit" value="search" disabled)
                     button#search-close close
                 #search-results
-                    #search-result-template.search-result result
+                    #search-result-template.search-result
+                        div title
+                        img
+            #queue-panel.menu-panel(hidden)
+                .menu-title
+                    div play queue
+                    button#queue-close close
+                #queue-items
+                    .queue-item#queue-item-template
+                        .queue-item-title title
+                        .queue-item-time 00:00
+                        button.queue-item-cancel(title="unqueue this")
+                            img(src="icons/cancel.png")
             #avatar-panel(hidden)
                 input#avatar-name(type="text")
                 canvas#avatar-paint(width=8, height=8)
@@ -59,6 +73,7 @@ html
                 div
                     button#play-banger queue random song
                     button#enable-notifications enable notifications
+                    button#popout-button pop out video
         canvas#chat-canvas(width=512, height=512)
         #chat-inputs
             input#chat-input(type="text", placeholder="chat message...", maxlength="160")

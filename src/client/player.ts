@@ -1,14 +1,15 @@
-import { QueueItem } from '../server/playback';
 import { EventEmitter } from 'events';
 import { sleep } from '../common/utility';
+import { QueueItem } from '../common/zone';
 
 export const NETWORK = ['NETWORK_EMPTY', 'NETWORK_IDLE', 'NETWORK_LOADING', 'NETWORK_NO_SOURCE'];
 export const READY = ['HAVE_NOTHING', 'HAVE_METADATA', 'HAVE_CURRENT_DATA', 'HAVE_FUTURE_DATA', 'HAVE_ENOUGH_DATA'];
 
 export async function expectMetadata(element: HTMLMediaElement) {
     return new Promise((resolve, reject) => {
-        setTimeout(() => reject('timeout'), 2000);
+        setTimeout(() => reject('timeout'), 30 * 1000);
         element.addEventListener('loadedmetadata', resolve, { once: true });
+        element.addEventListener('error', reject, { once: true });
     });
 }
 
@@ -16,13 +17,14 @@ export class Player extends EventEmitter {
     private item?: QueueItem;
     private itemPlayStart = 0;
     private reloading?: object;
+    private startedPlaying = false;
 
     constructor(private readonly element: HTMLVideoElement) {
         super();
 
         let lastUnstall = performance.now();
         setInterval(() => {
-            if (this.reloading || !this.hasItem) return;
+            if (!this.startedPlaying) return;
 
             if (this.element.readyState >= HTMLMediaElement.HAVE_FUTURE_DATA) {
                 lastUnstall = performance.now();
@@ -53,9 +55,19 @@ export class Player extends EventEmitter {
     }
 
     get status() {
-        const network = NETWORK[this.element.networkState];
-        const ready = READY[this.element.readyState];
-        return `${network} / ${ready}`;
+        if (!this.item) {
+            return 'done';
+        } else if (this.element.networkState === HTMLMediaElement.NETWORK_NO_SOURCE) {
+            return 'no source';
+        } else if (this.element.readyState === HTMLMediaElement.HAVE_ENOUGH_DATA) {
+            return this.elapsed < 0 ? 'ready' : 'playing';
+        } else if (this.element.readyState >= HTMLMediaElement.HAVE_METADATA) {
+            return 'loading video';
+        } else if (this.element.readyState === HTMLMediaElement.HAVE_NOTHING) {
+            return 'loading metadata';
+        } else {
+            return 'loading video';
+        }
     }
 
     get volume() {
@@ -97,9 +109,10 @@ export class Player extends EventEmitter {
         if (error > 0.1) this.element.currentTime = target;
     }
 
-    private async reloadSource() {
-        if (!this.item || !!this.reloading) return;
+    private async reloadSource(force = false) {
+        if (!this.item || (!force && !!this.reloading)) return;
         const token = {};
+        this.startedPlaying = false;
         this.reloading = token;
 
         const done = () => {
@@ -108,7 +121,7 @@ export class Player extends EventEmitter {
 
         this.element.pause();
         const waiter = expectMetadata(this.element);
-        this.element.src = this.item.media.source + '#t=' + this.elapsed / 1000;
+        this.element.src = this.item.media.source;
         this.element.load();
 
         try {
@@ -116,12 +129,13 @@ export class Player extends EventEmitter {
             if (this.elapsed < 0) await sleep(-this.elapsed);
             this.reseek();
             await this.element.play();
+            this.startedPlaying = true;
             done();
         } catch (e) {
             console.log('source failed', this.status, e);
             if (this.reloading === token) {
-                done();
-                this.reloadSource();
+                await sleep(500);
+                this.reloadSource(true);
             }
         } finally {
             done();
@@ -130,6 +144,7 @@ export class Player extends EventEmitter {
 
     private removeSource() {
         this.reloading = undefined;
+        this.startedPlaying = false;
         this.element.pause();
         this.element.removeAttribute('src');
         this.element.load();

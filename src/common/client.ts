@@ -1,9 +1,8 @@
 import Messaging from './messaging';
-import { QueueItem } from '../server/playback';
 import { EventEmitter } from 'events';
 import { YoutubeVideo } from '../server/youtube';
 import { specifically } from './utility';
-import { ZoneState, UserState, mediaEquals } from './zone';
+import { ZoneState, UserState, QueueItem } from './zone';
 import fetch from 'node-fetch';
 
 export type StatusMesage = { text: string };
@@ -14,6 +13,7 @@ export type UsersMessage = { users: UserState[] };
 export type LeaveMessage = { userId: string };
 export type PlayMessage = { item: QueueItem; time: number };
 export type QueueMessage = { items: QueueItem[] };
+export type UnqueueMessage = { itemId: number };
 
 export type SendChat = { text: string };
 export type RecvChat = { text: string; userId: string };
@@ -58,6 +58,7 @@ export interface ClientEventMap {
 
     play: (event: { message: PlayMessage }) => void;
     queue: (event: { item: QueueItem }) => void;
+    unqueue: (event: { item: QueueItem }) => void;
 
     move: (event: { user: UserState; position: number[]; local: boolean }) => void;
     emotes: (event: { user: UserState; emotes: string[]; local: boolean }) => void;
@@ -194,6 +195,19 @@ export class ZoneClient extends EventEmitter {
         });
     }
 
+    async unqueue(item: QueueItem) {
+        return new Promise<QueueItem>((resolve, reject) => {
+            setTimeout(() => reject('timeout'), this.options.quickResponseTimeout);
+            specifically(
+                this, 
+                'unqueue', 
+                (unqueued: QueueItem) => unqueued.itemId === unqueued.itemId, 
+                resolve,
+            );
+            this.messaging.send('unqueue', { itemId: item.itemId });
+        });
+    }
+
     async skip() {
         if (!this.zone.lastPlayedItem) return;
         const source = this.zone.lastPlayedItem.media.source;
@@ -201,6 +215,14 @@ export class ZoneClient extends EventEmitter {
     }
 
     private addStandardListeners() {
+        const unqueue = (itemId: number) => {
+            const index = this.zone.queue.findIndex((item) => item.itemId === itemId);
+            if (index >= 0) {
+                const [item] = this.zone.queue.splice(index, 1);
+                this.emit('unqueue', { item });
+            }
+        };
+
         this.messaging.on('close', (code) => {
             const clean = code <= 1001;
             this.emit('disconnect', { clean });
@@ -226,15 +248,15 @@ export class ZoneClient extends EventEmitter {
         });
         this.messaging.messages.on('play', (message: PlayMessage) => {
             this.zone.lastPlayedItem = message.item;
-
-            const index = this.zone.queue.findIndex((item) => mediaEquals(item.media, message.item?.media));
-            if (index >= 0) this.zone.queue.splice(index, 1);
-
+            if (message.item) unqueue(message.item.itemId);
             this.emit('play', { message });
         });
         this.messaging.messages.on('queue', (message: QueueMessage) => {
-            if (message.items.length === 1) this.emit('queue', { item: message.items[0] });
             this.zone.queue.push(...message.items);
+            if (message.items.length === 1) this.emit('queue', { item: message.items[0] });
+        });
+        this.messaging.messages.on('unqueue', (message: UnqueueMessage) => {
+            unqueue(message.itemId);
         });
         this.messaging.messages.on('user', (message: UserState) => {
             const user = this.zone.getUser(message.userId);

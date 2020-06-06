@@ -3,9 +3,9 @@ import * as expressWs from 'express-ws';
 import * as low from 'lowdb';
 
 import * as youtube from './youtube';
-import Playback, { QueueItem } from './playback';
+import Playback from './playback';
 import Messaging from '../common/messaging';
-import { ZoneState, UserId, UserState, mediaEquals, Media } from '../common/zone';
+import { ZoneState, UserId, UserState, mediaEquals, Media, QueueItem } from '../common/zone';
 import { nanoid } from 'nanoid';
 import { copy } from '../common/utility';
 import { MESSAGE_SCHEMAS } from './protocol';
@@ -27,7 +27,7 @@ export type HostOptions = {
     joinPassword?: string;
     authPassword?: string;
 
-    playbackPaddingTime: number;
+    playbackStartDelay: number;
 };
 
 export const DEFAULT_OPTIONS: HostOptions = {
@@ -41,7 +41,7 @@ export const DEFAULT_OPTIONS: HostOptions = {
     voteSkipThreshold: 0.6,
     errorSkipThreshold: 0.4,
 
-    playbackPaddingTime: 1 * SECONDS,
+    playbackStartDelay: 3 * SECONDS,
 };
 
 const HALFHOUR = 30 * 60 * 60 * 1000;
@@ -109,8 +109,7 @@ export function host(xws: expressWs.Instance, adapter: low.AdapterSync, options:
     const authorised = new Set<UserState>();
 
     const zone = new ZoneState();
-    const playback = new Playback();
-    playback.paddingTime = opts.playbackPaddingTime;
+    const playback = new Playback(opts.playbackStartDelay);
 
     let eventMode = false;
     const djs = new Set<UserState>();
@@ -123,10 +122,12 @@ export function host(xws: expressWs.Instance, adapter: low.AdapterSync, options:
     load();
 
     playback.on('queue', (item: QueueItem) => sendAll('queue', { items: [item] }));
-    playback.on('play', (item: QueueItem) => sendAll('play', { item: sanitiseItem(item) }));
+    playback.on('play', (item: QueueItem) => sendAll('play', { item: sanitiseItem(item), time: playback.currentTime }));
     playback.on('stop', () => sendAll('play', {}));
+    playback.on('unqueue', ({ itemId }) => sendAll('unqueue', { itemId }));
 
     playback.on('queue', save);
+    playback.on('unqueue', save);
     playback.on('play', save);
 
     function sourceToVideoId(source: string) {
@@ -328,10 +329,11 @@ export function host(xws: expressWs.Instance, adapter: low.AdapterSync, options:
 
         const existing = playback.queue.find((queued) => mediaEquals(queued.media, media))?.media;
         const count = playback.queue.filter((item) => item.info.ip === userIp).length;
+        const dj = eventMode && djs.has(user);
 
         if (existing) {
             status(`'${existing.title}' is already queued`, user);
-        } else if (count >= opts.perUserQueueLimit) {
+        } else if (!dj && count >= opts.perUserQueueLimit) {
             status(`you already have ${count} videos in the queue`, user);
         } else {
             playback.queueMedia(media, { userId: user.userId, ip: userIp });
@@ -386,6 +388,17 @@ export function host(xws: expressWs.Instance, adapter: low.AdapterSync, options:
             } else {
                 status(`can't skip during event mode`, user);
             }
+        });
+
+        messaging.messages.on('unqueue', ({ itemId }) => {
+            const item = playback.queue.find((item) => item.itemId === itemId);
+            if (!item) return;
+
+            const dj = eventMode && djs.has(user);
+            const own = item.info.userId === user.userId;
+            const auth = authorised.has(user);
+
+            if (dj || own || auth) playback.unqueue(item);
         });
 
         messaging.messages.on('user', (changes: Partial<UserState>) => {
