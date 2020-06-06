@@ -7,6 +7,7 @@ export type PlaybackState = {
     current?: QueueItem;
     queue: QueueItem[];
     time: number;
+    nextId: number,
 };
 
 export interface Playback {
@@ -34,17 +35,21 @@ export class Playback extends EventEmitter {
             current: this.currentItem,
             queue: this.queue,
             time: this.currentTime,
+            nextId: this.nextId, 
         };
     }
 
     loadState(data: PlaybackState) {
         if (data.current) this.setMedia(data.current, data.time);
-        data.queue.forEach((item) => this.queueMedia(item.media, item.info));
+        data.queue.forEach((item) => this.queueMedia(item.media, item.info, item.itemId));
+        this.nextId = data.nextId || 0;
     }
 
-    queueMedia(media: Media, info: QueueInfo = {}) {
-        const itemId = this.nextId;
-        this.nextId += 1;
+    queueMedia(media: Media, info: QueueInfo = {}, itemId?: number) {
+        if (itemId === undefined) {
+            itemId = this.nextId;
+            this.nextId += 1;
+        }
 
         const queued = { media, info, itemId };
         this.queue.push(queued);

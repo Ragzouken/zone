@@ -198,7 +198,12 @@ export class ZoneClient extends EventEmitter {
     async unqueue(item: QueueItem) {
         return new Promise<QueueItem>((resolve, reject) => {
             setTimeout(() => reject('timeout'), this.options.quickResponseTimeout);
-            this.once('unqueue', () => resolve());
+            specifically(
+                this, 
+                'unqueue', 
+                (unqueued: QueueItem) => unqueued.itemId === unqueued.itemId, 
+                resolve,
+            );
             this.messaging.send('unqueue', { itemId: item.itemId });
         });
     }
