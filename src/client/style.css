@@ -270,6 +270,20 @@ input[type="text"]:focus {
     width: 448px; height: 252px;
 }
 
+#user-panel {
+    position: absolute;
+    right: 0; bottom: 0;
+    margin: 8px;
+
+    width: 50%;
+
+    display: flex;
+    flex-direction: column;
+
+    padding: 8px;
+    background: black;
+}
+
 #avatar-panel {
     position: absolute;
     right: 0; bottom: 0;

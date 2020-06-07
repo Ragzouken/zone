@@ -49,6 +49,7 @@ export const DEFAULT_OPTIONS: ClientOptions = {
 
 export interface ClientEventMap {
     disconnect: (event: { clean: boolean }) => void;
+    joined: (event: { user: UserState }) => void;
 
     chat: (event: { user: UserState; text: string; local: boolean }) => void;
     join: (event: { user: UserState }) => void;
@@ -114,6 +115,7 @@ export class ZoneClient extends EventEmitter {
         }).then((assign) => {
             this.assignation = assign;
             this.localUser = this.zone.getUser(assign.userId);
+            this.emit('joined', { user: this.localUser });
             return assign;
         });
     }
