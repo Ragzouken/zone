@@ -180,6 +180,7 @@ input[type="text"]:focus {
 }
 
 .menu-title {
+    width: 100%;
     display: flex;
     flex-direction: row;
     align-items: stretch;
@@ -189,8 +190,19 @@ input[type="text"]:focus {
     flex: 1;
 }
 
-.menu-title > button {
+.icon-button-small {
+    width: 24px;
+    height: 24px;
     flex: 0;
+
+    border: none;
+    padding: 4px;
+    background-color: var(--button-color);
+    border-color: var(--button-color);
+}
+
+.icon-button-small > img {
+    width: 16px; height: 16px;
 }
 
 #queue-items {
@@ -248,6 +260,7 @@ input[type="text"]:focus {
     padding: 16px;
 
     display: flex;
+    flex-direction: column;
     align-items: center;
     align-content: center;
     justify-content: center;
@@ -262,12 +275,16 @@ input[type="text"]:focus {
     right: 0; bottom: 0;
     margin: 8px;
 
+    width: 50%;
+
     display: flex;
     flex-direction: column;
 
     padding: 8px;
 
     background: black;
+
+    align-items: center;
 }
 
 #avatar-panel > *:not(:first-child) {
@@ -346,6 +363,7 @@ body {
 
 #avatar-paint {
     width: 128px; height: 128px;
+    background-color: var(--button-color);
 }
 
 #three-container {

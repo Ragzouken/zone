@@ -38,11 +38,16 @@ html
                 button#avatar-button(title="change appearance")
                     img(src="icons/avatar.png")
             #popout-panel(hidden)
+                .menu-title
+                    div video pop-out
+                    button#popout-close(title="hide panel").icon-button-small
+                        img(src="icons/close.png")
             #search-panel.menu-panel(hidden)
                 form#search-form
                     input#search-input(type="text", placeholder="search for a video")
                     input#search-submit(type="submit" value="search" disabled)
-                    button#search-close close
+                    button#search-close(title="hide panel").icon-button-small
+                        img(src="icons/close.png")
                 #search-results
                     #search-result-template.search-result
                         div title
@@ -50,7 +55,8 @@ html
             #queue-panel.menu-panel(hidden)
                 .menu-title
                     div play queue
-                    button#queue-close close
+                    button#queue-close(title="hide panel").icon-button-small
+                        img(src="icons/close.png")
                 #queue-items
                     .queue-item#queue-item-template
                         .queue-item-title title
@@ -58,15 +64,18 @@ html
                         button.queue-item-cancel(title="unqueue this")
                             img(src="icons/cancel.png")
             #avatar-panel(hidden)
-                input#avatar-name(type="text")
+                .menu-title
+                    div update appearance
+                    button#avatar-cancel(title="hide panel").icon-button-small
+                        img(src="icons/close.png")
                 canvas#avatar-paint(width=8, height=8)
-                .controls
-                    button#avatar-update update
-                    button#avatar-cancel close
+                input#avatar-name(type="text")
+                button#avatar-update update
             #menu-panel.menu-panel(hidden)
-                div
-                    span menu
-                    button#menu-close close
+                .menu-title
+                    div miscellanious options
+                    button#menu-close(title="hide panel").icon-button-small
+                        img(src="icons/close.png")
                 div
                     label(for="volume-slider") volume
                     input#volume-slider(type="range", min="0", max="1", step=".01")
