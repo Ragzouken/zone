@@ -172,6 +172,18 @@ export async function load() {
         chat.status(`notifications ${permission}`);
     });
 
+    const userPanel = document.getElementById('user-panel')!;
+    const userItemContainer = document.getElementById('user-items')!;
+
+    function refreshUsers() {
+        const users = Array.from(client.zone.users.values());
+        const names = users.map(user => user.name);
+        userItemContainer.innerHTML = `${names.length} people are zoning: ` + names.join(", ");
+    }
+
+    document.getElementById('users-close')!.addEventListener('click', () => userPanel.hidden = true); 
+    document.getElementById('users-button')!.addEventListener('click', () => userPanel.hidden = false); 
+
     const queuePanel = document.getElementById('queue-panel')!;
     const queueItemContainer = document.getElementById('queue-items')!;
     const queueItemTemplate = document.getElementById('queue-item-template')!;
@@ -254,6 +266,12 @@ export async function load() {
         await sleep(100);
         await connect();
     });
+
+    client.on('joined', refreshUsers);
+    client.on('join', refreshUsers);
+    client.on('leave', refreshUsers);
+    client.on('rename', refreshUsers);
+    refreshUsers();
 
     client.on('queue', ({ item }) => {
         const { title, duration } = item.media;

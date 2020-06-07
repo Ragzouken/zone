@@ -37,6 +37,8 @@ html
                     img(src="icons/spn.png")
                 button#avatar-button(title="change appearance")
                     img(src="icons/avatar.png")
+                button#users-button(title="open user list")
+                    img(src="icons/users.png")
             #popout-panel(hidden)
                 .menu-title
                     div video pop-out
@@ -63,6 +65,12 @@ html
                         .queue-item-time 00:00
                         button.queue-item-cancel(title="unqueue this")
                             img(src="icons/cancel.png")
+            #user-panel(hidden)
+                .menu-title
+                    div user list
+                    button#users-close(title="hide panel").icon-button-small
+                        img(src="icons/close.png")
+                #user-items
             #avatar-panel(hidden)
                 .menu-title
                     div update appearance
