@@ -105,7 +105,7 @@ export function host(xws: expressWs.Instance, adapter: low.AdapterSync, options:
     let lastUserId = 0;
     const tokenToUser = new Map<string, UserState>();
     const userToToken = new Map<UserState, string>();
-    const connections = new Map<UserId, Messaging>();;
+    const connections = new Map<UserId, Messaging>();
 
     const zone = new ZoneState();
     const playback = new Playback(opts.playbackStartDelay);

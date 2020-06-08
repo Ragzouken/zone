@@ -189,10 +189,10 @@ export async function load() {
         }
 
         const users = Array.from(client.zone.users.values());
-        const names = users.map(user => formatName(user));
-        userItemContainer.innerHTML = `${names.length} people are zoning: ` + names.join(", ");
+        const names = users.map((user) => formatName(user));
+        userItemContainer.innerHTML = `${names.length} people are zoning: ` + names.join(', ');
 
-        userSelect.innerHTML = "";
+        userSelect.innerHTML = '';
         users.forEach((user) => {
             const option = document.createElement('option');
             option.value = user.name || '';
@@ -201,11 +201,11 @@ export async function load() {
         });
     }
 
-    document.getElementById('users-close')!.addEventListener('click', () => userPanel.hidden = true); 
+    document.getElementById('users-close')!.addEventListener('click', () => (userPanel.hidden = true));
     document.getElementById('users-button')!.addEventListener('click', () => {
         userPanel.hidden = false;
         refreshUsers();
-    }); 
+    });
 
     document.getElementById('add-dj-button')!.addEventListener('click', () => {
         client.command('dj-add', [userSelect.value]);

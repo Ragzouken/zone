@@ -64,7 +64,7 @@ export interface ClientEventMap {
     move: (event: { user: UserState; position: number[]; local: boolean }) => void;
     emotes: (event: { user: UserState; emotes: string[]; local: boolean }) => void;
     avatar: (event: { user: UserState; data: string; local: boolean }) => void;
-    tags: (event: { user: UserState; tags: string[], local: boolean }) => void;
+    tags: (event: { user: UserState; tags: string[]; local: boolean }) => void;
 }
 
 export interface ZoneClient {
