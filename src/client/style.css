@@ -29,12 +29,12 @@ html {
     font-family: var(--ascii-small);
 }
 
-input, button {
+input, button, option, select {
     font-family: var(--ascii-small);
     font-size: 16px;
 }
 
-input[type="text"] {
+input[type="text"], select {
     color: white;
 
     background: black;

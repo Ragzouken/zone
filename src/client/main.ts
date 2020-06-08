@@ -175,6 +175,7 @@ export async function load() {
 
     const userPanel = document.getElementById('user-panel')!;
     const userItemContainer = document.getElementById('user-items')!;
+    const userSelect = document.getElementById('user-select') as HTMLSelectElement;
 
     function refreshUsers() {
         function formatName(user: UserState) {
@@ -183,13 +184,21 @@ export async function load() {
             } else if (user.tags.includes('dj')) {
                 return `<span class="user-dj">${user.name}</span>`;
             } else {
-                return user.name;
+                return user.name || '';
             }
         }
 
         const users = Array.from(client.zone.users.values());
         const names = users.map(user => formatName(user));
         userItemContainer.innerHTML = `${names.length} people are zoning: ` + names.join(", ");
+
+        userSelect.innerHTML = "";
+        users.forEach((user) => {
+            const option = document.createElement('option');
+            option.value = user.name || '';
+            option.innerHTML = formatName(user);
+            userSelect.appendChild(option);
+        });
     }
 
     document.getElementById('users-close')!.addEventListener('click', () => userPanel.hidden = true); 
@@ -197,6 +206,15 @@ export async function load() {
         userPanel.hidden = false;
         refreshUsers();
     }); 
+
+    document.getElementById('add-dj-button')!.addEventListener('click', () => {
+        client.command('dj-add', [userSelect.value]);
+    });
+    document.getElementById('del-dj-button')!.addEventListener('click', () => {
+        client.command('dj-del', [userSelect.value]);
+    });
+    document.getElementById('event-mode-on')!.addEventListener('click', () => client.command('mode', ['event']));
+    document.getElementById('event-mode-off')!.addEventListener('click', () => client.command('mode', ['']));
 
     const queuePanel = document.getElementById('queue-panel')!;
     const queueItemContainer = document.getElementById('queue-items')!;
@@ -231,6 +249,11 @@ export async function load() {
     document.getElementById('queue-button')!.addEventListener('click', () => {
         refreshQueue();
         queuePanel.hidden = false;
+    });
+
+    document.getElementById('auth-button')!.addEventListener('click', () => {
+        const input = document.getElementById('auth-input') as HTMLInputElement;
+        client.auth(input.value);
     });
 
     const searchPanel = document.getElementById('search-panel')!;
