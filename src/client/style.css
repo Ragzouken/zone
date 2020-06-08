@@ -357,6 +357,14 @@ body {
     border: 2px solid black;
 }
 
+.user-dj {
+    color: #00FFFF;
+}
+
+.user-admin {
+    color: #FF00FF;
+}
+
 #commands {
     overflow-y: auto;
 }

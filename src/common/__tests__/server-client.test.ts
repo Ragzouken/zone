@@ -304,12 +304,12 @@ describe('playback', () => {
         });
     });
 
-    it("can unqueue own items", async () => {
+    it('can unqueue own items', async () => {
         await zoneServer({}, async (server) => {
             const client = await server.client();
 
             await client.join();
-            console.log(await client.local('DAY_MEDIA'));
+            await client.local('DAY_MEDIA');
             const item = await client.local('TINY_MEDIA');
 
             await client.unqueue(item);
@@ -320,7 +320,7 @@ describe('playback', () => {
         await zoneServer({}, async (server) => {
             const client1 = await server.client();
             const client2 = await server.client();
-            
+
             await client1.join();
             await client2.join();
             await client1.local('DAY_MEDIA');

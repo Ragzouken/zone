@@ -64,6 +64,7 @@ export interface ClientEventMap {
     move: (event: { user: UserState; position: number[]; local: boolean }) => void;
     emotes: (event: { user: UserState; emotes: string[]; local: boolean }) => void;
     avatar: (event: { user: UserState; data: string; local: boolean }) => void;
+    tags: (event: { user: UserState; tags: string[], local: boolean }) => void;
 }
 
 export interface ZoneClient {
@@ -200,12 +201,7 @@ export class ZoneClient extends EventEmitter {
     async unqueue(item: QueueItem) {
         return new Promise<QueueItem>((resolve, reject) => {
             setTimeout(() => reject('timeout'), this.options.quickResponseTimeout);
-            specifically(
-                this, 
-                'unqueue', 
-                (unqueued: QueueItem) => unqueued.itemId === unqueued.itemId, 
-                resolve,
-            );
+            specifically(this, 'unqueue', (unqueued: QueueItem) => unqueued.itemId === unqueued.itemId, resolve);
             this.messaging.send('unqueue', { itemId: item.itemId });
         });
     }
@@ -280,6 +276,7 @@ export class ZoneClient extends EventEmitter {
             if (changes.position) this.emit('move', { user, local, position: changes.position });
             if (changes.emotes) this.emit('emotes', { user, local, emotes: changes.emotes });
             if (changes.avatar) this.emit('avatar', { user, local, data: changes.avatar });
+            if (changes.tags) this.emit('tags', { user, local, tags: changes.tags });
         });
     }
 }

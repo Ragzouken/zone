@@ -105,14 +105,12 @@ export function host(xws: expressWs.Instance, adapter: low.AdapterSync, options:
     let lastUserId = 0;
     const tokenToUser = new Map<string, UserState>();
     const userToToken = new Map<UserState, string>();
-    const connections = new Map<UserId, Messaging>();
-    const authorised = new Set<UserState>();
+    const connections = new Map<UserId, Messaging>();;
 
     const zone = new ZoneState();
     const playback = new Playback(opts.playbackStartDelay);
 
     let eventMode = false;
-    const djs = new Set<UserState>();
 
     const localLibrary = new Map<string, Media>();
 
@@ -189,7 +187,6 @@ export function host(xws: expressWs.Instance, adapter: low.AdapterSync, options:
         zone.users.delete(user.userId);
         connections.delete(user.userId);
         userToConnections.delete(user);
-        authorised.delete(user);
         revokeUserToken(user);
     }
 
@@ -248,12 +245,6 @@ export function host(xws: expressWs.Instance, adapter: low.AdapterSync, options:
                 }
             });
 
-            if (resume) {
-                // console.log('resume user', user.userId, userIp);
-            } else {
-                // console.log('new user', user.userId, userIp);
-            }
-
             sendAllState(user);
             sendOnly('assign', { userId: user.userId, token }, user.userId);
             if (!resume) sendAll('user', user);
@@ -297,7 +288,9 @@ export function host(xws: expressWs.Instance, adapter: low.AdapterSync, options:
     }
 
     function statusAuthed(text: string) {
-        authorised.forEach((user) => status(text, user));
+        zone.users.forEach((user) => {
+            if (user.tags.includes('admin')) status(text, user);
+        });
     }
 
     const authCommands = new Map<string, (admin: UserState, ...args: any[]) => void>();
@@ -308,28 +301,38 @@ export function host(xws: expressWs.Instance, adapter: low.AdapterSync, options:
     });
     authCommands.set('dj-add', (admin, name: string) =>
         ifUser(name, (user) => {
-            djs.add(user);
-            status('you are a dj', user);
-            statusAuthed(`${user.name} is a dj`);
+            if (user.tags.includes('dj')) {
+                status(`${user.name} is already a dj`, admin);
+            } else {
+                user.tags.push('dj');
+                sendAll('user', { userId: user.userId, tags: user.tags });
+                status('you are a dj', user);
+                statusAuthed(`${user.name} is a dj`);
+            }
         }),
     );
     authCommands.set('dj-del', (admin, name: string) =>
         ifUser(name, (user) => {
-            djs.delete(user);
-            status('no longer a dj', user);
-            statusAuthed(`${user.name} no longer a dj`);
+            if (!user.tags.includes('dj')) {
+                status(`${user.name} isn't a dj`, admin);
+            } else {
+                user.tags.splice(user.tags.indexOf('dj'), 1);
+                sendAll('user', { userId: user.userId, tags: user.tags });
+                status('no longer a dj', user);
+                statusAuthed(`${user.name} no longer a dj`);
+            }
         }),
     );
 
     function tryQueueMedia2(user: UserState, media: Media, userIp: unknown) {
-        if (eventMode && !djs.has(user)) {
+        if (eventMode && !user.tags.includes('dj')) {
             status('zone is currently in event mode, only djs may queue', user);
             return;
         }
 
         const existing = playback.queue.find((queued) => mediaEquals(queued.media, media))?.media;
         const count = playback.queue.filter((item) => item.info.ip === userIp).length;
-        const dj = eventMode && djs.has(user);
+        const dj = eventMode && user.tags.includes('dj');
 
         if (existing) {
             status(`'${existing.title}' is already queued`, user);
@@ -383,7 +386,7 @@ export function host(xws: expressWs.Instance, adapter: low.AdapterSync, options:
 
             if (!eventMode) {
                 voteSkip(message.source, user);
-            } else if (djs.has(user)) {
+            } else if (user.tags.includes('dj')) {
                 skip(`${user.name} skipped ${playback.currentItem!.media.title}`);
             } else {
                 status(`can't skip during event mode`, user);
@@ -394,9 +397,9 @@ export function host(xws: expressWs.Instance, adapter: low.AdapterSync, options:
             const item = playback.queue.find((item) => item.itemId === itemId);
             if (!item) return;
 
-            const dj = eventMode && djs.has(user);
+            const dj = eventMode && user.tags.includes('dj');
             const own = item.info.userId === user.userId;
-            const auth = authorised.has(user);
+            const auth = user.tags.includes('admin');
 
             if (dj || own || auth) playback.unqueue(item);
         });
@@ -415,12 +418,17 @@ export function host(xws: expressWs.Instance, adapter: low.AdapterSync, options:
         messaging.messages.on('auth', (message: SendAuth) => {
             if ((message.password || {}) !== opts.authPassword) return;
 
-            authorised.add(user);
-            status('you are now authorised', user);
+            if (user.tags.includes('admin')) {
+                status('you are already authorised', user);
+            } else {
+                user.tags.push('admin');
+                sendAll('user', { userId: user.userId, tags: user.tags });
+                status('you are now authorised', user);
+            }
         });
 
         messaging.messages.on('command', (message: SendCommand) => {
-            if (!authorised.has(user)) return;
+            if (!user.tags.includes('admin')) return;
 
             const { name, args } = message;
             const command = authCommands.get(name);
