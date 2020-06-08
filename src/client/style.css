@@ -29,12 +29,12 @@ html {
     font-family: var(--ascii-small);
 }
 
-input, button {
+input, button, option, select {
     font-family: var(--ascii-small);
     font-size: 16px;
 }
 
-input[type="text"] {
+input[type="text"], select {
     color: white;
 
     background: black;
@@ -355,6 +355,14 @@ body {
     margin: 2px;
     padding: 2px;
     border: 2px solid black;
+}
+
+.user-dj {
+    color: #00FFFF;
+}
+
+.user-admin {
+    color: #FF00FF;
 }
 
 #commands {

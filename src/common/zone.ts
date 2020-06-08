@@ -8,6 +8,7 @@ export type UserState = {
     position?: number[];
     avatar?: string;
     emotes: string[];
+    tags: string[];
 };
 
 export type Media = {
@@ -38,6 +39,6 @@ export class ZoneState {
     }
 
     public getUser(userId: UserId): UserState {
-        return getDefault(this.users, userId, () => ({ userId, emotes: [] }));
+        return getDefault(this.users, userId, () => ({ userId, emotes: [], tags: [] }));
     }
 }

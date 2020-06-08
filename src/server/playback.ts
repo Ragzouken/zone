@@ -7,7 +7,7 @@ export type PlaybackState = {
     current?: QueueItem;
     queue: QueueItem[];
     time: number;
-    nextId: number,
+    nextId: number;
 };
 
 export interface Playback {
@@ -35,7 +35,7 @@ export class Playback extends EventEmitter {
             current: this.currentItem,
             queue: this.queue,
             time: this.currentTime,
-            nextId: this.nextId, 
+            nextId: this.nextId,
         };
     }
 

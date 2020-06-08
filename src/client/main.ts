@@ -8,6 +8,7 @@ import ZoneClient from '../common/client';
 import { YoutubeVideo } from '../server/youtube';
 import { ZoneSceneRenderer, avatarImage } from './scene';
 import { Player } from './player';
+import { UserState } from '../common/zone';
 
 window.addEventListener('load', () => load());
 
@@ -174,15 +175,46 @@ export async function load() {
 
     const userPanel = document.getElementById('user-panel')!;
     const userItemContainer = document.getElementById('user-items')!;
+    const userSelect = document.getElementById('user-select') as HTMLSelectElement;
 
     function refreshUsers() {
+        function formatName(user: UserState) {
+            if (user.tags.includes('admin')) {
+                return `<span class="user-admin">${user.name}</span>`;
+            } else if (user.tags.includes('dj')) {
+                return `<span class="user-dj">${user.name}</span>`;
+            } else {
+                return user.name || '';
+            }
+        }
+
         const users = Array.from(client.zone.users.values());
-        const names = users.map(user => user.name);
-        userItemContainer.innerHTML = `${names.length} people are zoning: ` + names.join(", ");
+        const names = users.map((user) => formatName(user));
+        userItemContainer.innerHTML = `${names.length} people are zoning: ` + names.join(', ');
+
+        userSelect.innerHTML = '';
+        users.forEach((user) => {
+            const option = document.createElement('option');
+            option.value = user.name || '';
+            option.innerHTML = formatName(user);
+            userSelect.appendChild(option);
+        });
     }
 
-    document.getElementById('users-close')!.addEventListener('click', () => userPanel.hidden = true); 
-    document.getElementById('users-button')!.addEventListener('click', () => userPanel.hidden = false); 
+    document.getElementById('users-close')!.addEventListener('click', () => (userPanel.hidden = true));
+    document.getElementById('users-button')!.addEventListener('click', () => {
+        userPanel.hidden = false;
+        refreshUsers();
+    });
+
+    document.getElementById('add-dj-button')!.addEventListener('click', () => {
+        client.command('dj-add', [userSelect.value]);
+    });
+    document.getElementById('del-dj-button')!.addEventListener('click', () => {
+        client.command('dj-del', [userSelect.value]);
+    });
+    document.getElementById('event-mode-on')!.addEventListener('click', () => client.command('mode', ['event']));
+    document.getElementById('event-mode-off')!.addEventListener('click', () => client.command('mode', ['']));
 
     const queuePanel = document.getElementById('queue-panel')!;
     const queueItemContainer = document.getElementById('queue-items')!;
@@ -195,15 +227,17 @@ export async function load() {
         queueElements.forEach((item) => item.parentElement!.removeChild(item));
         queueElements.length = 0;
 
+        const user = getLocalUser();
         client.zone.queue.forEach((item) => {
             const element = queueItemTemplate.cloneNode(true) as HTMLElement;
             const titleElement = element.querySelector('.queue-item-title')!;
             const timeElement = element.querySelector('.queue-item-time')!;
             const cancelButton = element.querySelector('.queue-item-cancel') as HTMLButtonElement;
 
+            const cancellable = item.info.userId === user?.userId || user?.tags.includes('dj');
             titleElement.innerHTML = item.media.title;
             timeElement.innerHTML = secondsToTime(item.media.duration / 1000);
-            cancelButton.disabled = item.info.userId !== getLocalUser()?.userId;
+            cancelButton.disabled = !cancellable;
             cancelButton.addEventListener('click', () => client.unqueue(item));
 
             queueItemContainer.appendChild(element);
@@ -215,6 +249,11 @@ export async function load() {
     document.getElementById('queue-button')!.addEventListener('click', () => {
         refreshQueue();
         queuePanel.hidden = false;
+    });
+
+    document.getElementById('auth-button')!.addEventListener('click', () => {
+        const input = document.getElementById('auth-input') as HTMLInputElement;
+        client.auth(input.value);
     });
 
     const searchPanel = document.getElementById('search-panel')!;
@@ -271,6 +310,7 @@ export async function load() {
     client.on('join', refreshUsers);
     client.on('leave', refreshUsers);
     client.on('rename', refreshUsers);
+    client.on('tags', refreshUsers);
     refreshUsers();
 
     client.on('queue', ({ item }) => {
