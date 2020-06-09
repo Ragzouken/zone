@@ -7,7 +7,7 @@ import Playback from './playback';
 import Messaging from '../common/messaging';
 import { ZoneState, UserId, UserState, mediaEquals, Media, QueueItem } from '../common/zone';
 import { nanoid } from 'nanoid';
-import { copy } from '../common/utility';
+import { copy, getDefault } from '../common/utility';
 import { MESSAGE_SCHEMAS } from './protocol';
 import { JoinMessage, SendAuth, SendCommand } from '../common/client';
 
@@ -45,6 +45,11 @@ export const DEFAULT_OPTIONS: HostOptions = {
 };
 
 const HALFHOUR = 30 * 60 * 60 * 1000;
+
+const ips = new Map<unknown, string>();
+function anonymiseIP(ip: unknown) {
+    return getDefault(ips, ip, () => ips.size.toString());
+}
 
 export function host(xws: expressWs.Instance, adapter: low.AdapterSync, options: Partial<HostOptions> = {}) {
     const opts = Object.assign({}, DEFAULT_OPTIONS, options);
@@ -229,7 +234,7 @@ export function host(xws: expressWs.Instance, adapter: low.AdapterSync, options:
             addUserToken(user, token);
             addConnectionToUser(user, messaging);
 
-            bindMessagingToUser(user, messaging, userIp);
+            bindMessagingToUser(user, messaging, anonymiseIP(userIp));
             connections.set(user.userId, messaging);
 
             websocket.on('close', (code: number) => {
