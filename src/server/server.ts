@@ -125,7 +125,7 @@ export function host(xws: expressWs.Instance, adapter: low.AdapterSync, options:
     load();
 
     playback.on('queue', (item: QueueItem) => sendAll('queue', { items: [item] }));
-    playback.on('play', (item: QueueItem) => sendAll('play', { item: sanitiseItem(item), time: playback.currentTime }));
+    playback.on('play', (item: QueueItem) => sendAll('play', { item, time: playback.currentTime }));
     playback.on('stop', () => sendAll('play', {}));
     playback.on('unqueue', ({ itemId }) => sendAll('unqueue', { itemId }));
 
@@ -256,16 +256,9 @@ export function host(xws: expressWs.Instance, adapter: low.AdapterSync, options:
         });
     }
 
-    function sanitiseItem(item: QueueItem) {
-        const sanitised = copy(item);
-        delete sanitised.info.ip;
-        return sanitised;
-    }
-
     function sendCurrent(user: UserState) {
         if (playback.currentItem) {
-            const item = sanitiseItem(playback.currentItem);
-            sendOnly('play', { item, time: playback.currentTime }, user.userId);
+            sendOnly('play', { item: playback.currentItem, time: playback.currentTime }, user.userId);
         } else {
             sendOnly('play', {}, user.userId);
         }
