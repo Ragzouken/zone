@@ -207,6 +207,9 @@ export async function load() {
         refreshUsers();
     });
 
+    document.getElementById('ban-ip-button')!.addEventListener('click', () => {
+        client.command('ban', [userSelect.value]);
+    });
     document.getElementById('add-dj-button')!.addEventListener('click', () => {
         client.command('dj-add', [userSelect.value]);
     });
