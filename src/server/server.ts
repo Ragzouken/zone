@@ -7,7 +7,7 @@ import Playback from './playback';
 import Messaging from '../common/messaging';
 import { ZoneState, UserId, UserState, mediaEquals, Media, QueueItem } from '../common/zone';
 import { nanoid } from 'nanoid';
-import { copy, getDefault } from '../common/utility';
+import { getDefault } from '../common/utility';
 import { MESSAGE_SCHEMAS } from './protocol';
 import { JoinMessage, SendAuth, SendCommand } from '../common/client';
 
@@ -32,7 +32,7 @@ export type HostOptions = {
 
 export const DEFAULT_OPTIONS: HostOptions = {
     pingInterval: 10 * SECONDS,
-    saveInterval: 30 * SECONDS,
+    saveInterval: 60 * SECONDS,
     userTimeout: 5 * SECONDS,
     nameLengthLimit: 16,
     chatLengthLimit: 160,
@@ -46,9 +46,23 @@ export const DEFAULT_OPTIONS: HostOptions = {
 
 const HALFHOUR = 30 * 60 * 60 * 1000;
 
-const ips = new Map<unknown, string>();
-function anonymiseIP(ip: unknown) {
-    return getDefault(ips, ip, () => ips.size.toString());
+const bans = new Map<unknown, Ban>();
+
+const ipToNetworkId = new Map<unknown, string>();
+const networkIdToIp = new Map<string, unknown>();
+
+function getNetworkIdFromIp(ip: unknown) {
+    const networkId = getDefault(ipToNetworkId, ip, () => ipToNetworkId.size.toString());
+    networkIdToIp.set(networkId, ip);
+    return networkId;
+}
+
+interface Ban {
+    ip: unknown,
+    bannee: string,
+    banner: string,
+    reason?: string,
+    date: string,
 }
 
 export function host(xws: expressWs.Instance, adapter: low.AdapterSync, options: Partial<HostOptions> = {}) {
@@ -59,7 +73,7 @@ export function host(xws: expressWs.Instance, adapter: low.AdapterSync, options:
     const db = low(adapter);
     db.defaults({
         playback: { current: undefined, queue: [], time: 0 },
-        youtube: { videos: [] },
+        bans: [],
     }).write();
 
     // this zone's websocket endpoint
@@ -110,6 +124,7 @@ export function host(xws: expressWs.Instance, adapter: low.AdapterSync, options:
     let lastUserId = 0;
     const tokenToUser = new Map<string, UserState>();
     const userToToken = new Map<UserState, string>();
+    const userToIp = new Map<UserState, unknown>();
     const connections = new Map<UserId, Messaging>();
 
     const zone = new ZoneState();
@@ -164,10 +179,13 @@ export function host(xws: expressWs.Instance, adapter: low.AdapterSync, options:
 
     function load() {
         playback.loadState(db.get('playback').value());
+        const banlist = db.get('bans').value() as Ban[];
+        banlist.forEach((ban) => bans.set(ban.ip, ban));
     }
 
     function save() {
         db.set('playback', playback.copyState()).write();
+        db.set('bans', Array.from(bans.values())).write();
     }
 
     const userToConnections = new Map<UserState, Set<Messaging>>();
@@ -217,6 +235,13 @@ export function host(xws: expressWs.Instance, adapter: low.AdapterSync, options:
         const messaging = new Messaging();
         messaging.setSocket(websocket);
         messaging.on('error', () => {});
+
+        if (bans.has(userIp)) {
+            messaging.send('reject', { text: 'you are banned' });
+            websocket.close(4001, 'banned');
+            return;
+        }
+
         messaging.messages.once('join', (message: JoinMessage) => {
             const resume = message.token && tokenToUser.has(message.token);
             const authorised = resume || !opts.joinPassword || message.password === opts.joinPassword;
@@ -233,8 +258,9 @@ export function host(xws: expressWs.Instance, adapter: low.AdapterSync, options:
 
             addUserToken(user, token);
             addConnectionToUser(user, messaging);
+            userToIp.set(user, userIp);
 
-            bindMessagingToUser(user, messaging, anonymiseIP(userIp));
+            bindMessagingToUser(user, messaging, getNetworkIdFromIp(userIp));
             connections.set(user.userId, messaging);
 
             websocket.on('close', (code: number) => {
@@ -292,6 +318,21 @@ export function host(xws: expressWs.Instance, adapter: low.AdapterSync, options:
     }
 
     const authCommands = new Map<string, (admin: UserState, ...args: any[]) => void>();
+    authCommands.set('ban', (admin, name: string, reason?: string) => {
+        ifUser(name, (user) => {
+            const ban: Ban = {
+                ip: userToIp.get(user)!,
+                bannee: user.name!,
+                banner: admin.name!,
+                reason,
+                date: JSON.stringify(new Date()),
+            }
+            bans.set(ban.ip, ban);
+            status(`${user.name} is banned`);
+
+            (userToConnections.get(user) || new Set<Messaging>()).forEach((messaging) => messaging.close(4001));
+        });
+    });
     authCommands.set('skip', () => skip(`admin skipped ${playback.currentItem!.media.title}`));
     authCommands.set('mode', (admin, mode: string) => {
         eventMode = mode === 'event';
