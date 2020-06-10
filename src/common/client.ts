@@ -222,7 +222,7 @@ export class ZoneClient extends EventEmitter {
         };
 
         this.messaging.on('close', (code) => {
-            const clean = code <= 1001;
+            const clean = code <= 1001 || code >= 4000;
             this.emit('disconnect', { clean });
         });
         this.messaging.messages.on('status', (message: StatusMesage) => {
