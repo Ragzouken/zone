@@ -41,7 +41,7 @@ export function specifically<T extends any[]>(
 ) {
     const handler = (...args: T) => {
         if (predicate(...args)) {
-            emitter.off(event, handler as any);
+            emitter.removeListener(event, handler as any);
             callback(...args);
         }
     };
