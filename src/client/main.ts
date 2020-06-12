@@ -98,7 +98,7 @@ async function connect(): Promise<void> {
         const data = localStorage.getItem('avatar');
         if (data) client.avatar(data);
     } catch (e) {
-        chat.status('enter server password with /password)');
+        chat.status(e.text);
         return;
     }
 
@@ -207,6 +207,9 @@ export async function load() {
         refreshUsers();
     });
 
+    document.getElementById('ban-ip-button')!.addEventListener('click', () => {
+        client.command('ban', [userSelect.value]);
+    });
     document.getElementById('add-dj-button')!.addEventListener('click', () => {
         client.command('dj-add', [userSelect.value]);
     });
