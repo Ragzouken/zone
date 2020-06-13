@@ -45,7 +45,7 @@ html
             #search-panel.menu-panel(hidden)
                 .menu-title
                     form#search-form
-                        input#search-input(type="text", placeholder="search for a video")
+                        input#search-input(placeholder="search for a video" type="text" autocomplete="off")
                         input#search-submit(type="submit" value="search" disabled)
                         button#play-banger(title="queue random song", type="button") random
                         button#search-close(title="hide panel", type="button").icon-button-small
@@ -112,7 +112,7 @@ html
                             button#event-mode-off event mode off
         canvas#chat-canvas(width=512, height=512)
         #chat-inputs
-            input#chat-input(type="text", placeholder="chat message...", maxlength="160")
+            input#chat-input(type="text" placeholder="chat message..." maxlength="160" autocomplete="off")
         #entry-splash
             #entry-panel
                 img#entry-logo(src="./zone-logo.png")
