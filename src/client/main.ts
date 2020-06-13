@@ -231,14 +231,14 @@ export async function load() {
 
     function refreshCurrentItem() {
         const count = client.zone.queue.length + (player.hasItem ? 1 : 0);
-        let total = Math.max(0, player.duration - player.elapsed) / 1000;
+        let total = player.remaining / 1000;
         client.zone.queue.forEach((item) => total += item.media.duration / 1000);
         queueTitle.innerText = `playlist (${count} items, ${secondsToTime(total)})`
 
         skipButton.disabled = false; // TODO: know when it's event mode
         currentItemContainer.hidden = !player.hasItem;
         currentItemTitle.innerHTML = player.playingItem?.media.title || '';
-        currentItemTime.innerHTML = secondsToTime((player.duration - player.elapsed) / 1000);
+        currentItemTime.innerHTML = secondsToTime(player.remaining / 1000);
     }
 
     const queueElements: HTMLElement[] = [];
