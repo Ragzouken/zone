@@ -159,6 +159,9 @@ export async function load() {
     const menuPanel = document.getElementById('menu-panel')!;
     const volumeSlider = document.getElementById('volume-slider') as HTMLInputElement;
 
+    const authRow = document.getElementById('auth-row')!;
+    const authContent = document.getElementById('auth-content')!;
+
     volumeSlider.addEventListener('input', () => (player.volume = parseFloat(volumeSlider.value)));
     document.getElementById('menu-button')?.addEventListener('click', openMenu);
     document.getElementById('menu-close')?.addEventListener('click', () => (menuPanel.hidden = true));
@@ -199,6 +202,11 @@ export async function load() {
             option.innerHTML = formatName(user);
             userSelect.appendChild(option);
         });
+        userSelect.value = "";
+
+        const auth = !!getLocalUser()?.tags.includes('admin');
+        authRow.hidden = auth;
+        authContent.hidden = !auth;
     }
 
     document.getElementById('users-close')!.addEventListener('click', () => (userPanel.hidden = true));

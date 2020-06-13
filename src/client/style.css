@@ -122,18 +122,10 @@ input[type="text"]:focus {
 .menu-panel {
     position: absolute;
     width: 100%;
-    background: black;
+    background: rgb(0 21 51);
 
     display: flex;
     flex-direction: column;
-}
-
-#menu-panel {
-    padding: 16px;
-}
-
-#search-panel {
-    padding: 16px;
 }
 
 #search-form {
@@ -143,17 +135,12 @@ input[type="text"]:focus {
 
 #search-input {
     flex: 1;
+    min-width: 0;
 }
 
 #search-form > button, #search-form > input[type="submit"] {
     flex: 0;
     margin-left: 16px;
-}
-
-#search-results {
-    width: 100%;
-    display: flex;
-    flex-direction: column;
 }
 
 .search-result {
@@ -184,10 +171,19 @@ input[type="text"]:focus {
     display: flex;
     flex-direction: row;
     align-items: stretch;
+    padding: 8px;
+    background: rgb(32 40 64);
 }
 
 .menu-title > * {
     flex: 1;
+}
+
+.menu-body {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    padding: 8px;
 }
 
 .icon-button-small {
@@ -280,7 +276,6 @@ input[type="text"]:focus {
     display: flex;
     flex-direction: column;
 
-    padding: 8px;
     background: black;
 }
 
