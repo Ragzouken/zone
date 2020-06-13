@@ -247,6 +247,11 @@ export async function load() {
         currentItemContainer.hidden = !player.hasItem;
         currentItemTitle.innerHTML = player.playingItem?.media.title || '';
         currentItemTime.innerHTML = secondsToTime(player.remaining / 1000);
+
+        if (client.zone.lastPlayedItem?.info.userId) {
+            const user = client.zone.getUser(client.zone.lastPlayedItem.info.userId);
+            currentItemTitle.setAttribute('title', 'queued by ' + user.name)
+        }
     }
 
     const queueElements: HTMLElement[] = [];
