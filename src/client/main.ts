@@ -202,6 +202,7 @@ export async function load() {
             option.innerHTML = formatName(user);
             userSelect.appendChild(option);
         });
+        userSelect.value = "";
 
         const auth = !!getLocalUser()?.tags.includes('admin');
         authRow.hidden = auth;
