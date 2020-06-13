@@ -1,6 +1,6 @@
 import * as blitsy from 'blitsy';
 import { secondsToTime, fakedownToTag, eventToElementPixel, withPixels } from './utility';
-import { sleep, randomInt, clamp } from '../common/utility';
+import { sleep, randomInt, clamp, timeToSeconds } from '../common/utility';
 import { scriptToPages, PageRenderer, getPageHeight } from './text';
 import { ChatPanel, animatePage, filterDrawable } from './chat';
 
@@ -224,6 +224,22 @@ export async function load() {
     const queueItemTemplate = document.getElementById('queue-item-template')!;
     queueItemTemplate.parentElement!.removeChild(queueItemTemplate);
 
+    const queueTitle = document.getElementById('queue-title')!;
+    const currentItemContainer = document.getElementById('current-item')!;
+    const currentItemTitle = document.getElementById('current-item-title')!;
+    const currentItemTime = document.getElementById('current-item-time')!;
+
+    function refreshCurrentItem() {
+        const count = client.zone.queue.length + (player.hasItem ? 1 : 0);
+        let total = Math.max(0, player.duration - player.elapsed) / 1000;
+        client.zone.queue.forEach((item) => total += item.media.duration / 1000);
+        queueTitle.innerText = `playlist (${count} items, ${secondsToTime(total)})`
+
+        currentItemContainer.hidden = !player.hasItem;
+        currentItemTitle.innerHTML = player.playingItem?.media.title || '';
+        currentItemTime.innerHTML = secondsToTime((player.duration - player.elapsed) / 1000);
+    }
+
     const queueElements: HTMLElement[] = [];
 
     function refreshQueue() {
@@ -246,6 +262,8 @@ export async function load() {
             queueItemContainer.appendChild(element);
             queueElements.push(element);
         });
+
+        refreshCurrentItem();
     }
 
     document.getElementById('queue-close')!.addEventListener('click', () => (queuePanel.hidden = true));
@@ -300,8 +318,6 @@ export async function load() {
             });
         });
     });
-
-    let showQueue = false;
 
     client.on('disconnect', async ({ clean }) => {
         if (clean) return;
@@ -511,7 +527,6 @@ export async function load() {
     gameKeys.set('2', () => toggleEmote('shk'));
     gameKeys.set('3', () => toggleEmote('rbw'));
     gameKeys.set('4', () => toggleEmote('spn'));
-    gameKeys.set('q', () => (showQueue = !showQueue));
     gameKeys.set('ArrowLeft', () => move(-1, 0));
     gameKeys.set('ArrowRight', () => move(1, 0));
     gameKeys.set('ArrowDown', () => move(0, 1));
@@ -560,55 +575,8 @@ export async function load() {
     const chatContext = document.querySelector<HTMLCanvasElement>('#chat-canvas')!.getContext('2d')!;
     chatContext.imageSmoothingEnabled = false;
 
-    const pageRenderer = new PageRenderer(256, 256);
-
-    function drawQueue() {
-        const lines: string[] = [];
-        const cols = 40;
-
-        function line(title: string, seconds: number) {
-            title = filterDrawable(title);
-            const time = secondsToTime(seconds);
-            const limit = cols - time.length;
-            const cut = title.length < limit ? title.padEnd(limit, ' ') : title.slice(0, limit - 4) + '... ';
-            lines.push(cut + time);
-        }
-
-        let remaining = 0;
-
-        const item = player.playingItem;
-
-        if (item) {
-            if (video.src && video.currentTime > 0) {
-                remaining = video.duration - video.currentTime;
-            } else {
-                remaining = Math.max(0, player.duration - player.elapsed) / 1000;
-            }
-
-            if (remaining > 0) line(item.media.title, remaining);
-        }
-
-        let total = remaining;
-
-        if (showQueue) {
-            client.zone.queue.forEach((item) => {
-                line(item.media.title, item.media.duration / 1000);
-                total += item.media.duration / 1000;
-            });
-            line('*** END ***', total);
-            lines[lines.length - 1] = '{clr=#FF00FF}' + lines[lines.length - 1];
-        }
-
-        const queuePage = scriptToPages(lines.join('\n'), layout)[0];
-        animatePage(queuePage);
-        pageRenderer.renderPage(queuePage, 0, 0);
-
-        const queueHeight = getPageHeight(queuePage, font);
-        chatContext.fillRect(0, 0, 512, queueHeight * 2 + 16);
-        chatContext.drawImage(pageRenderer.pageImage, 16, 16, 512, 512);
-    }
-
     function redraw() {
+        refreshCurrentItem();
         playerStatus.innerHTML = player.status;
 
         chatContext.fillStyle = 'rgb(0, 0, 0)';
@@ -616,7 +584,6 @@ export async function load() {
 
         chat.render();
         chatContext.drawImage(chat.context.canvas, 0, 0, 512, 512);
-        drawQueue();
 
         window.requestAnimationFrame(redraw);
     }
