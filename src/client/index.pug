@@ -43,13 +43,14 @@ html
                     button#popout-close(title="hide panel").icon-button-small
                         img(src="icons/close.png")
             #search-panel.menu-panel(hidden)
-                form#search-form
-                    input#search-input(type="text", placeholder="search for a video")
-                    input#search-submit(type="submit" value="search" disabled)
-                    button#play-banger(title="queue random song", type="button") random
-                    button#search-close(title="hide panel", type="button").icon-button-small
-                        img(src="icons/close.png")
-                #search-results
+                .menu-title
+                    form#search-form
+                        input#search-input(type="text", placeholder="search for a video")
+                        input#search-submit(type="submit" value="search" disabled)
+                        button#play-banger(title="queue random song", type="button") random
+                        button#search-close(title="hide panel", type="button").icon-button-small
+                            img(src="icons/close.png")
+                .menu-body#search-results
                     #search-result-template.search-result
                         div title
                         img
@@ -58,53 +59,58 @@ html
                     #queue-title play queue
                     button#queue-close(title="hide panel").icon-button-small
                         img(src="icons/close.png")
-                .queue-item#current-item
-                    .queue-item-title#current-item-title title
-                    .queue-item-time#current-item-time 00:00
-                    button.queue-item-cancel#skip-button(title="vote to skip this")
-                        img(src="icons/skip.png")
-                #queue-items
-                    .queue-item#queue-item-template
-                        .queue-item-title title
-                        .queue-item-time 00:00
-                        button.queue-item-cancel(title="unqueue this")
-                            img(src="icons/cancel.png")
+                .menu-body
+                    .queue-item#current-item
+                        .queue-item-title#current-item-title title
+                        .queue-item-time#current-item-time 00:00
+                        button.queue-item-cancel#skip-button(title="vote to skip this")
+                            img(src="icons/skip.png")
+                    #queue-items
+                        .queue-item#queue-item-template
+                            .queue-item-title title
+                            .queue-item-time 00:00
+                            button.queue-item-cancel(title="unqueue this")
+                                img(src="icons/cancel.png")
             #user-panel(hidden)
                 .menu-title
                     div user list
                     button#users-close(title="hide panel").icon-button-small
                         img(src="icons/close.png")
-                #user-items
+                .menu-body#user-items
             #avatar-panel(hidden)
                 .menu-title
                     div update appearance
                     button#avatar-cancel(title="hide panel").icon-button-small
                         img(src="icons/close.png")
-                canvas#avatar-paint(width=8, height=8)
-                input#avatar-name(type="text")
-                button#avatar-update update
+                .menu-body
+                    canvas#avatar-paint(width=8, height=8)
+                    input#avatar-name(type="text")
+                    button#avatar-update update
             #menu-panel.menu-panel(hidden)
                 .menu-title
                     div miscellanious options
                     button#menu-close(title="hide panel").icon-button-small
                         img(src="icons/close.png")
-                div
-                    label(for="volume-slider") volume
-                    input#volume-slider(type="range", min="0", max="1", step=".01")
-                div
-                    button#enable-notifications enable notifications
-                    button#popout-button pop out video
-                div
-                    input#auth-input
-                    button#auth-button auth
-                div
-                    select#user-select
-                    button#add-dj-button add dj
-                    button#del-dj-button del dj
-                    button#ban-ip-button ban ip
-                div
-                    button#event-mode-on event mode on
-                    button#event-mode-off event mode off
+                .menu-body
+                    div
+                        label(for="volume-slider") volume
+                        input#volume-slider(type="range", min="0", max="1", step=".01")
+                    div
+                        button#enable-notifications enable notifications
+                        button#popout-button pop out video
+                    span moderation
+                    #auth-row
+                        input#auth-input
+                        button#auth-button auth
+                    #auth-content
+                        div
+                            select#user-select
+                            button#add-dj-button add dj
+                            button#del-dj-button del dj
+                            button#ban-ip-button ban ip
+                        div
+                            button#event-mode-on event mode on
+                            button#event-mode-off event mode off
         canvas#chat-canvas(width=512, height=512)
         #chat-inputs
             input#chat-input(type="text", placeholder="chat message...", maxlength="160")
