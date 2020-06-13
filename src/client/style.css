@@ -140,7 +140,7 @@ input[type="text"]:focus {
 
 #search-form > button, #search-form > input[type="submit"] {
     flex: 0;
-    margin-left: 16px;
+    margin-left: 8px;
 }
 
 .search-result {
