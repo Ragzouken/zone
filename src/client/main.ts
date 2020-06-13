@@ -264,6 +264,10 @@ export async function load() {
 
             const cancellable = item.info.userId === user?.userId || user?.tags.includes('dj');
             titleElement.innerHTML = item.media.title;
+            if (item.info.userId) {
+                const user = client.zone.getUser(item.info.userId);
+                titleElement.setAttribute('title', 'queued by ' + user.name)
+            }
             timeElement.innerHTML = secondsToTime(item.media.duration / 1000);
             cancelButton.disabled = !cancellable;
             cancelButton.addEventListener('click', () => client.unqueue(item));
