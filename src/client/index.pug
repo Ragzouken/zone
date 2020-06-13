@@ -46,7 +46,8 @@ html
                 form#search-form
                     input#search-input(type="text", placeholder="search for a video")
                     input#search-submit(type="submit" value="search" disabled)
-                    button#search-close(title="hide panel").icon-button-small
+                    button#play-banger(title="queue random song", type="button") random
+                    button#search-close(title="hide panel", type="button").icon-button-small
                         img(src="icons/close.png")
                 #search-results
                     #search-result-template.search-result
@@ -91,7 +92,6 @@ html
                     label(for="volume-slider") volume
                     input#volume-slider(type="range", min="0", max="1", step=".01")
                 div
-                    button#play-banger queue random song
                     button#enable-notifications enable notifications
                     button#popout-button pop out video
                 div

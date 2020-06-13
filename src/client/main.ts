@@ -235,6 +235,7 @@ export async function load() {
         client.zone.queue.forEach((item) => total += item.media.duration / 1000);
         queueTitle.innerText = `playlist (${count} items, ${secondsToTime(total)})`
 
+        skipButton.disabled = false; // TODO: know when it's event mode
         currentItemContainer.hidden = !player.hasItem;
         currentItemTitle.innerHTML = player.playingItem?.media.title || '';
         currentItemTime.innerHTML = secondsToTime((player.duration - player.elapsed) / 1000);
@@ -437,8 +438,9 @@ export async function load() {
 
     let lastSearchResults: YoutubeVideo[] = [];
 
+    const skipButton = document.getElementById('skip-button') as HTMLButtonElement;
     document.getElementById('avatar-button')?.addEventListener('click', () => openAvatarEditor());
-    document.getElementById('skip-button')?.addEventListener('click', () => client.skip());
+    skipButton.addEventListener('click', () => client.skip());
     document.getElementById('resync-button')?.addEventListener('click', () => player.forceRetry('reload button'));
 
     const chatCommands = new Map<string, (args: string) => void>();
