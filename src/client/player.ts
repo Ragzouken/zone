@@ -54,6 +54,10 @@ export class Player extends EventEmitter {
         return this.hasItem ? performance.now() - this.itemPlayStart : 0;
     }
 
+    get remaining() {
+        return Math.max(0, this.duration - this.elapsed);
+    }
+
     get status() {
         if (!this.item) {
             return 'done';
