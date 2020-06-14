@@ -8,6 +8,6 @@ MESSAGE_SCHEMAS.set(
         name: Joi.string(),
         avatar: Joi.string().base64(),
         emotes: Joi.array().items(Joi.string().valid('shk', 'wvy', 'rbw', 'spn')),
-        position: Joi.array().ordered(Joi.number().required(), Joi.number().required()),
+        position: Joi.array().ordered(Joi.number().required(), Joi.number().required(), Joi.number().required()),
     }),
 );

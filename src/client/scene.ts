@@ -265,9 +265,12 @@ export class ZoneSceneRenderer extends EventEmitter {
 
     private readonly scene = new THREE.Scene();
     private readonly avatarGroup = new THREE.Group();
+    private readonly blockGroup = new THREE.Group();
     private readonly mediaMesh: THREE.Mesh;
     private readonly floorMesh: THREE.Mesh;
     private readonly brickMesh: THREE.Mesh;
+
+    private readonly meshToCoords = new Map<THREE.Object3D, number[]>();
 
     private cameraIndex = 0;
 
@@ -347,23 +350,27 @@ export class ZoneSceneRenderer extends EventEmitter {
         this.brickMesh.visible = false;
         this.floorMesh.visible = false;
 
+        this.scene.add(this.blockGroup);
         this.scene.add(this.avatarGroup);
         this.scene.add(this.mediaMesh);
 
         for (let z = 0; z < 6; ++z) {
             for (let x = 0; x < 16; ++x) {
-                const cube = new THREE.Mesh(blockGeo, blockMaterial);
-                this.scene.add(cube);
-                cube.position.set((x-7.5)/16, -5.5/16, (z-2.5)/16);
+                zone.grid.set([x-7, -5, z-2], true);
             }
         }
         for (let x = 0; x < 16; ++x) {
             for (let y = 0; y < 10; ++y) {
-                const cube = new THREE.Mesh(blockGeo, blockMaterial);
-                this.scene.add(cube);
-                cube.position.set((x-7.5)/16, (y-4.5)/16, -3.5/16);
+                zone.grid.set([x-7, y-4, -3], true);
             }
         }
+
+        zone.grid.forEach((_, [x, y, z]) => {
+            const cube = new THREE.Mesh(blockGeo, blockMaterial);
+            this.blockGroup.add(cube);
+            cube.position.set((x-.5)/16, (y-.5)/16, (z-.5)/16);
+            this.meshToCoords.set(cube, [x, y, z]);
+        });
 
         this.renderer.setSize(container.clientWidth, container.clientHeight);
         container.appendChild(this.renderer.domElement);
@@ -406,17 +413,8 @@ export class ZoneSceneRenderer extends EventEmitter {
         let i = 0;
         this.zone.users.forEach((user) => {
             if (!user.position) return;
-            let y = -4.5;
-            let [x, z] = user.position;
+            const [x, y, z] = user.position;
             const mesh = avatarMeshes[i++];
-
-            if (z < 10) {
-                y -= z - 9;
-            }
-
-            z = Math.max(0, z - 10);
-            x -= 7.5;
-            z -= 2.5;
 
             let [dy, dx] = [0, 0];
             if (user.emotes && user.emotes.includes('shk')) {
@@ -447,7 +445,7 @@ export class ZoneSceneRenderer extends EventEmitter {
             material.color.set(`rgb(${r}, ${g}, ${b})`);
             mesh.material = material;
 
-            mesh.position.set(x / 16 + dx / 512, y / 16 + dy / 512, z / 16);
+            mesh.position.set((x-.5) / 16 + dx / 512, (y-.5) / 16 + dy / 512, (z-.5) / 16);
 
             this.avatarGroup.add(mesh);
         });
@@ -465,21 +463,21 @@ export class ZoneSceneRenderer extends EventEmitter {
         point.y = -(cy / this.renderer.domElement.clientHeight) * 2 + 1;
 
         this.raycaster.setFromCamera(point, this.camera);
-        const brickIntersects = this.raycaster.intersectObject(this.brickMesh);
-        const floorIntersects = this.raycaster.intersectObject(this.floorMesh);
+        const blockIntersects = this.raycaster.intersectObject(this.blockGroup, true);
 
-        if (brickIntersects.length > 0) {
-            const intersection = brickIntersects[0].point;
-            const x = Math.floor((intersection.x + 0.5) * 16);
-            const y = 12 - Math.floor((intersection.y + 0.5) * 16);
+        if (blockIntersects.length > 0) {
+            let [x, y, z] = this.meshToCoords.get(blockIntersects[0].object)!;
+            const delta = blockIntersects[0].point.sub(blockIntersects[0].object.position);
+            
+            if (Math.abs(delta.y) > Math.abs(delta.x) && Math.abs(delta.y) > Math.abs(delta.z)) {
+                y += Math.sign(delta.y);
+            } else if (Math.abs(delta.x) > Math.abs(delta.y) && Math.abs(delta.x) > Math.abs(delta.z)) {
+                x += Math.sign(delta.x);
+            } else if (Math.abs(delta.z) > Math.abs(delta.x) && Math.abs(delta.z) > Math.abs(delta.y)) {
+                z += Math.sign(delta.z);
+            }
 
-            return { x, y };
-        } else if (floorIntersects.length > 0) {
-            const intersection = floorIntersects[0].point;
-            const x = Math.floor((intersection.x + 0.5) * 16);
-            const y = 5 + Math.floor((intersection.z + 0.5) * 16);
-
-            return { x, y };
+            return { x, y, z };
         } else {
             return undefined;
         }

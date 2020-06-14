@@ -396,19 +396,59 @@ export async function load() {
 
     setInterval(() => client.heartbeat(), 30 * 1000);
 
-    function moveTo(x: number, y: number) {
+    function moveTo(x: number, y: number, z: number) {
         const user = getLocalUser()!;
-        user.position = [x, y];
+        user.position = [x, y, z];
         client.move(user.position);
     }
 
-    function move(dx: number, dy: number) {
+    function move(dx: number, dz: number) {
         const user = getLocalUser()!;
 
         if (user.position) {
-            moveTo(clamp(0, 15, user.position[0] + dx), clamp(0, 15, user.position[1] + dy));
-        } else {
-            moveTo(randomInt(0, 15), 15);
+            const [px, py, pz] = user.position;
+            let [nx, ny, nz] = [px+dx, py, pz+dz];
+
+            const grid = client.zone.grid;
+
+            const block = grid.has([nx, ny, nz]);
+            const belowMe = grid.has([px, py-1, pz]);
+            const aboveMe = grid.has([px, py+1, pz]);
+            const belowBlock = grid.has([nx, ny-1, nz]);
+            const aboveBlock = grid.has([nx, ny+1, nz]);
+            
+            const walled = grid.has([nx-1, ny, nz])
+                        || grid.has([nx+1, ny, nz])
+                        || grid.has([nx, ny, nz-1])
+                        || grid.has([nx, ny, nz+1]);
+
+            // wall into empty space along floor or wall
+            if (!block && (walled || belowBlock)) {
+                // great
+            // walk up wall
+            } else if (block && aboveBlock && !aboveMe) {
+                nx = px;
+                nz = pz;
+                ny = py + 1;
+            // step up
+            } else if (block && !aboveBlock && !aboveMe) {
+                ny += 1;
+            // walk down wall
+            } else if (!block && !belowMe && !walled && !belowBlock) {
+                nx = px;
+                nz = pz;
+                ny = py - 1;
+            // step down
+            } else if (!block && !belowBlock) {
+                ny -= 1;
+            // can't move
+            } else {
+                nx = px;
+                ny = py;
+                nz = pz;
+            }
+
+            moveTo(nx, ny, nz);
         }
     }
 
@@ -550,6 +590,7 @@ export async function load() {
     gameKeys.set('ArrowRight', () => move(1, 0));
     gameKeys.set('ArrowDown', () => move(0, 1));
     gameKeys.set('ArrowUp', () => move(0, -1));
+    gameKeys.set('q', () => queuePanel.hidden = !queuePanel.hidden);
 
     function sendChat() {
         const line = chatInput.value;
@@ -638,10 +679,10 @@ export async function load() {
     document.getElementById('camera-button')!.addEventListener('click', () => sceneRenderer.cycleCamera());
 
     const tooltip = document.getElementById('tooltip')!;
-    sceneRenderer.on('pointerdown', (point) => moveTo(point.x, point.y));
+    sceneRenderer.on('pointerdown', (point) => moveTo(point.x, point.y, point.z));
     sceneRenderer.on('pointermove', (point) => {
         if (point) {
-            const pos = [point.x, point.y];
+            const pos = [point.x, point.y, point.z];
             const names = Array.from(client.zone.users.values())
                 .filter((user) => user.position?.join(',') === pos.join(','))
                 .map((user) => user.name);
