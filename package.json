@@ -5,7 +5,7 @@
   "scripts": {
     "start": "node lib/server/run.js",
     "test": "jest --config jestconfig.json",
-    "build:client:script": "browserify src/client/main.ts -p [ tsify -p src/client/tsconfig.json ] -s zone | terser -c -m -o public/script.js",
+    "build:client:script": "webpack src/client/main.ts --config src/client/webpack.config.js",
     "build:client:html": "pug --pretty src/client/index.pug -o public",
     "build:client:css": "cp-cli src/client/style.css public/style.css",
     "build:client": "npm run build:client:css && npm run build:client:html && npm run build:client:script",
@@ -26,7 +26,6 @@
   "license": "MIT",
   "keywords": [
     "node",
-    "glitch",
     "express",
     "zone"
   ],
@@ -59,18 +58,18 @@
     "@types/tmp": "^0.2.0",
     "@types/ws": "^7.2.4",
     "blitsy": "^0.2.1",
-    "browserify": "^16.5.1",
     "cp-cli": "^2.0.0",
     "jest": "^25.3.0",
     "jest-canvas-mock": "^2.2.0",
     "prettier": "^2.0.4",
     "pug-cli": "^1.0.0-alpha6",
-    "terser": "^4.6.13",
     "ts-jest": "^25.3.1",
-    "tsify": "^4.0.1",
+    "ts-loader": "^7.0.5",
     "tslint": "^6.1.1",
     "tslint-config-prettier": "^1.18.0",
     "typescript": "^3.8.3",
+    "webpack": "^4.43.0",
+    "webpack-cli": "^3.3.11",
     "ws": "^7.2.5"
   }
 }
