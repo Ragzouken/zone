@@ -215,8 +215,6 @@ export async function load() {
         refreshUsers();
     });
 
-    console.log(client.on, client.off);
-
     document.getElementById('ban-ip-button')!.addEventListener('click', () => {
         client.command('ban', [userSelect.value]);
     });

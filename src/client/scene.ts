@@ -2,7 +2,7 @@ import * as THREE from 'three';
 import { ZoneState } from '../common/zone';
 import { hslToRgb, withPixels, eventToElementPixel } from './utility';
 import { randomInt } from '../common/utility';
-import { rgbaToColor, decodeAsciiTexture } from 'blitsy';
+import { rgbaToColor, decodeAsciiTexture, createContext2D } from 'blitsy';
 import { EventEmitter } from 'events';
 
 function recolor(context: CanvasRenderingContext2D) {
@@ -58,15 +58,139 @@ ________
 recolor(floorTile);
 recolor(brickTile);
 
+const texture = createContext2D(16, 8);
+texture.drawImage(floorTile.canvas, 0, 0);
+texture.drawImage(brickTile.canvas, 8, 0);
+
+const testTile = decodeAsciiTexture(
+    `
+########
+#______#
+#______#
+#______#
+#______#
+#______#
+#______#
+########
+`,
+    '#',
+);
+
 const black = new THREE.Color(0, 0, 0);
 const red = new THREE.Color(255, 0, 0);
 
+const blockTexture = makeTileCanvasTexture(texture.canvas);
 const brickTexture = makeTileCanvasTexture(brickTile.canvas);
 const floorTexture = makeTileCanvasTexture(floorTile.canvas);
-brickTexture.repeat.set(16, 10);
-floorTexture.repeat.set(16, 6);
+// brickTexture.repeat.set(16, 10);
+// floorTexture.repeat.set(16, 6);
 const brickMaterial = new THREE.MeshBasicMaterial({ map: brickTexture, side: THREE.DoubleSide });
 const floorMaterial = new THREE.MeshBasicMaterial({ map: floorTexture, side: THREE.DoubleSide });
+
+const blockMaterial = new THREE.MeshBasicMaterial({ map: blockTexture });
+
+const cubeGeo = new THREE.BoxBufferGeometry(1/16, 1/16, 1/16);
+
+const cubeData = 
+{
+    faces:
+    [
+        {
+            name: "top",
+            positions: [[0, 1, 1], [1, 1, 1], [1, 1, 0], [0, 1, 0]],
+            texturing: [   [.5, 0],    [.5, 1],    [0, 1],    [0, 0]],
+            triangles: [[0, 1, 2], [0, 2, 3]]
+        },
+
+        {
+            name: "front",
+            positions: [[0, 1, 1], [0, 0, 1], [1, 0, 1], [1, 1, 1]],
+            texturing: [   [1, 0],    [1, 1],    [.5, 1],    [.5, 0]],
+            triangles: [[0, 1, 2], [0, 2, 3]]
+        },
+
+        {
+            name: "back",
+            positions: [[1, 0, 0], [0, 0, 0], [0, 1, 0], [1, 1, 0]],
+            texturing: [   [.5, 1],    [1, 1],    [1, 0],    [.5, 0]],
+            triangles: [[0, 1, 2], [0, 2, 3]]
+        },
+        
+        {
+            name: "left",
+            positions: [[1, 1, 1], [1, 0, 1], [1, 0, 0], [1, 1, 0]],
+            texturing: [   [1, 0],    [1, 1],    [.5, 1],    [.5, 0]],
+            triangles: [[0, 1, 2], [0, 2, 3]]
+        },
+
+        {
+            name: "right",
+            positions: [[0, 1, 0], [0, 0, 0], [0, 0, 1], [0, 1, 1]],
+            texturing: [   [1, 0],    [1, 1],    [.5, 1],    [.5, 0]],
+            triangles: [[0, 1, 2], [0, 2, 3]]
+        },
+
+        {
+            name: "bottom",
+            positions: [[0, 0, 1], [0, 0, 0], [1, 0, 0], [1, 0, 1]],
+            texturing: [   [.5, 0],    [.5, 1],    [0, 1],    [0, 0]],
+            triangles: [[0, 1, 2], [0, 2, 3]]
+        }
+    ]
+};
+
+function dataToGeo(data: any): THREE.BufferGeometry {
+    let indexOffset = 0;
+    const indices: number[] = [];
+    const positions: number[] = [];
+    const texcoords: number[] = [];
+    const normals: number[] = [];
+
+    data.faces.forEach((face: any) =>
+    {
+        // offset indices relative to existing vertices
+        // const indexOffset = this.vertexCount;
+        const faceIndexes = face.triangles.reduce((a: number[], b: number[]) => [...a, ...b], [])
+                                            .map((index: number) => index + indexOffset);
+
+        indices.push(...faceIndexes);
+        // faces.set(face.name, faceIndexes);
+        // face.triangles.forEach(_ => this.tri2face.push(face.name));
+
+        // compute shared normal and add all positions/texcoords/normals
+        const positions2 = face.positions.slice(0, 3).map((position: number[]) => new THREE.Vector3(...position));
+        
+        const normal = new THREE.Vector3();
+        normal.crossVectors(positions2[1].clone().sub(positions2[0]),
+                            positions2[2].clone().sub(positions2[0])); 
+
+        face.positions.forEach((position: number[], i: number) =>
+        {
+            positions.push(...face.positions[i]);
+            texcoords.push(...face.texturing[i]);
+            normals.push(normal.x, normal.y, normal.z);
+        });
+
+        indexOffset += face.positions.length;
+    });
+
+    // threejs stuff
+    const positionBuffer = new THREE.Float32BufferAttribute(positions, 3);
+    const normalBuffer   = new THREE.Float32BufferAttribute(normals,   3);
+    const texcoordBuffer = new THREE.Float32BufferAttribute(texcoords, 2);
+
+    const geometry = new THREE.BufferGeometry();
+    geometry.setAttribute("position", positionBuffer);
+    geometry.setAttribute("normal",   normalBuffer);
+    geometry.setAttribute("uv",       texcoordBuffer);
+    geometry.setIndex(indices);
+
+    geometry.translate(-.5, -.5, -.5);
+    geometry.scale(1/16, 1/16, 1/16);
+    return geometry;
+}
+
+const blockGeo = dataToGeo(cubeData);
 
 function makeTileCanvasTexture(canvas: HTMLCanvasElement) {
     const texture = new THREE.CanvasTexture(canvas);
@@ -217,10 +341,31 @@ export class ZoneSceneRenderer extends EventEmitter {
         this.mediaMesh.translateZ(-3 / 16 + 1 / 512);
         this.brickMesh.translateZ(-3 / 16);
 
-        this.scene.add(this.brickMesh);
-        this.scene.add(this.floorMesh);
+        // this.scene.add(this.brickMesh);
+        // this.scene.add(this.floorMesh);
         this.scene.add(this.avatarGroup);
         this.scene.add(this.mediaMesh);
+
+        for (let z = 0; z < 6; ++z) {
+            for (let x = 0; x < 16; ++x) {
+                const cube = new THREE.Mesh(blockGeo, blockMaterial);
+                this.scene.add(cube);
+                cube.position.set((x-7.5)/16, -5.5/16, (z-2.5)/16);
+            }
+        }
+        for (let x = 0; x < 16; ++x) {
+            for (let y = 0; y < 10; ++y) {
+                const cube = new THREE.Mesh(blockGeo, blockMaterial);
+                this.scene.add(cube);
+                cube.position.set((x-7.5)/16, (y-4.5)/16, -3.5/16);
+            }
+        }
+
+        /*
+        const test = new THREE.Mesh(blockGeo, blockMaterial);
+        this.scene.add(test);
+        test.rotateY(1);
+        */
 
         this.renderer.setSize(container.clientWidth, container.clientHeight);
         container.appendChild(this.renderer.domElement);
