@@ -590,7 +590,10 @@ export async function load() {
     gameKeys.set('ArrowRight', () => move(1, 0));
     gameKeys.set('ArrowDown', () => move(0, 1));
     gameKeys.set('ArrowUp', () => move(0, -1));
-    gameKeys.set('q', () => queuePanel.hidden = !queuePanel.hidden);
+    gameKeys.set('q', () => {
+        refreshQueue();
+        queuePanel.hidden = !queuePanel.hidden;
+    });
 
     function sendChat() {
         const line = chatInput.value;
