@@ -187,6 +187,7 @@ function dataToGeo(data: any): THREE.BufferGeometry {
 
     geometry.translate(-.5, -.5, -.5);
     geometry.scale(1/16, 1/16, 1/16);
+    geometry.rotateY(Math.PI / 2);
     return geometry;
 }
 
@@ -341,8 +342,11 @@ export class ZoneSceneRenderer extends EventEmitter {
         this.mediaMesh.translateZ(-3 / 16 + 1 / 512);
         this.brickMesh.translateZ(-3 / 16);
 
-        // this.scene.add(this.brickMesh);
-        // this.scene.add(this.floorMesh);
+        this.scene.add(this.brickMesh);
+        this.scene.add(this.floorMesh);
+        this.brickMesh.visible = false;
+        this.floorMesh.visible = false;
+
         this.scene.add(this.avatarGroup);
         this.scene.add(this.mediaMesh);
 
@@ -360,12 +364,6 @@ export class ZoneSceneRenderer extends EventEmitter {
                 cube.position.set((x-7.5)/16, (y-4.5)/16, -3.5/16);
             }
         }
-
-        /*
-        const test = new THREE.Mesh(blockGeo, blockMaterial);
-        this.scene.add(test);
-        test.rotateY(1);
-        */
 
         this.renderer.setSize(container.clientWidth, container.clientHeight);
         container.appendChild(this.renderer.domElement);
