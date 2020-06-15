@@ -365,12 +365,11 @@ export class ZoneSceneRenderer extends EventEmitter {
             }
         }
         for (let x = 0; x < 16; ++x) {
-            zone.grid.set([x-7, Math.min(-5, 3-x), 3], true);
+            zone.grid.set([x-7, Math.min(-5, 5-x), 3], true);
         }
-
-        zone.grid.set([8, -4, -1], true);
-        zone.grid.set([8, -3, -1], true);
-        zone.grid.set([7, -3, -1], true);
+        for (let z = 0; z < 6; ++z) {
+            zone.grid.set([8, -z, z-3], true);
+        }
 
         zone.grid.forEach((_, [x, y, z]) => {
             const cube = new THREE.Mesh(blockGeo, blockMaterial);
