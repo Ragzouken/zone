@@ -354,7 +354,7 @@ export class ZoneSceneRenderer extends EventEmitter {
         this.scene.add(this.avatarGroup);
         this.scene.add(this.mediaMesh);
 
-        for (let z = 0; z < 6; ++z) {
+        for (let z = 0; z < 5; ++z) {
             for (let x = 0; x < 16; ++x) {
                 zone.grid.set([x-7, -5, z-2], true);
             }
@@ -363,6 +363,9 @@ export class ZoneSceneRenderer extends EventEmitter {
             for (let y = 0; y < 10; ++y) {
                 zone.grid.set([x-7, y-4, -3], true);
             }
+        }
+        for (let x = 0; x < 16; ++x) {
+            zone.grid.set([x-7, Math.min(-5, 3-x), 3], true);
         }
 
         zone.grid.set([8, -4, -1], true);
