@@ -415,6 +415,7 @@ export async function load() {
             const belowMe = grid.has([px, py-1, pz]);
             const aboveMe = grid.has([px, py+1, pz]);
             const belowBlock = grid.has([nx, ny-1, nz]);
+            const belowBlock2 = grid.has([nx, ny-2, nz]);
             const aboveBlock = grid.has([nx, ny+1, nz]);
             
             const walled = grid.has([nx-1, ny, nz])
@@ -422,8 +423,14 @@ export async function load() {
                         || grid.has([nx, ny, nz-1])
                         || grid.has([nx, ny, nz+1]);
 
-            // wall into empty space along floor or wall
-            if (!block && (walled || belowBlock)) {
+            // walk into empty space along floor
+            if (!block && belowBlock) {
+                // great
+            // special step down
+            } else if (belowMe && !block && !belowBlock && belowBlock2) {
+                ny -= 1;
+            // walk into empty space along wall
+            } else if (!block && walled) {
                 // great
             // walk up wall
             } else if (block && aboveBlock && !aboveMe) {
