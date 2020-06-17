@@ -395,7 +395,7 @@ export async function load() {
         }
     });
 
-    client.on('blocks', () => sceneRenderer.rebuild());
+    client.on('blocks', ({ coords }) => sceneRenderer.rebuildAtCoords(coords));
 
     setInterval(() => client.heartbeat(), 30 * 1000);
 
@@ -725,12 +725,11 @@ export async function load() {
     document.getElementById('camera-button')!.addEventListener('click', () => sceneRenderer.cycleCamera());
 
     const tooltip = document.getElementById('tooltip')!;
-    sceneRenderer.on('pointerdown', (point) => moveTo(point.x, point.y, point.z));
-    sceneRenderer.on('pointermove', (point) => {
-        if (point) {
-            const pos = [point.x, point.y, point.z];
+    sceneRenderer.on('pointerdown', ([x, y, z]) => moveTo(x, y, z));
+    sceneRenderer.on('pointermove', (coords) => {
+        if (coords) {
             const names = Array.from(client.zone.users.values())
-                .filter((user) => user.position?.join(',') === pos.join(','))
+                .filter((user) => user.position?.join(',') === coords.join(','))
                 .map((user) => user.name);
             tooltip.innerHTML = names.join(', ');
         } else {

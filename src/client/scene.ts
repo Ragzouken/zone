@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import { ZoneState } from '../common/zone';
 import { hslToRgb, withPixels, eventToElementPixel } from './utility';
-import { randomInt } from '../common/utility';
+import { randomInt, Grid } from '../common/utility';
 import { rgbaToColor, decodeAsciiTexture, createContext2D } from 'blitsy';
 import { EventEmitter } from 'events';
 import ZoneClient from '../common/client';
@@ -267,8 +267,8 @@ export class FollowCamera {
 }
 
 export interface ZoneSceneRenderer {
-    on(event: 'pointerdown', callback: (point: THREE.Vector3) => void): this;
-    on(event: 'pointermove', callback: (point?: THREE.Vector3) => void): this;
+    on(event: 'pointerdown', callback: (point: number[]) => void): this;
+    on(event: 'pointermove', callback: (point?: number[]) => void): this;
 }
 
 export class ZoneSceneRenderer extends EventEmitter {
@@ -286,6 +286,7 @@ export class ZoneSceneRenderer extends EventEmitter {
     private readonly mediaMesh: THREE.Mesh;
 
     private readonly meshToCoords = new Map<THREE.Object3D, number[]>();
+    private readonly coordsToMesh = new Grid<THREE.Object3D>();
 
     private cameraIndex = 0;
     private cursor = new THREE.Mesh(cursorGeo, cursorMat);
@@ -412,8 +413,7 @@ export class ZoneSceneRenderer extends EventEmitter {
                 } else if (event.ctrlKey) {
                     client.setBlock(info.blockCoords, false);
                 } else {
-                    const [x, y, z] = info.spaceCoords;
-                    this.emit('pointerdown', { x, y, z });
+                    this.emit('pointerdown', info.spaceCoords);
                 }
             }
 
@@ -447,11 +447,33 @@ export class ZoneSceneRenderer extends EventEmitter {
             this.blockGroup.remove(this.blockGroup.children[0]);
         }
 
+        this.coordsToMesh.clear();
         this.zone.grid.forEach((_, [x, y, z]) => {
             const cube = new THREE.Mesh(blockGeo, blockMaterial);
             this.blockGroup.add(cube);
             cube.position.set(x/16, y/16, z/16);
             this.meshToCoords.set(cube, [x, y, z]);
+            this.coordsToMesh.set([x, y, z], cube);
+        });
+    }
+
+    rebuildAtCoords(coords: number[][]) {
+        coords.forEach((coord) => {
+            const value = this.zone.grid.has(coord);
+
+            if (value && !this.coordsToMesh.has(coord)) {
+                const [x, y, z] = coord;
+                const cube = new THREE.Mesh(blockGeo, blockMaterial);
+                this.blockGroup.add(cube);
+                cube.position.set(x/16, y/16, z/16);
+                this.meshToCoords.set(cube, [x, y, z]);
+                this.coordsToMesh.set([x, y, z], cube);
+            } else if (!value && this.coordsToMesh.has(coord)) {
+                const mesh = this.coordsToMesh.get(coord)!;
+                this.blockGroup.remove(mesh);
+                this.meshToCoords.delete(mesh);
+                this.coordsToMesh.delete(coord);
+            }
         });
     }
 
