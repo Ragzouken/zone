@@ -63,7 +63,7 @@ const texture = createContext2D(16, 8);
 texture.drawImage(floorTile.canvas, 0, 0);
 texture.drawImage(brickTile.canvas, 8, 0);
 
-const testTile = decodeAsciiTexture(
+const cursorTile = decodeAsciiTexture(
     `
 ########
 #______#
@@ -81,16 +81,12 @@ const black = new THREE.Color(0, 0, 0);
 const red = new THREE.Color(255, 0, 0);
 
 const blockTexture = makeTileCanvasTexture(texture.canvas);
-const brickTexture = makeTileCanvasTexture(brickTile.canvas);
-const floorTexture = makeTileCanvasTexture(floorTile.canvas);
-// brickTexture.repeat.set(16, 10);
-// floorTexture.repeat.set(16, 6);
-const brickMaterial = new THREE.MeshBasicMaterial({ map: brickTexture, side: THREE.DoubleSide });
-const floorMaterial = new THREE.MeshBasicMaterial({ map: floorTexture, side: THREE.DoubleSide });
+const cursorTexture = makeTileCanvasTexture(cursorTile.canvas);
 
 const blockMaterial = new THREE.MeshBasicMaterial({ map: blockTexture });
 
-const cubeGeo = new THREE.BoxBufferGeometry(1/16, 1/16, 1/16);
+const cursorGeo = new THREE.BoxBufferGeometry(1/16, 1/16, 1/16);
+const cursorMat = new THREE.MeshBasicMaterial({ map: cursorTexture, side: THREE.DoubleSide, transparent: true })
 
 const cubeData = 
 {
@@ -268,13 +264,12 @@ export class ZoneSceneRenderer extends EventEmitter {
     private readonly avatarGroup = new THREE.Group();
     private readonly blockGroup = new THREE.Group();
     private readonly mediaMesh: THREE.Mesh;
-    private readonly floorMesh: THREE.Mesh;
-    private readonly brickMesh: THREE.Mesh;
 
     private readonly meshToCoords = new Map<THREE.Object3D, number[]>();
 
     private cameraIndex = 0;
     private followCam: THREE.OrthographicCamera;
+    private cursor = new THREE.Mesh(cursorGeo, cursorMat);
 
     private get camera() {
         return this.cameras[this.cameraIndex];
@@ -289,6 +284,8 @@ export class ZoneSceneRenderer extends EventEmitter {
     ) {
         super();
 
+        this.cursor.scale.set(1.1, 1.1, 1.1);
+
         const aspect = container.clientWidth / container.clientHeight;
         const frustumSize = 1.1;
 
@@ -300,8 +297,8 @@ export class ZoneSceneRenderer extends EventEmitter {
             0.01,
             10,
         );
-        isoCamera.position.set(-1 / 8, 4.5 / 8, 4.5 / 8);
-        isoCamera.lookAt(0, 0, 0);
+        isoCamera.position.set(-1 / 8 + .5/16, 4.5 / 8, 4.5 / 8);
+        isoCamera.lookAt(.5/16, 0, 0);
 
         this.followCam = new THREE.OrthographicCamera(
             (frustumSize * aspect) / -2,
@@ -324,12 +321,12 @@ export class ZoneSceneRenderer extends EventEmitter {
             0.01,
             10,
         );
-        flatCamera.position.set(0, 1, 1);
-        flatCamera.lookAt(0, 0, 0);
+        flatCamera.position.set(.5/16, 1, 1);
+        flatCamera.lookAt(.5/16, 0, 0);
 
         const cinemaCamera = new THREE.PerspectiveCamera(70, aspect, 0.01, 10);
-        cinemaCamera.position.set(0, 0, 0.8);
-        cinemaCamera.lookAt(0, 0, 0);
+        cinemaCamera.position.set(.5/16, 0, 0.8);
+        cinemaCamera.lookAt(.5/16, 0, 0);
 
         this.cameras.push(isoCamera);
         this.cameras.push(flatCamera);
@@ -347,27 +344,18 @@ export class ZoneSceneRenderer extends EventEmitter {
             side: THREE.DoubleSide,
             blending: THREE.AdditiveBlending,
             transparent: true,
-            depthTest: false,
+            depthTest: true,
             depthWrite: false,
         });
 
         this.mediaMesh = new THREE.Mesh(new THREE.PlaneGeometry(1, 1, 1, 1), mediaMaterial);
-        this.brickMesh = new THREE.Mesh(new THREE.PlaneGeometry(1, 10 / 16, 1, 1), brickMaterial);
-        this.floorMesh = new THREE.Mesh(new THREE.PlaneGeometry(1, 6 / 16, 1, 1), floorMaterial);
-
-        this.floorMesh.rotateX(Math.PI / 2);
-        this.floorMesh.translateZ(5 / 16);
-        this.mediaMesh.translateZ(-3 / 16 + 1 / 512);
-        this.brickMesh.translateZ(-3 / 16);
-
-        this.scene.add(this.brickMesh);
-        this.scene.add(this.floorMesh);
-        this.brickMesh.visible = false;
-        this.floorMesh.visible = false;
+        this.mediaMesh.translateX(.5/16);
+        this.mediaMesh.translateZ(-2.5 / 16 + 1 / 512);
 
         this.scene.add(this.blockGroup);
         this.scene.add(this.avatarGroup);
         this.scene.add(this.mediaMesh);
+        this.scene.add(this.cursor);
 
         for (let z = 0; z < 5; ++z) {
             for (let x = 0; x < 16; ++x) {
@@ -386,29 +374,67 @@ export class ZoneSceneRenderer extends EventEmitter {
             zone.grid.set([8, -z, z-3], true);
         }
 
-        zone.grid.forEach((_, [x, y, z]) => {
-            const cube = new THREE.Mesh(blockGeo, blockMaterial);
-            this.blockGroup.add(cube);
-            cube.position.set((x-.5)/16, (y-.5)/16, (z-.5)/16);
-            this.meshToCoords.set(cube, [x, y, z]);
-        });
+        this.rebuild();
 
         this.renderer.setSize(container.clientWidth, container.clientHeight);
         container.appendChild(this.renderer.domElement);
 
         this.renderer.domElement.addEventListener('pointerdown', (event) => {
-            const point = this.getPointUnderMouseEvent(event);
-            if (point) this.emit('pointerdown', point);
+            const info = this.getInfoUnderMouseEvent(event);
+
+            if (info) {
+                if (event.shiftKey) {
+                    client.setBlock(info.spaceCoords, true);
+                    // const [x, y, z] = info.spaceCoords;
+                    // this.zone.grid.set([x, y, z], true);
+                    // this.rebuild();
+                } else if (event.ctrlKey) {
+                    client.setBlock(info.spaceCoords, false);
+                    // const [x, y, z] = info.blockCoords;
+                    // this.zone.grid.delete([x, y, z]);
+                    // this.rebuild();
+                } else {
+                    const [x, y, z] = info.spaceCoords;
+                    this.emit('pointerdown', { x, y, z });
+                }
+            }
+
+            event.preventDefault();
+            event.stopPropagation();
         });
 
-        this.renderer.domElement.addEventListener('pointermove', (event) => {
-            const point = this.getPointUnderMouseEvent(event);
-            this.emit('pointermove', point);
+        document.addEventListener('keydown', (event) => this.cursor.visible = event.shiftKey || event.ctrlKey);
+        document.addEventListener('keyup', (event) => this.cursor.visible = event.shiftKey || event.ctrlKey);
+
+        document.addEventListener('pointermove', (event) => {
+            
+            const info = this.getInfoUnderMouseEvent(event);
+
+            if (info?.blockCoords) {
+                const [x, y, z] = info.blockCoords;
+                this.cursor.position.set(x/16, y/16, z/16);
+            }
+
+            this.emit('pointermove', info?.spaceCoords);
         });
     }
 
     cycleCamera() {
         this.cameraIndex = (this.cameraIndex + 1) % this.cameras.length;
+    }
+
+    rebuild() {
+        while (this.blockGroup.children.length)
+        {
+            this.blockGroup.remove(this.blockGroup.children[0]);
+        }
+
+        this.zone.grid.forEach((_, [x, y, z]) => {
+            const cube = new THREE.Mesh(blockGeo, blockMaterial);
+            this.blockGroup.add(cube);
+            cube.position.set(x/16, y/16, z/16);
+            this.meshToCoords.set(cube, [x, y, z]);
+        });
     }
 
     update() {
@@ -472,7 +498,7 @@ export class ZoneSceneRenderer extends EventEmitter {
             material.color.set(`rgb(${r}, ${g}, ${b})`);
             mesh.material = material;
 
-            mesh.position.set((x-.5) / 16 + dx / 512, (y-.5) / 16 + dy / 512, (z-.5) / 16);
+            mesh.position.set(x / 16 + dx / 512, y / 16 + dy / 512, z / 16);
 
             this.avatarGroup.add(mesh);
         });
@@ -482,31 +508,51 @@ export class ZoneSceneRenderer extends EventEmitter {
         this.renderer.render(this.scene, this.camera);
     }
 
-    getPointUnderMouseEvent(event: PointerEvent) {
+    cameraPointFromMouseEvent(event: PointerEvent) {
         const [cx, cy] = eventToElementPixel(event, this.renderer.domElement);
 
-        const point = new THREE.Vector2();
-        point.x = (cx / this.renderer.domElement.clientWidth) * 2 - 1;
-        point.y = -(cy / this.renderer.domElement.clientHeight) * 2 + 1;
+        return new THREE.Vector2(
+            -1 + cx / this.renderer.domElement.clientWidth * 2,
+             1 - cy / this.renderer.domElement.clientHeight * 2,
+        );
+    }
 
+    blockIntersectCameraPoint(point: THREE.Vector2): THREE.Intersection | undefined {
         this.raycaster.setFromCamera(point, this.camera);
-        const blockIntersects = this.raycaster.intersectObject(this.blockGroup, true);
+        return this.raycaster.intersectObject(this.blockGroup, true)[0];
+    }
 
-        if (blockIntersects.length > 0) {
-            let [x, y, z] = this.meshToCoords.get(blockIntersects[0].object)!;
-            const delta = blockIntersects[0].point.sub(blockIntersects[0].object.position);
-            
-            if (Math.abs(delta.y) > Math.abs(delta.x) && Math.abs(delta.y) > Math.abs(delta.z)) {
-                y += Math.sign(delta.y);
-            } else if (Math.abs(delta.x) > Math.abs(delta.y) && Math.abs(delta.x) > Math.abs(delta.z)) {
-                x += Math.sign(delta.x);
-            } else if (Math.abs(delta.z) > Math.abs(delta.x) && Math.abs(delta.z) > Math.abs(delta.y)) {
-                z += Math.sign(delta.z);
-            }
+    getInfoUnderMouseEvent(event: PointerEvent) {
+        const point = this.cameraPointFromMouseEvent(event);
+        const intersection = this.blockIntersectCameraPoint(point);
 
-            return { x, y, z };
-        } else {
-            return undefined;
+        if (!intersection) return undefined;
+
+        const blockCoords = this.meshToCoords.get(intersection.object)!;
+
+        let [x, y, z] = blockCoords;
+        const delta = intersection.point.sub(intersection.object.position);
+        
+        if (Math.abs(delta.y) > Math.abs(delta.x) && Math.abs(delta.y) > Math.abs(delta.z)) {
+            y += Math.sign(delta.y);
+        } else if (Math.abs(delta.x) > Math.abs(delta.y) && Math.abs(delta.x) > Math.abs(delta.z)) {
+            x += Math.sign(delta.x);
+        } else if (Math.abs(delta.z) > Math.abs(delta.x) && Math.abs(delta.z) > Math.abs(delta.y)) {
+            z += Math.sign(delta.z);
         }
+
+        const spaceCoords = [x, y, z];
+
+        return { 
+            blockCoords,
+            spaceCoords,
+        };
+    }
+
+    getPointUnderMouseEvent(event: PointerEvent) {
+        const info = this.getInfoUnderMouseEvent(event);
+        if (!info) return undefined;
+        const [x, y, z] = info.spaceCoords;
+        return { x, y, z };
     }
 }

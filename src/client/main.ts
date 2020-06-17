@@ -394,6 +394,8 @@ export async function load() {
         }
     });
 
+    client.on('blocks', () => sceneRenderer.rebuild());
+
     setInterval(() => client.heartbeat(), 30 * 1000);
 
     function moveTo(x: number, y: number, z: number) {
@@ -609,6 +611,7 @@ export async function load() {
     gameKeys.set('v', () => {
         sceneRenderer.cycleCamera();
     });
+    gameKeys.set('u', () => userPanel.hidden = !userPanel.hidden);
 
     function closeAllPanels() {
         queuePanel.hidden = true;
