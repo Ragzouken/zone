@@ -440,7 +440,7 @@ export async function load() {
             // step up
             } else if (block && !aboveBlock && !aboveMe) {
                 ny += 1;
-            // walk down wall
+            // fall down wall
             } else if (!block && !belowMe && !walled && !belowBlock) {
                 nx = px;
                 nz = pz;
@@ -597,10 +597,23 @@ export async function load() {
     gameKeys.set('ArrowRight', () => move(1, 0));
     gameKeys.set('ArrowDown', () => move(0, 1));
     gameKeys.set('ArrowUp', () => move(0, -1));
+
     gameKeys.set('q', () => {
         refreshQueue();
         queuePanel.hidden = !queuePanel.hidden;
     });
+    gameKeys.set('s', () => {
+        searchPanel.hidden = false;
+        searchInput.focus();
+    });
+    gameKeys.set('v', () => {
+        sceneRenderer.cycleCamera();
+    });
+
+    function closeAllPanels() {
+        queuePanel.hidden = true;
+        searchPanel.hidden = true;
+    }
 
     function sendChat() {
         const line = chatInput.value;
@@ -621,17 +634,27 @@ export async function load() {
         chatInput.value = '';
     }
 
-    document.addEventListener('keydown', (event) => {
-        const typing = document.activeElement!.tagName === 'INPUT';
+    function isInputElement(element: Element | null): element is HTMLInputElement {
+        return element?.tagName === 'INPUT';
+    }
 
-        if (typing) {
-            if (event.key === 'Tab' || event.key === 'Escape') {
-                chatInput.blur();
+    document.addEventListener('keydown', (event) => {
+        if (event.key === 'Escape') {
+            if (isInputElement(document.activeElement)) {
+                document.activeElement.blur();
+                event.preventDefault();
+            }
+            closeAllPanels();
+        }
+
+        if (isInputElement(document.activeElement)) {
+            if (event.key === 'Tab' && document.activeElement === chatInput) {
+                document.activeElement.blur();
                 event.preventDefault();
             } else if (event.key === 'Enter') {
                 sendChat();
             }
-        } else if (!typing) {
+        } else {
             const func = gameKeys.get(event.key);
             if (func) {
                 func();
@@ -671,6 +694,7 @@ export async function load() {
 
     const sceneRenderer = new ZoneSceneRenderer(
         document.getElementById('three-container')!,
+        client,
         client.zone,
         getTile,
         connecting,

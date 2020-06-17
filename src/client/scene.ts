@@ -4,6 +4,7 @@ import { hslToRgb, withPixels, eventToElementPixel } from './utility';
 import { randomInt } from '../common/utility';
 import { rgbaToColor, decodeAsciiTexture, createContext2D } from 'blitsy';
 import { EventEmitter } from 'events';
+import ZoneClient from '../common/client';
 
 function recolor(context: CanvasRenderingContext2D) {
     withPixels(context, (pixels) => {
@@ -273,6 +274,7 @@ export class ZoneSceneRenderer extends EventEmitter {
     private readonly meshToCoords = new Map<THREE.Object3D, number[]>();
 
     private cameraIndex = 0;
+    private followCam: THREE.OrthographicCamera;
 
     private get camera() {
         return this.cameras[this.cameraIndex];
@@ -280,6 +282,7 @@ export class ZoneSceneRenderer extends EventEmitter {
 
     constructor(
         container: HTMLElement,
+        private readonly client: ZoneClient,
         private readonly zone: ZoneState,
         private readonly getTile: (base64: string | undefined) => CanvasRenderingContext2D,
         private readonly connecting: () => boolean,
@@ -299,6 +302,17 @@ export class ZoneSceneRenderer extends EventEmitter {
         );
         isoCamera.position.set(-1 / 8, 4.5 / 8, 4.5 / 8);
         isoCamera.lookAt(0, 0, 0);
+
+        this.followCam = new THREE.OrthographicCamera(
+            (frustumSize * aspect) / -2,
+            (frustumSize * aspect) / 2,
+            frustumSize / 2,
+            frustumSize / -2,
+            0.01,
+            10,
+        );
+        this.followCam.position.set(-1 / 8, 4.5 / 8, 4.5 / 8);
+        this.followCam.lookAt(0, 0, 0);
 
         const factor = Math.sqrt(2);
 
@@ -320,6 +334,7 @@ export class ZoneSceneRenderer extends EventEmitter {
         this.cameras.push(isoCamera);
         this.cameras.push(flatCamera);
         this.cameras.push(cinemaCamera);
+        this.cameras.push(this.followCam);
 
         this.mediaTexture.minFilter = THREE.NearestFilter;
         this.mediaTexture.magFilter = THREE.NearestFilter;
@@ -409,6 +424,12 @@ export class ZoneSceneRenderer extends EventEmitter {
             mediaAspect = this.mediaElement.naturalWidth / this.mediaElement.naturalHeight;
         } else if (isCanvas(this.mediaElement)) {
             mediaAspect = this.mediaElement.width / this.mediaElement.height;
+        }
+
+        const localCoords = this.client.localUser?.position;
+        if (localCoords) {
+            const [x, y, z] = localCoords;
+            this.followCam.position.set(x/16 + -1/8, y/16 + 4.5 / 8, z/16 + 4.5/8);
         }
 
         this.mediaMesh.scale.set((252 * mediaAspect) / 512, 252 / 512, 1);
