@@ -389,7 +389,7 @@ export class ZoneSceneRenderer extends EventEmitter {
                     // this.zone.grid.set([x, y, z], true);
                     // this.rebuild();
                 } else if (event.ctrlKey) {
-                    client.setBlock(info.spaceCoords, false);
+                    client.setBlock(info.blockCoords, false);
                     // const [x, y, z] = info.blockCoords;
                     // this.zone.grid.delete([x, y, z]);
                     // this.rebuild();
