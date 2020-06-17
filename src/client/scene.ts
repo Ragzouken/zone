@@ -285,6 +285,7 @@ export class ZoneSceneRenderer extends EventEmitter {
         super();
 
         this.cursor.scale.set(1.1, 1.1, 1.1);
+        this.cursor.visible = false;
 
         const aspect = container.clientWidth / container.clientHeight;
         const frustumSize = 1.1;
@@ -385,14 +386,8 @@ export class ZoneSceneRenderer extends EventEmitter {
             if (info) {
                 if (event.shiftKey) {
                     client.setBlock(info.spaceCoords, true);
-                    // const [x, y, z] = info.spaceCoords;
-                    // this.zone.grid.set([x, y, z], true);
-                    // this.rebuild();
                 } else if (event.ctrlKey) {
                     client.setBlock(info.blockCoords, false);
-                    // const [x, y, z] = info.blockCoords;
-                    // this.zone.grid.delete([x, y, z]);
-                    // this.rebuild();
                 } else {
                     const [x, y, z] = info.spaceCoords;
                     this.emit('pointerdown', { x, y, z });
