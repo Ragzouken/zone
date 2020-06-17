@@ -223,7 +223,7 @@ describe('user presence', () => {
     });
 
     test('client move', async () => {
-        const position = [6, 9];
+        const position = [6, 9, 0];
         await zoneServer({}, async (server) => {
             const client = await server.client();
             await client.join();
