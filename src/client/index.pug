@@ -14,13 +14,13 @@ html
             #top-toolbar.toolbar
                 button#menu-button(title="open menu")
                     img(src="icons/menu.png")
-                button#search-button(title="search for video")
+                button#search-button(title="search for video (s)")
                     img(src="icons/search.png")
-                button#queue-button(title="view queue")
+                button#queue-button(title="view queue (q)")
                     img(src="icons/list.png")
                 button#resync-button(title="reload this")
                     img(src="icons/resync.png")
-                button#camera-button(title="switch view")
+                button#camera-button(title="switch view (v)")
                     img(src="icons/look.png")
                 #player-status
             #bottom-toolbar.toolbar
@@ -40,7 +40,7 @@ html
             #popout-panel(hidden)
                 .menu-title
                     div video pop-out
-                    button#popout-close(title="hide panel").icon-button-small
+                    button#popout-close(title="hide panel (esc)").icon-button-small
                         img(src="icons/close.png")
             #search-panel.menu-panel(hidden)
                 .menu-title
@@ -48,7 +48,7 @@ html
                         input#search-input(placeholder="search for a video" type="text" autocomplete="off")
                         input#search-submit(type="submit" value="search" disabled)
                         button#play-banger(title="queue random song", type="button") random
-                        button#search-close(title="hide panel", type="button").icon-button-small
+                        button#search-close(title="hide panel (esc)", type="button").icon-button-small
                             img(src="icons/close.png")
                 .menu-body#search-results
                     #search-result-template.search-result
@@ -57,7 +57,7 @@ html
             #queue-panel.menu-panel(hidden)
                 .menu-title
                     #queue-title play queue
-                    button#queue-close(title="hide panel").icon-button-small
+                    button#queue-close(title="hide panel (esc)").icon-button-small
                         img(src="icons/close.png")
                 .menu-body
                     .queue-item#current-item
@@ -74,13 +74,13 @@ html
             #user-panel(hidden)
                 .menu-title
                     div user list
-                    button#users-close(title="hide panel").icon-button-small
+                    button#users-close(title="hide panel (esc)").icon-button-small
                         img(src="icons/close.png")
                 .menu-body#user-items
             #avatar-panel(hidden)
                 .menu-title
                     div update appearance
-                    button#avatar-cancel(title="hide panel").icon-button-small
+                    button#avatar-cancel(title="hide panel (esc)").icon-button-small
                         img(src="icons/close.png")
                 .menu-body
                     canvas#avatar-paint(width=8, height=8)
@@ -89,7 +89,7 @@ html
             #menu-panel.menu-panel(hidden)
                 .menu-title
                     div miscellanious options
-                    button#menu-close(title="hide panel").icon-button-small
+                    button#menu-close(title="hide panel (esc)").icon-button-small
                         img(src="icons/close.png")
                 .menu-body
                     div

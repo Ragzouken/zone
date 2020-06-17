@@ -613,6 +613,10 @@ export async function load() {
     function closeAllPanels() {
         queuePanel.hidden = true;
         searchPanel.hidden = true;
+        menuPanel.hidden = true;
+        userPanel.hidden = true;
+        popoutPanel.hidden = true;
+        avatarPanel.hidden = true;
     }
 
     function sendChat() {
