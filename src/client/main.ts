@@ -9,6 +9,7 @@ import { YoutubeVideo } from '../server/youtube';
 import { ZoneSceneRenderer, avatarImage } from './scene';
 import { Player } from './player';
 import { UserState } from '../common/zone';
+import THREE = require('three');
 
 window.addEventListener('load', () => load());
 
@@ -599,6 +600,10 @@ export async function load() {
     gameKeys.set('ArrowRight', () => move(1, 0));
     gameKeys.set('ArrowDown', () => move(0, 1));
     gameKeys.set('ArrowUp', () => move(0, -1));
+
+    const rot = Math.PI / 4;
+    gameKeys.set('[', () => sceneRenderer.followCam.angle += rot);
+    gameKeys.set(']', () => sceneRenderer.followCam.angle -= rot);
 
     gameKeys.set('q', () => {
         refreshQueue();

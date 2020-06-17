@@ -246,6 +246,26 @@ function setAvatarCount(count: number) {
     }
 }
 
+export class FollowCamera {
+    focus = new THREE.Vector3();
+    angle = -Math.PI / 12;
+    pitch = Math.PI / 4;
+    depth = 1;
+
+    constructor(public readonly camera: THREE.Camera) {
+    }
+
+    refresh() {
+        const angle = new THREE.Euler(-this.pitch, this.angle, 0, 'ZYX');
+        const position = new THREE.Vector3(0, 0, this.depth);
+        position.applyEuler(angle);
+        position.add(this.focus);
+
+        this.camera.position.copy(position);
+        this.camera.lookAt(this.focus);
+    }
+}
+
 export interface ZoneSceneRenderer {
     on(event: 'pointerdown', callback: (point: THREE.Vector3) => void): this;
     on(event: 'pointermove', callback: (point?: THREE.Vector3) => void): this;
@@ -268,8 +288,9 @@ export class ZoneSceneRenderer extends EventEmitter {
     private readonly meshToCoords = new Map<THREE.Object3D, number[]>();
 
     private cameraIndex = 0;
-    private followCam: THREE.OrthographicCamera;
     private cursor = new THREE.Mesh(cursorGeo, cursorMat);
+
+    public readonly followCam: FollowCamera;
 
     private get camera() {
         return this.cameras[this.cameraIndex];
@@ -301,7 +322,7 @@ export class ZoneSceneRenderer extends EventEmitter {
         isoCamera.position.set(-1 / 8 + .5/16, 4.5 / 8, 4.5 / 8);
         isoCamera.lookAt(.5/16, 0, 0);
 
-        this.followCam = new THREE.OrthographicCamera(
+        const followCam = new THREE.OrthographicCamera(
             (frustumSize * aspect) / -2,
             (frustumSize * aspect) / 2,
             frustumSize / 2,
@@ -309,8 +330,10 @@ export class ZoneSceneRenderer extends EventEmitter {
             0.01,
             10,
         );
-        this.followCam.position.set(-1 / 8, 4.5 / 8, 4.5 / 8);
-        this.followCam.lookAt(0, 0, 0);
+        followCam.position.set(-1 / 8, 4.5 / 8, 4.5 / 8);
+        followCam.lookAt(0, 0, 0);
+
+        this.followCam = new FollowCamera(followCam);
 
         const factor = Math.sqrt(2);
 
@@ -332,7 +355,7 @@ export class ZoneSceneRenderer extends EventEmitter {
         this.cameras.push(isoCamera);
         this.cameras.push(flatCamera);
         this.cameras.push(cinemaCamera);
-        this.cameras.push(this.followCam);
+        this.cameras.push(followCam);
 
         this.mediaTexture.minFilter = THREE.NearestFilter;
         this.mediaTexture.magFilter = THREE.NearestFilter;
@@ -450,7 +473,7 @@ export class ZoneSceneRenderer extends EventEmitter {
         const localCoords = this.client.localUser?.position;
         if (localCoords) {
             const [x, y, z] = localCoords;
-            this.followCam.position.set(x/16 + -1/8, y/16 + 4.5 / 8, z/16 + 4.5/8);
+            this.followCam.focus.set(x/16, y/16, z/16);
         }
 
         this.mediaMesh.scale.set((252 * mediaAspect) / 512, 252 / 512, 1);
@@ -500,6 +523,7 @@ export class ZoneSceneRenderer extends EventEmitter {
     }
 
     render() {
+        this.followCam.refresh();
         this.renderer.render(this.scene, this.camera);
     }
 
