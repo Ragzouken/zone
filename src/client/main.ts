@@ -488,13 +488,40 @@ export async function load() {
         avatarPanel.hidden = false;
     }
 
+    let painting = false;
+    let erase = false;
+    
+    function paint(px: number, py: number) {
+        withPixels(avatarContext, (pixels) => pixels[py * 8 + px] = erase ? 0 : 0xFFFFFFFF);
+    }
+
+    window.addEventListener('pointerup', (event) => {
+        if (painting) {
+            painting = false;
+            event.preventDefault();
+            event.stopPropagation();
+        }
+    })
     avatarPaint.addEventListener('pointerdown', (event) => {
+        painting = true;
+
         const scaling = 8 / avatarPaint.clientWidth;
         const [cx, cy] = eventToElementPixel(event, avatarPaint);
         const [px, py] = [Math.floor(cx * scaling), Math.floor(cy * scaling)];
+
         withPixels(avatarContext, (pixels) => {
-            pixels[py * 8 + px] = 0xffffffff - pixels[py * 8 + px];
+            erase = pixels[py * 8 + px] > 0;
         });
+
+        paint(px, py);
+    });
+    avatarPaint.addEventListener('pointermove', (event) => {
+        if (painting) {
+            const scaling = 8 / avatarPaint.clientWidth;
+            const [cx, cy] = eventToElementPixel(event, avatarPaint);
+            const [px, py] = [Math.floor(cx * scaling), Math.floor(cy * scaling)];
+            paint(px, py);
+        }
     });
 
     avatarUpdate.addEventListener('click', () => {
