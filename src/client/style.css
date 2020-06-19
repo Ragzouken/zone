@@ -380,8 +380,9 @@ body {
 }
 
 #avatar-paint {
-    width: 128px; height: 128px;
+    width: 200px; height: 200px;
     background-color: var(--button-color);
+    margin: auto;
 }
 
 #three-container {

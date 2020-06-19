@@ -192,7 +192,7 @@ export async function load() {
             }
         }
 
-        const users = Array.from(client.zone.users.values());
+        const users = Array.from(client.zone.users.values()).filter((user) => !!user.name);
         const names = users.map((user) => formatName(user));
         userItemContainer.innerHTML = `${names.length} people are zoning: ` + names.join(', ');
 
