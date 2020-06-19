@@ -6,6 +6,7 @@
     "start": "node lib/server/run.js",
     "test": "jest --config jestconfig.json",
     "build:client:script": "webpack src/client/main.ts --config src/client/webpack.config.js",
+    "watch:client:script": "webpack src/client/main.ts --config src/client/webpack.config.dev.js",
     "build:client:html": "pug --pretty src/client/index.pug -o public",
     "build:client:css": "cp-cli src/client/style.css public/style.css",
     "build:client": "npm run build:client:css && npm run build:client:html && npm run build:client:script",

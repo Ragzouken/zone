@@ -1,9 +1,10 @@
 import * as THREE from 'three';
 import { ZoneState } from '../common/zone';
 import { hslToRgb, withPixels, eventToElementPixel } from './utility';
-import { randomInt } from '../common/utility';
-import { rgbaToColor, decodeAsciiTexture } from 'blitsy';
+import { randomInt, Grid } from '../common/utility';
+import { rgbaToColor, decodeAsciiTexture, createContext2D } from 'blitsy';
 import { EventEmitter } from 'events';
+import ZoneClient from '../common/client';
 
 function recolor(context: CanvasRenderingContext2D) {
     withPixels(context, (pixels) => {
@@ -58,15 +59,136 @@ ________
 recolor(floorTile);
 recolor(brickTile);
 
+const texture = createContext2D(16, 8);
+texture.drawImage(floorTile.canvas, 0, 0);
+texture.drawImage(brickTile.canvas, 8, 0);
+
+const cursorTile = decodeAsciiTexture(
+    `
+########
+#______#
+#______#
+#______#
+#______#
+#______#
+#______#
+########
+`,
+    '#',
+);
+
 const black = new THREE.Color(0, 0, 0);
 const red = new THREE.Color(255, 0, 0);
 
-const brickTexture = makeTileCanvasTexture(brickTile.canvas);
-const floorTexture = makeTileCanvasTexture(floorTile.canvas);
-brickTexture.repeat.set(16, 10);
-floorTexture.repeat.set(16, 6);
-const brickMaterial = new THREE.MeshBasicMaterial({ map: brickTexture, side: THREE.DoubleSide });
-const floorMaterial = new THREE.MeshBasicMaterial({ map: floorTexture, side: THREE.DoubleSide });
+const blockTexture = makeTileCanvasTexture(texture.canvas);
+const cursorTexture = makeTileCanvasTexture(cursorTile.canvas);
+
+const blockMaterial = new THREE.MeshBasicMaterial({ map: blockTexture });
+
+const cursorGeo = new THREE.BoxBufferGeometry(1/16, 1/16, 1/16);
+const cursorMat = new THREE.MeshBasicMaterial({ map: cursorTexture, side: THREE.DoubleSide, transparent: true })
+
+const cubeData = 
+{
+    faces:
+    [
+        {
+            name: "top",
+            positions: [[0, 1, 1], [1, 1, 1], [1, 1, 0], [0, 1, 0]],
+            texturing: [   [.5, 0],    [.5, 1],    [0, 1],    [0, 0]],
+            triangles: [[0, 1, 2], [0, 2, 3]]
+        },
+
+        {
+            name: "front",
+            positions: [[0, 1, 1], [0, 0, 1], [1, 0, 1], [1, 1, 1]],
+            texturing: [   [1, 0],    [1, 1],    [.5, 1],    [.5, 0]],
+            triangles: [[0, 1, 2], [0, 2, 3]]
+        },
+
+        {
+            name: "back",
+            positions: [[1, 0, 0], [0, 0, 0], [0, 1, 0], [1, 1, 0]],
+            texturing: [   [.5, 1],    [1, 1],    [1, 0],    [.5, 0]],
+            triangles: [[0, 1, 2], [0, 2, 3]]
+        },
+        
+        {
+            name: "left",
+            positions: [[1, 1, 1], [1, 0, 1], [1, 0, 0], [1, 1, 0]],
+            texturing: [   [1, 0],    [1, 1],    [.5, 1],    [.5, 0]],
+            triangles: [[0, 1, 2], [0, 2, 3]]
+        },
+
+        {
+            name: "right",
+            positions: [[0, 1, 0], [0, 0, 0], [0, 0, 1], [0, 1, 1]],
+            texturing: [   [1, 0],    [1, 1],    [.5, 1],    [.5, 0]],
+            triangles: [[0, 1, 2], [0, 2, 3]]
+        },
+
+        {
+            name: "bottom",
+            positions: [[0, 0, 1], [0, 0, 0], [1, 0, 0], [1, 0, 1]],
+            texturing: [   [.5, 0],    [.5, 1],    [0, 1],    [0, 0]],
+            triangles: [[0, 1, 2], [0, 2, 3]]
+        }
+    ]
+};
+
+function dataToGeo(data: any): THREE.BufferGeometry {
+    let indexOffset = 0;
+    const indices: number[] = [];
+    const positions: number[] = [];
+    const texcoords: number[] = [];
+    const normals: number[] = [];
+
+    data.faces.forEach((face: any) =>
+    {
+        // offset indices relative to existing vertices
+        // const indexOffset = this.vertexCount;
+        const faceIndexes = face.triangles.reduce((a: number[], b: number[]) => [...a, ...b], [])
+                                            .map((index: number) => index + indexOffset);
+
+        indices.push(...faceIndexes);
+        // faces.set(face.name, faceIndexes);
+        // face.triangles.forEach(_ => this.tri2face.push(face.name));
+
+        // compute shared normal and add all positions/texcoords/normals
+        const positions2 = face.positions.slice(0, 3).map((position: number[]) => new THREE.Vector3(...position));
+        
+        const normal = new THREE.Vector3();
+        normal.crossVectors(positions2[1].clone().sub(positions2[0]),
+                            positions2[2].clone().sub(positions2[0])); 
+
+        face.positions.forEach((position: number[], i: number) =>
+        {
+            positions.push(...face.positions[i]);
+            texcoords.push(...face.texturing[i]);
+            normals.push(normal.x, normal.y, normal.z);
+        });
+
+        indexOffset += face.positions.length;
+    });
+
+    // threejs stuff
+    const positionBuffer = new THREE.Float32BufferAttribute(positions, 3);
+    const normalBuffer   = new THREE.Float32BufferAttribute(normals,   3);
+    const texcoordBuffer = new THREE.Float32BufferAttribute(texcoords, 2);
+
+    const geometry = new THREE.BufferGeometry();
+    geometry.setAttribute("position", positionBuffer);
+    geometry.setAttribute("normal",   normalBuffer);
+    geometry.setAttribute("uv",       texcoordBuffer);
+    geometry.setIndex(indices);
+
+    geometry.translate(-.5, -.5, -.5);
+    geometry.scale(1/16, 1/16, 1/16);
+    geometry.rotateY(Math.PI / 2);
+    return geometry;
+}
+
+const blockGeo = dataToGeo(cubeData);
 
 function makeTileCanvasTexture(canvas: HTMLCanvasElement) {
     const texture = new THREE.CanvasTexture(canvas);
@@ -104,8 +226,8 @@ function getTileMaterial(canvas: HTMLCanvasElement) {
 
     texture.minFilter = THREE.NearestFilter;
     texture.magFilter = THREE.NearestFilter;
-    texture.wrapS = THREE.RepeatWrapping;
-    texture.wrapT = THREE.RepeatWrapping;
+    texture.wrapS = THREE.ClampToEdgeWrapping;
+    texture.wrapT = THREE.ClampToEdgeWrapping;
 
     return material;
 }
@@ -124,9 +246,29 @@ function setAvatarCount(count: number) {
     }
 }
 
+export class FollowCamera {
+    focus = new THREE.Vector3();
+    angle = -Math.PI / 12;
+    pitch = Math.PI / 4;
+    depth = 1;
+
+    constructor(public readonly camera: THREE.Camera) {
+    }
+
+    refresh() {
+        const angle = new THREE.Euler(-this.pitch, this.angle, 0, 'ZYX');
+        const position = new THREE.Vector3(0, 0, this.depth);
+        position.applyEuler(angle);
+        position.add(this.focus);
+
+        this.camera.position.copy(position);
+        this.camera.lookAt(this.focus);
+    }
+}
+
 export interface ZoneSceneRenderer {
-    on(event: 'pointerdown', callback: (point: THREE.Vector3) => void): this;
-    on(event: 'pointermove', callback: (point?: THREE.Vector3) => void): this;
+    on(event: 'pointerdown', callback: (point: number[]) => void): this;
+    on(event: 'pointermove', callback: (point?: number[]) => void): this;
 }
 
 export class ZoneSceneRenderer extends EventEmitter {
@@ -140,11 +282,16 @@ export class ZoneSceneRenderer extends EventEmitter {
 
     private readonly scene = new THREE.Scene();
     private readonly avatarGroup = new THREE.Group();
+    private readonly blockGroup = new THREE.Group();
     private readonly mediaMesh: THREE.Mesh;
-    private readonly floorMesh: THREE.Mesh;
-    private readonly brickMesh: THREE.Mesh;
+
+    private readonly meshToCoords = new Map<THREE.Object3D, number[]>();
+    private readonly coordsToMesh = new Grid<THREE.Object3D>();
 
     private cameraIndex = 0;
+    private cursor = new THREE.Mesh(cursorGeo, cursorMat);
+
+    public readonly followCam: FollowCamera;
 
     private get camera() {
         return this.cameras[this.cameraIndex];
@@ -152,11 +299,15 @@ export class ZoneSceneRenderer extends EventEmitter {
 
     constructor(
         container: HTMLElement,
+        private readonly client: ZoneClient,
         private readonly zone: ZoneState,
         private readonly getTile: (base64: string | undefined) => CanvasRenderingContext2D,
         private readonly connecting: () => boolean,
     ) {
         super();
+
+        this.cursor.scale.set(1.1, 1.1, 1.1);
+        this.cursor.visible = false;
 
         const aspect = container.clientWidth / container.clientHeight;
         const frustumSize = 1.1;
@@ -169,8 +320,21 @@ export class ZoneSceneRenderer extends EventEmitter {
             0.01,
             10,
         );
-        isoCamera.position.set(-1 / 8, 4.5 / 8, 4.5 / 8);
-        isoCamera.lookAt(0, 0, 0);
+        isoCamera.position.set(-1 / 8 + .5/16, 4.5 / 8, 4.5 / 8);
+        isoCamera.lookAt(.5/16, 0, 0);
+
+        const followCam = new THREE.OrthographicCamera(
+            (frustumSize * aspect) / -2,
+            (frustumSize * aspect) / 2,
+            frustumSize / 2,
+            frustumSize / -2,
+            0.01,
+            10,
+        );
+        followCam.position.set(-1 / 8, 4.5 / 8, 4.5 / 8);
+        followCam.lookAt(0, 0, 0);
+
+        this.followCam = new FollowCamera(followCam);
 
         const factor = Math.sqrt(2);
 
@@ -182,16 +346,17 @@ export class ZoneSceneRenderer extends EventEmitter {
             0.01,
             10,
         );
-        flatCamera.position.set(0, 1, 1);
-        flatCamera.lookAt(0, 0, 0);
+        flatCamera.position.set(.5/16, 1, 1);
+        flatCamera.lookAt(.5/16, 0, 0);
 
         const cinemaCamera = new THREE.PerspectiveCamera(70, aspect, 0.01, 10);
-        cinemaCamera.position.set(0, 0, 0.8);
-        cinemaCamera.lookAt(0, 0, 0);
+        cinemaCamera.position.set(.5/16, 0, 0.8);
+        cinemaCamera.lookAt(.5/16, 0, 0);
 
         this.cameras.push(isoCamera);
         this.cameras.push(flatCamera);
         this.cameras.push(cinemaCamera);
+        this.cameras.push(followCam);
 
         this.mediaTexture.minFilter = THREE.NearestFilter;
         this.mediaTexture.magFilter = THREE.NearestFilter;
@@ -204,40 +369,112 @@ export class ZoneSceneRenderer extends EventEmitter {
             side: THREE.DoubleSide,
             blending: THREE.AdditiveBlending,
             transparent: true,
-            depthTest: false,
+            depthTest: true,
             depthWrite: false,
         });
 
         this.mediaMesh = new THREE.Mesh(new THREE.PlaneGeometry(1, 1, 1, 1), mediaMaterial);
-        this.brickMesh = new THREE.Mesh(new THREE.PlaneGeometry(1, 10 / 16, 1, 1), brickMaterial);
-        this.floorMesh = new THREE.Mesh(new THREE.PlaneGeometry(1, 6 / 16, 1, 1), floorMaterial);
+        this.mediaMesh.translateX(.5/16);
+        this.mediaMesh.translateZ(-2.5 / 16 + 1 / 512);
 
-        this.floorMesh.rotateX(Math.PI / 2);
-        this.floorMesh.translateZ(5 / 16);
-        this.mediaMesh.translateZ(-3 / 16 + 1 / 512);
-        this.brickMesh.translateZ(-3 / 16);
-
-        this.scene.add(this.brickMesh);
-        this.scene.add(this.floorMesh);
+        this.scene.add(this.blockGroup);
         this.scene.add(this.avatarGroup);
         this.scene.add(this.mediaMesh);
+        this.scene.add(this.cursor);
+
+        for (let z = 0; z < 5; ++z) {
+            for (let x = 0; x < 16; ++x) {
+                zone.grid.set([x-7, -5, z-2], true);
+            }
+        }
+        for (let x = 0; x < 16; ++x) {
+            for (let y = 0; y < 10; ++y) {
+                zone.grid.set([x-7, y-4, -3], true);
+            }
+        }
+        for (let x = 0; x < 16; ++x) {
+            zone.grid.set([x-7, Math.min(-5, 5-x), 3], true);
+        }
+        for (let z = 0; z < 6; ++z) {
+            zone.grid.set([8, -z, z-3], true);
+        }
+
+        this.rebuild();
 
         this.renderer.setSize(container.clientWidth, container.clientHeight);
         container.appendChild(this.renderer.domElement);
 
         this.renderer.domElement.addEventListener('pointerdown', (event) => {
-            const point = this.getPointUnderMouseEvent(event);
-            if (point) this.emit('pointerdown', point);
+            const info = this.getInfoUnderMouseEvent(event);
+
+            if (info) {
+                if (event.shiftKey) {
+                    client.setBlock(info.spaceCoords, true);
+                } else if (event.ctrlKey) {
+                    client.setBlock(info.blockCoords, false);
+                } else {
+                    this.emit('pointerdown', info.spaceCoords);
+                }
+            }
+
+            event.preventDefault();
+            event.stopPropagation();
         });
 
-        this.renderer.domElement.addEventListener('pointermove', (event) => {
-            const point = this.getPointUnderMouseEvent(event);
-            this.emit('pointermove', point);
+        document.addEventListener('keydown', (event) => this.cursor.visible = event.shiftKey || event.ctrlKey);
+        document.addEventListener('keyup', (event) => this.cursor.visible = event.shiftKey || event.ctrlKey);
+
+        document.addEventListener('pointermove', (event) => {
+            
+            const info = this.getInfoUnderMouseEvent(event);
+
+            if (info?.blockCoords) {
+                const [x, y, z] = info.blockCoords;
+                this.cursor.position.set(x/16, y/16, z/16);
+            }
+
+            this.emit('pointermove', info?.spaceCoords);
         });
     }
 
     cycleCamera() {
         this.cameraIndex = (this.cameraIndex + 1) % this.cameras.length;
+    }
+
+    rebuild() {
+        while (this.blockGroup.children.length)
+        {
+            this.blockGroup.remove(this.blockGroup.children[0]);
+        }
+
+        this.coordsToMesh.clear();
+        this.zone.grid.forEach((_, [x, y, z]) => {
+            const cube = new THREE.Mesh(blockGeo, blockMaterial);
+            this.blockGroup.add(cube);
+            cube.position.set(x/16, y/16, z/16);
+            this.meshToCoords.set(cube, [x, y, z]);
+            this.coordsToMesh.set([x, y, z], cube);
+        });
+    }
+
+    rebuildAtCoords(coords: number[][]) {
+        coords.forEach((coord) => {
+            const value = this.zone.grid.has(coord);
+
+            if (value && !this.coordsToMesh.has(coord)) {
+                const [x, y, z] = coord;
+                const cube = new THREE.Mesh(blockGeo, blockMaterial);
+                this.blockGroup.add(cube);
+                cube.position.set(x/16, y/16, z/16);
+                this.meshToCoords.set(cube, [x, y, z]);
+                this.coordsToMesh.set([x, y, z], cube);
+            } else if (!value && this.coordsToMesh.has(coord)) {
+                const mesh = this.coordsToMesh.get(coord)!;
+                this.blockGroup.remove(mesh);
+                this.meshToCoords.delete(mesh);
+                this.coordsToMesh.delete(coord);
+            }
+        });
     }
 
     update() {
@@ -255,6 +492,12 @@ export class ZoneSceneRenderer extends EventEmitter {
             mediaAspect = this.mediaElement.width / this.mediaElement.height;
         }
 
+        const localCoords = this.client.localUser?.position;
+        if (localCoords) {
+            const [x, y, z] = localCoords;
+            this.followCam.focus.set(x/16, y/16, z/16);
+        }
+
         this.mediaMesh.scale.set((252 * mediaAspect) / 512, 252 / 512, 1);
 
         setAvatarCount(this.zone.users.size);
@@ -263,17 +506,8 @@ export class ZoneSceneRenderer extends EventEmitter {
         let i = 0;
         this.zone.users.forEach((user) => {
             if (!user.position) return;
-            let y = -4.5;
-            let [x, z] = user.position;
+            const [x, y, z] = user.position;
             const mesh = avatarMeshes[i++];
-
-            if (z < 10) {
-                y -= z - 9;
-            }
-
-            z = Math.max(0, z - 10);
-            x -= 7.5;
-            z -= 2.5;
 
             let [dy, dx] = [0, 0];
             if (user.emotes && user.emotes.includes('shk')) {
@@ -311,34 +545,55 @@ export class ZoneSceneRenderer extends EventEmitter {
     }
 
     render() {
+        this.followCam.refresh();
         this.renderer.render(this.scene, this.camera);
     }
 
-    getPointUnderMouseEvent(event: PointerEvent) {
+    cameraPointFromMouseEvent(event: PointerEvent) {
         const [cx, cy] = eventToElementPixel(event, this.renderer.domElement);
 
-        const point = new THREE.Vector2();
-        point.x = (cx / this.renderer.domElement.clientWidth) * 2 - 1;
-        point.y = -(cy / this.renderer.domElement.clientHeight) * 2 + 1;
+        return new THREE.Vector2(
+            -1 + cx / this.renderer.domElement.clientWidth * 2,
+             1 - cy / this.renderer.domElement.clientHeight * 2,
+        );
+    }
 
+    blockIntersectCameraPoint(point: THREE.Vector2): THREE.Intersection | undefined {
         this.raycaster.setFromCamera(point, this.camera);
-        const brickIntersects = this.raycaster.intersectObject(this.brickMesh);
-        const floorIntersects = this.raycaster.intersectObject(this.floorMesh);
+        return this.raycaster.intersectObject(this.blockGroup, true)[0];
+    }
 
-        if (brickIntersects.length > 0) {
-            const intersection = brickIntersects[0].point;
-            const x = Math.floor((intersection.x + 0.5) * 16);
-            const y = 12 - Math.floor((intersection.y + 0.5) * 16);
+    getInfoUnderMouseEvent(event: PointerEvent) {
+        const point = this.cameraPointFromMouseEvent(event);
+        const intersection = this.blockIntersectCameraPoint(point);
 
-            return { x, y };
-        } else if (floorIntersects.length > 0) {
-            const intersection = floorIntersects[0].point;
-            const x = Math.floor((intersection.x + 0.5) * 16);
-            const y = 5 + Math.floor((intersection.z + 0.5) * 16);
+        if (!intersection) return undefined;
 
-            return { x, y };
-        } else {
-            return undefined;
+        const blockCoords = this.meshToCoords.get(intersection.object)!;
+
+        let [x, y, z] = blockCoords;
+        const delta = intersection.point.sub(intersection.object.position);
+        
+        if (Math.abs(delta.y) > Math.abs(delta.x) && Math.abs(delta.y) > Math.abs(delta.z)) {
+            y += Math.sign(delta.y);
+        } else if (Math.abs(delta.x) > Math.abs(delta.y) && Math.abs(delta.x) > Math.abs(delta.z)) {
+            x += Math.sign(delta.x);
+        } else if (Math.abs(delta.z) > Math.abs(delta.x) && Math.abs(delta.z) > Math.abs(delta.y)) {
+            z += Math.sign(delta.z);
         }
+
+        const spaceCoords = [x, y, z];
+
+        return { 
+            blockCoords,
+            spaceCoords,
+        };
+    }
+
+    getPointUnderMouseEvent(event: PointerEvent) {
+        const info = this.getInfoUnderMouseEvent(event);
+        if (!info) return undefined;
+        const [x, y, z] = info.spaceCoords;
+        return { x, y, z };
     }
 }

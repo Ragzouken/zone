@@ -1,4 +1,4 @@
-import { getDefault } from './utility';
+import { getDefault, Grid } from './utility';
 
 export type UserId = string;
 
@@ -31,6 +31,8 @@ export class ZoneState {
     public readonly users = new Map<UserId, UserState>();
     readonly queue: QueueItem[] = [];
     lastPlayedItem?: QueueItem;
+
+    public readonly grid = new Grid<true>();
 
     public clear() {
         this.users.clear();

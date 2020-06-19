@@ -74,6 +74,7 @@ export function host(xws: expressWs.Instance, adapter: low.AdapterSync, options:
     db.defaults({
         playback: { current: undefined, queue: [], time: 0 },
         bans: [],
+        blocks: { coords: [] },
     }).write();
 
     // this zone's websocket endpoint
@@ -181,11 +182,19 @@ export function host(xws: expressWs.Instance, adapter: low.AdapterSync, options:
         playback.loadState(db.get('playback').value());
         const banlist = db.get('bans').value() as Ban[];
         banlist.forEach((ban) => bans.set(ban.ip, ban));
+
+        zone.grid.clear();
+        const coords = db.get('blocks.coords').value() as number[][];
+        coords.forEach((coord) => zone.grid.set(coord, true));
     }
 
     function save() {
         db.set('playback', playback.copyState()).write();
         db.set('bans', Array.from(bans.values())).write();
+
+        const coords: number[][] = [];
+        zone.grid.forEach((_, coord) => coords.push(coord));
+        db.set('blocks', { coords }).write();
     }
 
     const userToConnections = new Map<UserState, Set<Messaging>>();
@@ -291,9 +300,13 @@ export function host(xws: expressWs.Instance, adapter: low.AdapterSync, options:
     }
 
     function sendAllState(user: UserState) {
+        const coords: number[][] = [];
+        zone.grid.forEach((_, coord) => coords.push(coord));
+
         const users = Array.from(zone.users.values());
         sendOnly('users', { users }, user.userId);
         sendOnly('queue', { items: playback.queue }, user.userId);
+        sendOnly('blocks', { coords }, user.userId);
         sendCurrent(user);
     }
 
@@ -476,6 +489,21 @@ export function host(xws: expressWs.Instance, adapter: low.AdapterSync, options:
             } else {
                 status(`no command "${name}"`, user);
             }
+        });
+
+        messaging.messages.on('block', (message) => {
+            const coords = message.coords.map((coord: number) => ~~coord);
+            const value = !!message.value;
+
+            if (coords[0] >= -7) return;
+
+            if (value) {
+                zone.grid.set(coords, true);
+            } else {
+                zone.grid.delete(coords);
+            }
+
+            sendAll('block', { coords, value });
         });
     }
 

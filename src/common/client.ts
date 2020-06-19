@@ -21,6 +21,9 @@ export type RecvChat = { text: string; userId: string };
 export type SendAuth = { password: string };
 export type SendCommand = { name: string; args: any[] };
 
+export type BlocksMessage = { coords: number[][] };
+export type BlockMessage = { coords: number[], value: boolean };
+
 export interface MessageMap {
     heartbeat: {};
     assign: AssignMessage;
@@ -32,6 +35,9 @@ export interface MessageMap {
 
     chat: SendChat;
     user: UserState;
+
+    block: BlockMessage;
+    blocks: BlocksMessage;
 }
 
 export interface ClientOptions {
@@ -65,6 +71,8 @@ export interface ClientEventMap {
     emotes: (event: { user: UserState; emotes: string[]; local: boolean }) => void;
     avatar: (event: { user: UserState; data: string; local: boolean }) => void;
     tags: (event: { user: UserState; tags: string[]; local: boolean }) => void;
+
+    blocks: (event: { coords: number[][] }) => void;
 }
 
 export interface ZoneClient {
@@ -165,6 +173,10 @@ export class ZoneClient extends EventEmitter {
         this.messaging.send('user', { emotes });
     }
 
+    async setBlock(coords: number[], value: boolean) {
+        this.messaging.send('block', { coords, value });
+    }
+
     async search(query: string): Promise<YoutubeVideo[]> {
         const url = this.options.urlRoot + '/youtube?q=' + encodeURIComponent(query);
         return fetch(url).then(async (res) => {
@@ -238,6 +250,20 @@ export class ZoneClient extends EventEmitter {
             message.users.forEach((user: UserState) => {
                 this.zone.users.set(user.userId, user);
             });
+        });
+        this.messaging.messages.on('blocks', (message: BlocksMessage) => {
+            message.coords.forEach((coords) => {
+                this.zone.grid.set(coords, true);
+            });
+            this.emit('blocks', { coords: message.coords });
+        });
+        this.messaging.messages.on('block', (message: BlockMessage) => {
+            if (message.value) {
+                this.zone.grid.set(message.coords, true);
+            } else {
+                this.zone.grid.delete(message.coords);
+            }
+            this.emit('blocks', { coords: [message.coords] });
         });
         this.messaging.messages.on('chat', (message: RecvChat) => {
             const user = this.zone.getUser(message.userId);

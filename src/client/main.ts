@@ -9,6 +9,7 @@ import { YoutubeVideo } from '../server/youtube';
 import { ZoneSceneRenderer, avatarImage } from './scene';
 import { Player } from './player';
 import { UserState } from '../common/zone';
+import THREE = require('three');
 
 window.addEventListener('load', () => load());
 
@@ -215,8 +216,6 @@ export async function load() {
         refreshUsers();
     });
 
-    console.log(client.on, client.off);
-
     document.getElementById('ban-ip-button')!.addEventListener('click', () => {
         client.command('ban', [userSelect.value]);
     });
@@ -396,21 +395,70 @@ export async function load() {
         }
     });
 
+    client.on('blocks', ({ coords }) => sceneRenderer.rebuildAtCoords(coords));
+
     setInterval(() => client.heartbeat(), 30 * 1000);
 
-    function moveTo(x: number, y: number) {
+    function moveTo(x: number, y: number, z: number) {
         const user = getLocalUser()!;
-        user.position = [x, y];
+        user.position = [x, y, z];
         client.move(user.position);
     }
 
-    function move(dx: number, dy: number) {
+    function move(dx: number, dz: number) {
         const user = getLocalUser()!;
 
         if (user.position) {
-            moveTo(clamp(0, 15, user.position[0] + dx), clamp(0, 15, user.position[1] + dy));
-        } else {
-            moveTo(randomInt(0, 15), 15);
+            const [px, py, pz] = user.position;
+            let [nx, ny, nz] = [px+dx, py, pz+dz];
+
+            const grid = client.zone.grid;
+
+            const block = grid.has([nx, ny, nz]);
+            const belowMe = grid.has([px, py-1, pz]);
+            const aboveMe = grid.has([px, py+1, pz]);
+            const belowBlock = grid.has([nx, ny-1, nz]);
+            const belowBlock2 = grid.has([nx, ny-2, nz]);
+            const aboveBlock = grid.has([nx, ny+1, nz]);
+            
+            const walled = grid.has([nx-1, ny, nz])
+                        || grid.has([nx+1, ny, nz])
+                        || grid.has([nx, ny, nz-1])
+                        || grid.has([nx, ny, nz+1]);
+
+            // walk into empty space along floor
+            if (!block && belowBlock) {
+                // great
+            // special step down
+            } else if (belowMe && !block && !belowBlock && belowBlock2) {
+                ny -= 1;
+            // walk into empty space along wall
+            } else if (!block && walled) {
+                // great
+            // walk up wall
+            } else if (block && aboveBlock && !aboveMe) {
+                nx = px;
+                nz = pz;
+                ny = py + 1;
+            // step up
+            } else if (block && !aboveBlock && !aboveMe) {
+                ny += 1;
+            // fall down wall
+            } else if (!block && !belowMe && !walled && !belowBlock) {
+                nx = px;
+                nz = pz;
+                ny = py - 1;
+            // step down
+            } else if (!block && !belowBlock) {
+                ny -= 1;
+            // can't move
+            } else {
+                nx = px;
+                ny = py;
+                nz = pz;
+            }
+
+            moveTo(nx, ny, nz);
         }
     }
 
@@ -553,6 +601,32 @@ export async function load() {
     gameKeys.set('ArrowDown', () => move(0, 1));
     gameKeys.set('ArrowUp', () => move(0, -1));
 
+    const rot = Math.PI / 4;
+    gameKeys.set('[', () => sceneRenderer.followCam.angle += rot);
+    gameKeys.set(']', () => sceneRenderer.followCam.angle -= rot);
+
+    gameKeys.set('q', () => {
+        refreshQueue();
+        queuePanel.hidden = !queuePanel.hidden;
+    });
+    gameKeys.set('s', () => {
+        searchPanel.hidden = false;
+        searchInput.focus();
+    });
+    gameKeys.set('v', () => {
+        sceneRenderer.cycleCamera();
+    });
+    gameKeys.set('u', () => userPanel.hidden = !userPanel.hidden);
+
+    function closeAllPanels() {
+        queuePanel.hidden = true;
+        searchPanel.hidden = true;
+        menuPanel.hidden = true;
+        userPanel.hidden = true;
+        popoutPanel.hidden = true;
+        avatarPanel.hidden = true;
+    }
+
     function sendChat() {
         const line = chatInput.value;
         const slash = line.match(/^\/(\w+)(.*)/);
@@ -572,17 +646,27 @@ export async function load() {
         chatInput.value = '';
     }
 
-    document.addEventListener('keydown', (event) => {
-        const typing = document.activeElement!.tagName === 'INPUT';
+    function isInputElement(element: Element | null): element is HTMLInputElement {
+        return element?.tagName === 'INPUT';
+    }
 
-        if (typing) {
-            if (event.key === 'Tab' || event.key === 'Escape') {
-                chatInput.blur();
+    document.addEventListener('keydown', (event) => {
+        if (event.key === 'Escape') {
+            if (isInputElement(document.activeElement)) {
+                document.activeElement.blur();
+                event.preventDefault();
+            }
+            closeAllPanels();
+        }
+
+        if (isInputElement(document.activeElement)) {
+            if (event.key === 'Tab' && document.activeElement === chatInput) {
+                document.activeElement.blur();
                 event.preventDefault();
             } else if (event.key === 'Enter') {
                 sendChat();
             }
-        } else if (!typing) {
+        } else {
             const func = gameKeys.get(event.key);
             if (func) {
                 func();
@@ -622,6 +706,7 @@ export async function load() {
 
     const sceneRenderer = new ZoneSceneRenderer(
         document.getElementById('three-container')!,
+        client,
         client.zone,
         getTile,
         connecting,
@@ -640,12 +725,11 @@ export async function load() {
     document.getElementById('camera-button')!.addEventListener('click', () => sceneRenderer.cycleCamera());
 
     const tooltip = document.getElementById('tooltip')!;
-    sceneRenderer.on('pointerdown', (point) => moveTo(point.x, point.y));
-    sceneRenderer.on('pointermove', (point) => {
-        if (point) {
-            const pos = [point.x, point.y];
+    sceneRenderer.on('pointerdown', ([x, y, z]) => moveTo(x, y, z));
+    sceneRenderer.on('pointermove', (coords) => {
+        if (coords) {
             const names = Array.from(client.zone.users.values())
-                .filter((user) => user.position?.join(',') === pos.join(','))
+                .filter((user) => user.position?.join(',') === coords.join(','))
                 .map((user) => user.name);
             tooltip.innerHTML = names.join(', ');
         } else {

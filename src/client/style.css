@@ -256,8 +256,6 @@ input[type="text"]:focus {
     width: 100%;
     background: black;
 
-    padding: 16px;
-
     display: flex;
     flex-direction: column;
     align-items: center;
