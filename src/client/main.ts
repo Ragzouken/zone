@@ -514,6 +514,9 @@ export async function load() {
         });
 
         paint(px, py);
+
+        event.preventDefault();
+        event.stopPropagation();
     });
     avatarPaint.addEventListener('pointermove', (event) => {
         if (painting) {
