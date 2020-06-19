@@ -35,6 +35,9 @@ export interface MessageMap {
 
     chat: SendChat;
     user: UserState;
+
+    block: BlockMessage;
+    blocks: BlocksMessage;
 }
 
 export interface ClientOptions {

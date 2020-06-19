@@ -247,6 +247,63 @@ describe('user presence', () => {
     });
 });
 
+describe('blocks', () => {
+    const blocks = new Set([
+        [-20, 0, 0],
+        [-19, 1, 2],
+        [-18, 5, 6]
+    ]);
+
+    it('can add a block', async () => {
+        const coords = [-99, -88, -77];
+
+        await zoneServer({}, async (server) => {
+            const client = await server.client();
+            await client.join();
+
+            const waiter = client.expect('block');
+            client.setBlock(coords, true);
+
+            const added = await waiter;
+            expect(added.coords).toEqual(coords);
+            expect(added.value).toEqual(true); 
+        });
+    });
+
+    it('can remove a block', async () => {
+        const coords = [-88, -77, -99];
+
+        await zoneServer({}, async (server) => {
+            const client = await server.client();
+            await client.join();
+
+            const waiter = client.expect('block');
+            client.setBlock(coords, false);
+
+            const added = await waiter;
+            expect(added.coords).toEqual(coords);
+            expect(added.value).toEqual(false); 
+        });
+    });
+
+    it('receives existing blocks', async () => {
+        await zoneServer({}, async (server) => {
+            const client1 = await server.client();
+            await client1.join();
+
+            blocks.forEach((coord) => client1.setBlock(coord, true));
+            await sleep(100);
+
+            const client2 = await server.client();
+            const waiter = client2.expect('blocks');
+            await client2.join();
+
+            const received = await waiter;
+            expect(new Set(received.coords)).toEqual(blocks);
+        });
+    });
+});
+
 describe('playback', () => {
     it('sends currently playing on join', async () => {
         await zoneServer({ playbackStartDelay: 0 }, async (server) => {
