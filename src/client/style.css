@@ -70,8 +70,6 @@ input[type="text"]:focus {
     display: flex;
     flex-direction: row;
     align-items: stretch;
-
-    pointer-events: none;
 }
 
 .toolbar > button {
@@ -81,8 +79,6 @@ input[type="text"]:focus {
     padding: 4px;
     background-color: var(--button-color);
     border-color: var(--button-color);
-
-    pointer-events: auto;
 }
 
 .toolbar > button > img {
