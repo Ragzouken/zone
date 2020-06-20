@@ -519,12 +519,18 @@ export function host(xws: expressWs.Instance, adapter: low.AdapterSync, options:
         messaging.messages.on('echo', (message: EchoMessage) => {
             const { text, position } = message;
 
-            if (zone.echoes.has(position)) {
-                status('cell is occupied', user);
-            } else {
+            const admin = !!zone.echoes.get(position)?.tags.includes('admin');
+            const valid = !admin || user.tags.includes('admin');
+
+            if (!valid) {
+                status("can't remove admin echo", user);
+            } else if (text.length > 0) {
                 const echo = { ...user, position, text: text.slice(0, 512) };
                 zone.echoes.set(position, echo);
                 sendAll('echoes', { added: [echo] });
+            } else {
+                zone.echoes.delete(position);
+                sendAll('echoes', { removed: [position] });
             }
         });
     }

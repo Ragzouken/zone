@@ -406,10 +406,10 @@ export class ZoneSceneRenderer extends EventEmitter {
         const factor = Math.sqrt(2);
 
         const flatCamera = new THREE.OrthographicCamera(
-            (frustumSize * aspect) / -2,
-            (frustumSize * aspect) / 2,
-            frustumSize / 2 / factor,
-            frustumSize / -2 / factor,
+            (1 * aspect) / -2,
+            (1 * aspect) / 2,
+            .5 / factor,
+            -.5 / factor,
             0.01,
             10,
         );
