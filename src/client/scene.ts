@@ -449,23 +449,6 @@ export class ZoneSceneRenderer extends EventEmitter {
         this.scene.add(this.mediaMesh);
         this.scene.add(this.cursor);
 
-        for (let z = 0; z < 5; ++z) {
-            for (let x = 0; x < 16; ++x) {
-                zone.grid.set([x - 7, -5, z - 2], true);
-            }
-        }
-        for (let x = 0; x < 16; ++x) {
-            for (let y = 0; y < 10; ++y) {
-                zone.grid.set([x - 7, y - 4, -3], true);
-            }
-        }
-        for (let x = 0; x < 16; ++x) {
-            zone.grid.set([x - 7, Math.min(-5, 5 - x), 3], true);
-        }
-        for (let z = 0; z < 6; ++z) {
-            zone.grid.set([8, -z, z - 3], true);
-        }
-
         this.rebuild();
 
         this.renderer.setSize(container.clientWidth, container.clientHeight);

@@ -74,7 +74,7 @@ export function host(xws: expressWs.Instance, adapter: low.AdapterSync, options:
     db.defaults({
         playback: { current: undefined, queue: [], time: 0 },
         bans: [],
-        blocks: { coords: [] },
+        blocks: { coords: [[0, -4, 0]] },
         echoes: [],
     }).write();
 
@@ -505,7 +505,7 @@ export function host(xws: expressWs.Instance, adapter: low.AdapterSync, options:
             const coords = message.coords.map((coord: number) => ~~coord);
             const value = !!message.value;
 
-            if (coords[0] >= -7) return;
+            if (coords[0] >= -7 && !user.tags.includes('admin')) return;
 
             if (value) {
                 zone.grid.set(coords, true);
