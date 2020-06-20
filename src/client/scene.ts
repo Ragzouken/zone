@@ -5,6 +5,7 @@ import { randomInt, Grid } from '../common/utility';
 import { rgbaToColor, decodeAsciiTexture, createContext2D } from 'blitsy';
 import { EventEmitter } from 'events';
 import ZoneClient from '../common/client';
+import { text } from 'express';
 
 function recolor(context: CanvasRenderingContext2D) {
     withPixels(context, (pixels) => {
@@ -285,38 +286,31 @@ function isImage(element: HTMLElement | undefined): element is HTMLImageElement 
     return element?.nodeName === 'IMG';
 }
 
-const tileMaterials = new Map<HTMLCanvasElement, THREE.MeshBasicMaterial>();
-function getTileMaterial(canvas: HTMLCanvasElement) {
-    const existing = tileMaterials.get(canvas);
+const tileTextures = new Map<HTMLCanvasElement, THREE.CanvasTexture>();
+function getTileTexture(canvas: HTMLCanvasElement) {
+    const existing = tileTextures.get(canvas);
     if (existing) return existing;
 
     const texture = new THREE.CanvasTexture(canvas);
-    const material = new THREE.MeshBasicMaterial({
-        map: texture,
-        transparent: true,
-        side: THREE.DoubleSide,
-    });
-    tileMaterials.set(canvas, material);
-
     texture.minFilter = THREE.NearestFilter;
     texture.magFilter = THREE.NearestFilter;
     texture.wrapS = THREE.ClampToEdgeWrapping;
     texture.wrapT = THREE.ClampToEdgeWrapping;
 
-    return material;
+    tileTextures.set(canvas, texture);
+    return texture;
 }
-
-const avatarMaterial = new THREE.MeshBasicMaterial({
-    map: new THREE.CanvasTexture(avatarImage.canvas),
-    transparent: true,
-    side: THREE.DoubleSide,
-});
 
 const avatarQuad = new THREE.PlaneGeometry(1 / 16, 1 / 16, 1, 1);
 const avatarMeshes: THREE.Mesh[] = [];
 function setAvatarCount(count: number) {
     while (avatarMeshes.length < count) {
-        avatarMeshes.push(new THREE.Mesh(avatarQuad, avatarMaterial));
+        const material = new THREE.MeshBasicMaterial({
+            map: new THREE.CanvasTexture(avatarImage.canvas),
+            transparent: true,
+            side: THREE.DoubleSide,
+        });
+        avatarMeshes.push(new THREE.Mesh(avatarQuad, material));
     }
 }
 
@@ -606,10 +600,10 @@ export class ZoneSceneRenderer extends EventEmitter {
             mesh.rotation.y = angle;
 
             const tile = this.getTile(user.avatar).canvas;
-            const material = getTileMaterial(tile);
+            const material = mesh.material as THREE.MeshBasicMaterial;
             material.color.setRGB(r / 255, g / 255, b / 255);
             material.opacity = echo ? 0.5 : 1;
-            mesh.material = material;
+            material.map = getTileTexture(tile);
 
             mesh.position.set(x / 16 + dx / 512, y / 16 + dy / 512, z / 16);
 

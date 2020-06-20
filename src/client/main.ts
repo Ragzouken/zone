@@ -181,17 +181,17 @@ export async function load() {
     const userItemContainer = document.getElementById('user-items')!;
     const userSelect = document.getElementById('user-select') as HTMLSelectElement;
 
-    function refreshUsers() {
-        function formatName(user: UserState) {
-            if (user.tags.includes('admin')) {
-                return `<span class="user-admin">${user.name}</span>`;
-            } else if (user.tags.includes('dj')) {
-                return `<span class="user-dj">${user.name}</span>`;
-            } else {
-                return user.name || '';
-            }
+    function formatName(user: UserState) {
+        if (user.tags.includes('admin')) {
+            return `<span class="user-admin">${user.name}</span>`;
+        } else if (user.tags.includes('dj')) {
+            return `<span class="user-dj">${user.name}</span>`;
+        } else {
+            return user.name || '';
         }
+    }
 
+    function refreshUsers() {
         const users = Array.from(client.zone.users.values()).filter((user) => !!user.name);
         const names = users.map((user) => formatName(user));
         userItemContainer.innerHTML = `${names.length} people are zoning: ` + names.join(', ');
@@ -769,7 +769,10 @@ export async function load() {
                 .map(([, echo]) => echo)
                 .filter((echo) => echo.position!.join(',') === coords.join(','));
 
-            const names = [...users.map((user) => user.name!), ...echoes.map((echo) => 'echo of ' + echo.name!)];
+            const names = [
+                ...users.map((user) => formatName(user)),
+                ...echoes.map((echo) => 'echo of ' + formatName(echo)),
+            ];
             tooltip.innerHTML = names.join(', ');
         } else {
             tooltip.innerHTML = '';
