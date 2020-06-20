@@ -18,6 +18,10 @@ export type Media = {
     thumbnail?: string;
 };
 
+export type UserEcho = UserState & {
+    text: string;
+};
+
 export type QueueInfo = { userId?: UserId; ip?: unknown };
 export type QueueItem = { media: Media; info: QueueInfo; itemId: number };
 
@@ -33,9 +37,11 @@ export class ZoneState {
     lastPlayedItem?: QueueItem;
 
     public readonly grid = new Grid<true>();
+    public readonly echoes = new Grid<UserEcho>();
 
     public clear() {
         this.users.clear();
+        this.echoes.clear();
         this.queue.length = 0;
         this.lastPlayedItem = undefined;
     }

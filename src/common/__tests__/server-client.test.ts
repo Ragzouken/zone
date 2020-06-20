@@ -251,7 +251,7 @@ describe('blocks', () => {
     const blocks = new Set([
         [-20, 0, 0],
         [-19, 1, 2],
-        [-18, 5, 6]
+        [-18, 5, 6],
     ]);
 
     it('can add a block', async () => {
@@ -266,7 +266,7 @@ describe('blocks', () => {
 
             const added = await waiter;
             expect(added.coords).toEqual(coords);
-            expect(added.value).toEqual(true); 
+            expect(added.value).toEqual(true);
         });
     });
 
@@ -282,7 +282,7 @@ describe('blocks', () => {
 
             const added = await waiter;
             expect(added.coords).toEqual(coords);
-            expect(added.value).toEqual(false); 
+            expect(added.value).toEqual(false);
         });
     });
 

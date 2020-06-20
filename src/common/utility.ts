@@ -84,4 +84,8 @@ export class Grid<T> {
     forEach(callbackfn: (value: T, coords: number[], grid: Grid<T>) => void) {
         return this.cells.forEach(([coords, value]) => callbackfn(value, coords, this));
     }
+
+    [Symbol.iterator]() {
+        return this.cells.values();
+    }
 }

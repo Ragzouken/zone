@@ -2,7 +2,7 @@ import Messaging from './messaging';
 import { EventEmitter } from 'events';
 import { YoutubeVideo } from '../server/youtube';
 import { specifically } from './utility';
-import { ZoneState, UserState, QueueItem } from './zone';
+import { ZoneState, UserState, QueueItem, UserEcho, UserId } from './zone';
 import fetch from 'node-fetch';
 
 export type StatusMesage = { text: string };
@@ -22,7 +22,10 @@ export type SendAuth = { password: string };
 export type SendCommand = { name: string; args: any[] };
 
 export type BlocksMessage = { coords: number[][] };
-export type BlockMessage = { coords: number[], value: boolean };
+export type BlockMessage = { coords: number[]; value: boolean };
+
+export type EchoMessage = { position: number[]; text: string };
+export type EchoesMessage = { added?: UserEcho[]; removed?: number[][] };
 
 export interface MessageMap {
     heartbeat: {};
@@ -38,6 +41,7 @@ export interface MessageMap {
 
     block: BlockMessage;
     blocks: BlocksMessage;
+    echoes: EchoesMessage;
 }
 
 export interface ClientOptions {
@@ -177,6 +181,10 @@ export class ZoneClient extends EventEmitter {
         this.messaging.send('block', { coords, value });
     }
 
+    async echo(position: number[], text: string) {
+        this.messaging.send('echo', { position, text });
+    }
+
     async search(query: string): Promise<YoutubeVideo[]> {
         const url = this.options.urlRoot + '/youtube?q=' + encodeURIComponent(query);
         return fetch(url).then(async (res) => {
@@ -232,7 +240,6 @@ export class ZoneClient extends EventEmitter {
                 this.emit('unqueue', { item });
             }
         };
-
         this.messaging.on('close', (code) => {
             const clean = code <= 1001 || code >= 4000;
             this.emit('disconnect', { clean });
@@ -264,6 +271,13 @@ export class ZoneClient extends EventEmitter {
                 this.zone.grid.delete(message.coords);
             }
             this.emit('blocks', { coords: [message.coords] });
+        });
+        this.messaging.messages.on('echoes', (message: EchoesMessage) => {
+            if (message.added) {
+                message.added.forEach((echo) => this.zone.echoes.set(echo.position!, echo));
+            } else if (message.removed) {
+                message.removed.forEach((coord) => this.zone.echoes.delete(coord));
+            }
         });
         this.messaging.messages.on('chat', (message: RecvChat) => {
             const user = this.zone.getUser(message.userId);

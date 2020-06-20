@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { ZoneState } from '../common/zone';
+import { ZoneState, UserState } from '../common/zone';
 import { hslToRgb, withPixels, eventToElementPixel } from './utility';
 import { randomInt, Grid } from '../common/utility';
 import { rgbaToColor, decodeAsciiTexture, createContext2D } from 'blitsy';
@@ -85,55 +85,131 @@ const cursorTexture = makeTileCanvasTexture(cursorTile.canvas);
 
 const blockMaterial = new THREE.MeshBasicMaterial({ map: blockTexture });
 
-const cursorGeo = new THREE.BoxBufferGeometry(1/16, 1/16, 1/16);
-const cursorMat = new THREE.MeshBasicMaterial({ map: cursorTexture, side: THREE.DoubleSide, transparent: true })
+const cursorGeo = new THREE.BoxBufferGeometry(1 / 16, 1 / 16, 1 / 16);
+const cursorMat = new THREE.MeshBasicMaterial({ map: cursorTexture, side: THREE.DoubleSide, transparent: true });
 
-const cubeData = 
-{
-    faces:
-    [
+const cubeData = {
+    faces: [
         {
-            name: "top",
-            positions: [[0, 1, 1], [1, 1, 1], [1, 1, 0], [0, 1, 0]],
-            texturing: [   [.5, 0],    [.5, 1],    [0, 1],    [0, 0]],
-            triangles: [[0, 1, 2], [0, 2, 3]]
+            name: 'top',
+            positions: [
+                [0, 1, 1],
+                [1, 1, 1],
+                [1, 1, 0],
+                [0, 1, 0],
+            ],
+            texturing: [
+                [0.5, 0],
+                [0.5, 1],
+                [0, 1],
+                [0, 0],
+            ],
+            triangles: [
+                [0, 1, 2],
+                [0, 2, 3],
+            ],
         },
 
         {
-            name: "front",
-            positions: [[0, 1, 1], [0, 0, 1], [1, 0, 1], [1, 1, 1]],
-            texturing: [   [1, 0],    [1, 1],    [.5, 1],    [.5, 0]],
-            triangles: [[0, 1, 2], [0, 2, 3]]
+            name: 'front',
+            positions: [
+                [0, 1, 1],
+                [0, 0, 1],
+                [1, 0, 1],
+                [1, 1, 1],
+            ],
+            texturing: [
+                [1, 0],
+                [1, 1],
+                [0.5, 1],
+                [0.5, 0],
+            ],
+            triangles: [
+                [0, 1, 2],
+                [0, 2, 3],
+            ],
         },
 
         {
-            name: "back",
-            positions: [[1, 0, 0], [0, 0, 0], [0, 1, 0], [1, 1, 0]],
-            texturing: [   [.5, 1],    [1, 1],    [1, 0],    [.5, 0]],
-            triangles: [[0, 1, 2], [0, 2, 3]]
-        },
-        
-        {
-            name: "left",
-            positions: [[1, 1, 1], [1, 0, 1], [1, 0, 0], [1, 1, 0]],
-            texturing: [   [1, 0],    [1, 1],    [.5, 1],    [.5, 0]],
-            triangles: [[0, 1, 2], [0, 2, 3]]
+            name: 'back',
+            positions: [
+                [1, 0, 0],
+                [0, 0, 0],
+                [0, 1, 0],
+                [1, 1, 0],
+            ],
+            texturing: [
+                [0.5, 1],
+                [1, 1],
+                [1, 0],
+                [0.5, 0],
+            ],
+            triangles: [
+                [0, 1, 2],
+                [0, 2, 3],
+            ],
         },
 
         {
-            name: "right",
-            positions: [[0, 1, 0], [0, 0, 0], [0, 0, 1], [0, 1, 1]],
-            texturing: [   [1, 0],    [1, 1],    [.5, 1],    [.5, 0]],
-            triangles: [[0, 1, 2], [0, 2, 3]]
+            name: 'left',
+            positions: [
+                [1, 1, 1],
+                [1, 0, 1],
+                [1, 0, 0],
+                [1, 1, 0],
+            ],
+            texturing: [
+                [1, 0],
+                [1, 1],
+                [0.5, 1],
+                [0.5, 0],
+            ],
+            triangles: [
+                [0, 1, 2],
+                [0, 2, 3],
+            ],
         },
 
         {
-            name: "bottom",
-            positions: [[0, 0, 1], [0, 0, 0], [1, 0, 0], [1, 0, 1]],
-            texturing: [   [.5, 0],    [.5, 1],    [0, 1],    [0, 0]],
-            triangles: [[0, 1, 2], [0, 2, 3]]
-        }
-    ]
+            name: 'right',
+            positions: [
+                [0, 1, 0],
+                [0, 0, 0],
+                [0, 0, 1],
+                [0, 1, 1],
+            ],
+            texturing: [
+                [1, 0],
+                [1, 1],
+                [0.5, 1],
+                [0.5, 0],
+            ],
+            triangles: [
+                [0, 1, 2],
+                [0, 2, 3],
+            ],
+        },
+
+        {
+            name: 'bottom',
+            positions: [
+                [0, 0, 1],
+                [0, 0, 0],
+                [1, 0, 0],
+                [1, 0, 1],
+            ],
+            texturing: [
+                [0.5, 0],
+                [0.5, 1],
+                [0, 1],
+                [0, 0],
+            ],
+            triangles: [
+                [0, 1, 2],
+                [0, 2, 3],
+            ],
+        },
+    ],
 };
 
 function dataToGeo(data: any): THREE.BufferGeometry {
@@ -143,12 +219,12 @@ function dataToGeo(data: any): THREE.BufferGeometry {
     const texcoords: number[] = [];
     const normals: number[] = [];
 
-    data.faces.forEach((face: any) =>
-    {
+    data.faces.forEach((face: any) => {
         // offset indices relative to existing vertices
         // const indexOffset = this.vertexCount;
-        const faceIndexes = face.triangles.reduce((a: number[], b: number[]) => [...a, ...b], [])
-                                            .map((index: number) => index + indexOffset);
+        const faceIndexes = face.triangles
+            .reduce((a: number[], b: number[]) => [...a, ...b], [])
+            .map((index: number) => index + indexOffset);
 
         indices.push(...faceIndexes);
         // faces.set(face.name, faceIndexes);
@@ -156,13 +232,11 @@ function dataToGeo(data: any): THREE.BufferGeometry {
 
         // compute shared normal and add all positions/texcoords/normals
         const positions2 = face.positions.slice(0, 3).map((position: number[]) => new THREE.Vector3(...position));
-        
-        const normal = new THREE.Vector3();
-        normal.crossVectors(positions2[1].clone().sub(positions2[0]),
-                            positions2[2].clone().sub(positions2[0])); 
 
-        face.positions.forEach((position: number[], i: number) =>
-        {
+        const normal = new THREE.Vector3();
+        normal.crossVectors(positions2[1].clone().sub(positions2[0]), positions2[2].clone().sub(positions2[0]));
+
+        face.positions.forEach((position: number[], i: number) => {
             positions.push(...face.positions[i]);
             texcoords.push(...face.texturing[i]);
             normals.push(normal.x, normal.y, normal.z);
@@ -173,17 +247,17 @@ function dataToGeo(data: any): THREE.BufferGeometry {
 
     // threejs stuff
     const positionBuffer = new THREE.Float32BufferAttribute(positions, 3);
-    const normalBuffer   = new THREE.Float32BufferAttribute(normals,   3);
+    const normalBuffer = new THREE.Float32BufferAttribute(normals, 3);
     const texcoordBuffer = new THREE.Float32BufferAttribute(texcoords, 2);
 
     const geometry = new THREE.BufferGeometry();
-    geometry.setAttribute("position", positionBuffer);
-    geometry.setAttribute("normal",   normalBuffer);
-    geometry.setAttribute("uv",       texcoordBuffer);
+    geometry.setAttribute('position', positionBuffer);
+    geometry.setAttribute('normal', normalBuffer);
+    geometry.setAttribute('uv', texcoordBuffer);
     geometry.setIndex(indices);
 
-    geometry.translate(-.5, -.5, -.5);
-    geometry.scale(1/16, 1/16, 1/16);
+    geometry.translate(-0.5, -0.5, -0.5);
+    geometry.scale(1 / 16, 1 / 16, 1 / 16);
     geometry.rotateY(Math.PI / 2);
     return geometry;
 }
@@ -252,8 +326,7 @@ export class FollowCamera {
     pitch = Math.PI / 4;
     depth = 1;
 
-    constructor(public readonly camera: THREE.Camera) {
-    }
+    constructor(public readonly camera: THREE.Camera) {}
 
     refresh() {
         const angle = new THREE.Euler(-this.pitch, this.angle, 0, 'ZYX');
@@ -320,8 +393,8 @@ export class ZoneSceneRenderer extends EventEmitter {
             0.01,
             10,
         );
-        isoCamera.position.set(-1 / 8 + .5/16, 4.5 / 8, 4.5 / 8);
-        isoCamera.lookAt(.5/16, 0, 0);
+        isoCamera.position.set(-1 / 8 + 0.5 / 16, 4.5 / 8, 4.5 / 8);
+        isoCamera.lookAt(0.5 / 16, 0, 0);
 
         const followCam = new THREE.OrthographicCamera(
             (frustumSize * aspect) / -2,
@@ -346,12 +419,12 @@ export class ZoneSceneRenderer extends EventEmitter {
             0.01,
             10,
         );
-        flatCamera.position.set(.5/16, 1, 1);
-        flatCamera.lookAt(.5/16, 0, 0);
+        flatCamera.position.set(0.5 / 16, 1, 1);
+        flatCamera.lookAt(0.5 / 16, 0, 0);
 
         const cinemaCamera = new THREE.PerspectiveCamera(70, aspect, 0.01, 10);
-        cinemaCamera.position.set(.5/16, 0, 0.8);
-        cinemaCamera.lookAt(.5/16, 0, 0);
+        cinemaCamera.position.set(0.5 / 16, 0, 0.8);
+        cinemaCamera.lookAt(0.5 / 16, 0, 0);
 
         this.cameras.push(isoCamera);
         this.cameras.push(flatCamera);
@@ -374,7 +447,7 @@ export class ZoneSceneRenderer extends EventEmitter {
         });
 
         this.mediaMesh = new THREE.Mesh(new THREE.PlaneGeometry(1, 1, 1, 1), mediaMaterial);
-        this.mediaMesh.translateX(.5/16);
+        this.mediaMesh.translateX(0.5 / 16);
         this.mediaMesh.translateZ(-2.5 / 16 + 1 / 512);
 
         this.scene.add(this.blockGroup);
@@ -384,19 +457,19 @@ export class ZoneSceneRenderer extends EventEmitter {
 
         for (let z = 0; z < 5; ++z) {
             for (let x = 0; x < 16; ++x) {
-                zone.grid.set([x-7, -5, z-2], true);
+                zone.grid.set([x - 7, -5, z - 2], true);
             }
         }
         for (let x = 0; x < 16; ++x) {
             for (let y = 0; y < 10; ++y) {
-                zone.grid.set([x-7, y-4, -3], true);
+                zone.grid.set([x - 7, y - 4, -3], true);
             }
         }
         for (let x = 0; x < 16; ++x) {
-            zone.grid.set([x-7, Math.min(-5, 5-x), 3], true);
+            zone.grid.set([x - 7, Math.min(-5, 5 - x), 3], true);
         }
         for (let z = 0; z < 6; ++z) {
-            zone.grid.set([8, -z, z-3], true);
+            zone.grid.set([8, -z, z - 3], true);
         }
 
         this.rebuild();
@@ -421,16 +494,15 @@ export class ZoneSceneRenderer extends EventEmitter {
             event.stopPropagation();
         });
 
-        document.addEventListener('keydown', (event) => this.cursor.visible = event.shiftKey || event.ctrlKey);
-        document.addEventListener('keyup', (event) => this.cursor.visible = event.shiftKey || event.ctrlKey);
+        document.addEventListener('keydown', (event) => (this.cursor.visible = event.shiftKey || event.ctrlKey));
+        document.addEventListener('keyup', (event) => (this.cursor.visible = event.shiftKey || event.ctrlKey));
 
         document.addEventListener('pointermove', (event) => {
-            
             const info = this.getInfoUnderMouseEvent(event);
 
             if (info?.blockCoords) {
                 const [x, y, z] = info.blockCoords;
-                this.cursor.position.set(x/16, y/16, z/16);
+                this.cursor.position.set(x / 16, y / 16, z / 16);
             }
 
             this.emit('pointermove', info?.spaceCoords);
@@ -442,8 +514,7 @@ export class ZoneSceneRenderer extends EventEmitter {
     }
 
     rebuild() {
-        while (this.blockGroup.children.length)
-        {
+        while (this.blockGroup.children.length) {
             this.blockGroup.remove(this.blockGroup.children[0]);
         }
 
@@ -451,7 +522,7 @@ export class ZoneSceneRenderer extends EventEmitter {
         this.zone.grid.forEach((_, [x, y, z]) => {
             const cube = new THREE.Mesh(blockGeo, blockMaterial);
             this.blockGroup.add(cube);
-            cube.position.set(x/16, y/16, z/16);
+            cube.position.set(x / 16, y / 16, z / 16);
             this.meshToCoords.set(cube, [x, y, z]);
             this.coordsToMesh.set([x, y, z], cube);
         });
@@ -465,7 +536,7 @@ export class ZoneSceneRenderer extends EventEmitter {
                 const [x, y, z] = coord;
                 const cube = new THREE.Mesh(blockGeo, blockMaterial);
                 this.blockGroup.add(cube);
-                cube.position.set(x/16, y/16, z/16);
+                cube.position.set(x / 16, y / 16, z / 16);
                 this.meshToCoords.set(cube, [x, y, z]);
                 this.coordsToMesh.set([x, y, z], cube);
             } else if (!value && this.coordsToMesh.has(coord)) {
@@ -495,16 +566,17 @@ export class ZoneSceneRenderer extends EventEmitter {
         const localCoords = this.client.localUser?.position;
         if (localCoords) {
             const [x, y, z] = localCoords;
-            this.followCam.focus.set(x/16, y/16, z/16);
+            this.followCam.focus.set(x / 16, y / 16, z / 16);
         }
 
         this.mediaMesh.scale.set((252 * mediaAspect) / 512, 252 / 512, 1);
 
-        setAvatarCount(this.zone.users.size);
+        setAvatarCount(this.zone.users.size + this.zone.echoes.size);
         this.avatarGroup.children = [];
 
         let i = 0;
-        this.zone.users.forEach((user) => {
+
+        const showAvatar = (user: UserState, echo = false) => {
             if (!user.position) return;
             const [x, y, z] = user.position;
             const mesh = avatarMeshes[i++];
@@ -535,13 +607,17 @@ export class ZoneSceneRenderer extends EventEmitter {
 
             const tile = this.getTile(user.avatar).canvas;
             const material = getTileMaterial(tile);
-            material.color.set(`rgb(${r}, ${g}, ${b})`);
+            material.color.setRGB(r / 255, g / 255, b / 255);
+            material.opacity = echo ? 0.5 : 1;
             mesh.material = material;
 
             mesh.position.set(x / 16 + dx / 512, y / 16 + dy / 512, z / 16);
 
             this.avatarGroup.add(mesh);
-        });
+        };
+
+        this.zone.users.forEach((user) => showAvatar(user));
+        this.zone.echoes.forEach((echo) => showAvatar(echo, true));
     }
 
     render() {
@@ -553,8 +629,8 @@ export class ZoneSceneRenderer extends EventEmitter {
         const [cx, cy] = eventToElementPixel(event, this.renderer.domElement);
 
         return new THREE.Vector2(
-            -1 + cx / this.renderer.domElement.clientWidth * 2,
-             1 - cy / this.renderer.domElement.clientHeight * 2,
+            -1 + (cx / this.renderer.domElement.clientWidth) * 2,
+            1 - (cy / this.renderer.domElement.clientHeight) * 2,
         );
     }
 
@@ -573,7 +649,7 @@ export class ZoneSceneRenderer extends EventEmitter {
 
         let [x, y, z] = blockCoords;
         const delta = intersection.point.sub(intersection.object.position);
-        
+
         if (Math.abs(delta.y) > Math.abs(delta.x) && Math.abs(delta.y) > Math.abs(delta.z)) {
             y += Math.sign(delta.y);
         } else if (Math.abs(delta.x) > Math.abs(delta.y) && Math.abs(delta.x) > Math.abs(delta.z)) {
@@ -584,7 +660,7 @@ export class ZoneSceneRenderer extends EventEmitter {
 
         const spaceCoords = [x, y, z];
 
-        return { 
+        return {
             blockCoords,
             spaceCoords,
         };

@@ -95,6 +95,7 @@ input[type="text"]:focus {
 
 #bottom-toolbar {
     bottom: 0; right: 0;
+    align-items: flex-end;
 }
 
 #bottom-toolbar > button {
