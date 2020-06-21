@@ -288,18 +288,12 @@ describe('blocks', () => {
 
     it('receives existing blocks', async () => {
         await zoneServer({}, async (server) => {
-            const client1 = await server.client();
-            await client1.join();
-
-            blocks.forEach((coord) => client1.setBlock(coord, true));
-            await sleep(100);
-
-            const client2 = await server.client();
-            const waiter = client2.expect('blocks');
-            await client2.join();
+            const clien = await server.client();
+            const waiter = clien.expect('blocks');
+            await clien.join();
 
             const received = await waiter;
-            expect(new Set(received.coords)).toEqual(blocks);
+            expect(received.coords).toEqual([[0, -4, 0]]);
         });
     });
 });
