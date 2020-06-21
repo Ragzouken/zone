@@ -614,21 +614,31 @@ export async function load() {
         element.addEventListener('click', () => toggleEmote(emote));
     });
 
+    const directions: [number, number][] = [
+        [1, 0],
+        [0, -1],
+        [-1, 0],
+        [0, 1],
+    ];
+    
+    function moveVector(direction: number): [number, number] {
+        return directions[(direction + sceneRenderer.rotateStep) % 4];
+    }
+
     const gameKeys = new Map<string, () => void>();
     gameKeys.set('Tab', () => chatInput.focus());
     gameKeys.set('1', () => toggleEmote('wvy'));
     gameKeys.set('2', () => toggleEmote('shk'));
     gameKeys.set('3', () => toggleEmote('rbw'));
     gameKeys.set('4', () => toggleEmote('spn'));
-    gameKeys.set('ArrowLeft', () => move(-1, 0));
-    gameKeys.set('ArrowRight', () => move(1, 0));
-    gameKeys.set('ArrowDown', () => move(0, 1));
-    gameKeys.set('ArrowUp', () => move(0, -1));
+    gameKeys.set('ArrowLeft', () => move(...moveVector(2)));
+    gameKeys.set('ArrowRight', () => move(...moveVector(0)));
+    gameKeys.set('ArrowDown', () => move(...moveVector(3)));
+    gameKeys.set('ArrowUp', () => move(...moveVector(1)));
 
     const rot = Math.PI / 4;
     gameKeys.set('[', () => (sceneRenderer.followCam.angle += rot));
     gameKeys.set(']', () => (sceneRenderer.followCam.angle -= rot));
-    gameKeys.set('f', () => (sceneRenderer.follow = !sceneRenderer.follow));
     gameKeys.set('v', () => sceneRenderer.cycleCamera());
 
     gameKeys.set('q', () => {

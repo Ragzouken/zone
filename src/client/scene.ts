@@ -347,7 +347,7 @@ export class ZoneSceneRenderer extends EventEmitter {
     mediaElement?: HTMLImageElement | HTMLCanvasElement | HTMLVideoElement;
 
     private readonly renderer = new THREE.WebGLRenderer({ antialias: false });
-    private readonly cameras: [THREE.Camera, boolean][] = [];
+    private readonly cameras: [THREE.Camera, boolean, boolean][] = [];
     private readonly raycaster = new THREE.Raycaster();
 
     private readonly mediaTexture = new THREE.VideoTexture(document.createElement('video'));
@@ -374,6 +374,12 @@ export class ZoneSceneRenderer extends EventEmitter {
 
     private get follow() {
         return this.cameras[this.cameraIndex][1];
+    }
+
+    get rotateStep() {
+        if (!this.cameras[this.cameraIndex][2]) return 0;
+        const increment = Math.round(2 * this.followCam.angle / Math.PI);
+        return (increment % 4) + 4;
     }
 
     constructor(
@@ -420,10 +426,10 @@ export class ZoneSceneRenderer extends EventEmitter {
         cinemaCamera.lookAt(0.5 / 16, 0, 0);
         this.cinemaCamera = cinemaCamera;
 
-        this.cameras.push([this.isoCamera, false]);
-        this.cameras.push([this.cinemaCamera, true]);
-        this.cameras.push([this.flatCamera, false]);
-        this.cameras.push([this.isoCamera, true]);
+        this.cameras.push([this.isoCamera, false, false]);
+        this.cameras.push([this.cinemaCamera, true, true]);
+        this.cameras.push([this.flatCamera, false, false]);
+        this.cameras.push([this.isoCamera, true, true]);
 
         this.mediaTexture.minFilter = THREE.NearestFilter;
         this.mediaTexture.magFilter = THREE.NearestFilter;
