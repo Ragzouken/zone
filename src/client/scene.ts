@@ -6,6 +6,7 @@ import { rgbaToColor, decodeAsciiTexture, createContext2D } from 'blitsy';
 import { EventEmitter } from 'events';
 import ZoneClient from '../common/client';
 import { text } from 'express';
+import { number } from '@hapi/joi';
 
 function recolor(context: CanvasRenderingContext2D) {
     withPixels(context, (pixels) => {
@@ -314,23 +315,27 @@ function setAvatarCount(count: number) {
     }
 }
 
-export class FollowCamera {
+function orientCamera(
+    camera: THREE.Camera, 
+    focus: THREE.Vector3, 
+    angle: number, 
+    pitch: number,
+    depth: number,
+) {
+    const euler = new THREE.Euler(-pitch, angle, 0, 'ZYX');
+    const position = new THREE.Vector3(0, 0, depth);
+    position.applyEuler(euler);
+    position.add(focus);
+
+    camera.position.copy(position);
+    camera.lookAt(focus);
+}
+
+export class FocusCamera {
     focus = new THREE.Vector3();
     angle = -Math.PI / 12;
     pitch = Math.PI / 4;
     depth = 1;
-
-    constructor(public readonly camera: THREE.Camera) {}
-
-    refresh() {
-        const angle = new THREE.Euler(-this.pitch, this.angle, 0, 'ZYX');
-        const position = new THREE.Vector3(0, 0, this.depth);
-        position.applyEuler(angle);
-        position.add(this.focus);
-
-        this.camera.position.copy(position);
-        this.camera.lookAt(this.focus);
-    }
 }
 
 export interface ZoneSceneRenderer {
@@ -342,7 +347,7 @@ export class ZoneSceneRenderer extends EventEmitter {
     mediaElement?: HTMLImageElement | HTMLCanvasElement | HTMLVideoElement;
 
     private readonly renderer = new THREE.WebGLRenderer({ antialias: false });
-    private readonly cameras: THREE.Camera[] = [];
+    private readonly cameras: [THREE.Camera, boolean][] = [];
     private readonly raycaster = new THREE.Raycaster();
 
     private readonly mediaTexture = new THREE.VideoTexture(document.createElement('video'));
@@ -358,10 +363,17 @@ export class ZoneSceneRenderer extends EventEmitter {
     private cameraIndex = 0;
     private cursor = new THREE.Mesh(cursorGeo, cursorMat);
 
-    public readonly followCam: FollowCamera;
+    public readonly followCam: FocusCamera;
+    private readonly cinemaCamera: THREE.Camera;
+    private readonly isoCamera: THREE.Camera;
+    private readonly flatCamera: THREE.Camera;
 
     private get camera() {
-        return this.cameras[this.cameraIndex];
+        return this.cameras[this.cameraIndex][0];
+    }
+
+    private get follow() {
+        return this.cameras[this.cameraIndex][1];
     }
 
     constructor(
@@ -379,7 +391,7 @@ export class ZoneSceneRenderer extends EventEmitter {
         const aspect = container.clientWidth / container.clientHeight;
         const frustumSize = 1.1;
 
-        const isoCamera = new THREE.OrthographicCamera(
+        this.isoCamera = new THREE.OrthographicCamera(
             (frustumSize * aspect) / -2,
             (frustumSize * aspect) / 2,
             frustumSize / 2,
@@ -387,25 +399,12 @@ export class ZoneSceneRenderer extends EventEmitter {
             0.01,
             10,
         );
-        isoCamera.position.set(-1 / 8 + 0.5 / 16, 4.5 / 8, 4.5 / 8);
-        isoCamera.lookAt(0.5 / 16, 0, 0);
 
-        const followCam = new THREE.OrthographicCamera(
-            (frustumSize * aspect) / -2,
-            (frustumSize * aspect) / 2,
-            frustumSize / 2,
-            frustumSize / -2,
-            0.01,
-            10,
-        );
-        followCam.position.set(-1 / 8, 4.5 / 8, 4.5 / 8);
-        followCam.lookAt(0, 0, 0);
-
-        this.followCam = new FollowCamera(followCam);
+        this.followCam = new FocusCamera();
 
         const factor = Math.sqrt(2);
 
-        const flatCamera = new THREE.OrthographicCamera(
+        this.flatCamera = new THREE.OrthographicCamera(
             (1 * aspect) / -2,
             (1 * aspect) / 2,
             .5 / factor,
@@ -413,17 +412,18 @@ export class ZoneSceneRenderer extends EventEmitter {
             0.01,
             10,
         );
-        flatCamera.position.set(0.5 / 16, 1, 1);
-        flatCamera.lookAt(0.5 / 16, 0, 0);
+        this.flatCamera.position.set(0.5 / 16, 1, 1);
+        this.flatCamera.lookAt(0.5 / 16, 0, 0);
 
         const cinemaCamera = new THREE.PerspectiveCamera(70, aspect, 0.01, 10);
         cinemaCamera.position.set(0.5 / 16, 0, 0.8);
         cinemaCamera.lookAt(0.5 / 16, 0, 0);
+        this.cinemaCamera = cinemaCamera;
 
-        this.cameras.push(isoCamera);
-        this.cameras.push(flatCamera);
-        this.cameras.push(cinemaCamera);
-        this.cameras.push(followCam);
+        this.cameras.push([this.isoCamera, false]);
+        this.cameras.push([this.cinemaCamera, true]);
+        this.cameras.push([this.flatCamera, false]);
+        this.cameras.push([this.isoCamera, true]);
 
         this.mediaTexture.minFilter = THREE.NearestFilter;
         this.mediaTexture.magFilter = THREE.NearestFilter;
@@ -526,6 +526,17 @@ export class ZoneSceneRenderer extends EventEmitter {
     }
 
     update() {
+        const localCoords = this.client.localUser?.position;
+        if (localCoords && this.follow) {
+            const [x, y, z] = localCoords;
+            this.followCam.focus.set(x / 16, y / 16, z / 16);
+        } else {
+            this.followCam.focus.set(0.5 / 16, 0, 0);
+        }
+
+        orientCamera(this.isoCamera, this.followCam.focus, this.followCam.angle, this.followCam.pitch, this.followCam.depth);
+        orientCamera(this.cinemaCamera, this.followCam.focus, this.followCam.angle, this.followCam.pitch, this.followCam.depth);
+
         this.renderer.setClearColor(this.connecting() ? red : black);
         this.mediaTexture.image = this.mediaElement;
         this.mediaTexture.needsUpdate = true;
@@ -538,12 +549,6 @@ export class ZoneSceneRenderer extends EventEmitter {
             mediaAspect = this.mediaElement.naturalWidth / this.mediaElement.naturalHeight;
         } else if (isCanvas(this.mediaElement)) {
             mediaAspect = this.mediaElement.width / this.mediaElement.height;
-        }
-
-        const localCoords = this.client.localUser?.position;
-        if (localCoords) {
-            const [x, y, z] = localCoords;
-            this.followCam.focus.set(x / 16, y / 16, z / 16);
         }
 
         this.mediaMesh.scale.set((252 * mediaAspect) / 512, 252 / 512, 1);
@@ -578,9 +583,7 @@ export class ZoneSceneRenderer extends EventEmitter {
             }
 
             const spin = user.emotes && user.emotes.includes('spn');
-            const angle = spin ? performance.now() / 100 - x : 0;
-
-            mesh.rotation.y = angle;
+            const da = spin ? performance.now() / 100 - x : 0;
 
             const tile = this.getTile(user.avatar).canvas;
             const material = mesh.material as THREE.MeshBasicMaterial;
@@ -588,7 +591,9 @@ export class ZoneSceneRenderer extends EventEmitter {
             material.opacity = echo ? 0.5 : 1;
             material.map = getTileTexture(tile);
 
+            const angle = this.camera === this.flatCamera ? 0 : this.followCam.angle;
             mesh.position.set(x / 16 + dx / 512, y / 16 + dy / 512, z / 16);
+            mesh.rotation.y = angle + da;
 
             this.avatarGroup.add(mesh);
         };
@@ -598,7 +603,6 @@ export class ZoneSceneRenderer extends EventEmitter {
     }
 
     render() {
-        this.followCam.refresh();
         this.renderer.render(this.scene, this.camera);
     }
 

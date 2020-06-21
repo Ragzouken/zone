@@ -628,6 +628,8 @@ export async function load() {
     const rot = Math.PI / 4;
     gameKeys.set('[', () => (sceneRenderer.followCam.angle += rot));
     gameKeys.set(']', () => (sceneRenderer.followCam.angle -= rot));
+    gameKeys.set('f', () => (sceneRenderer.follow = !sceneRenderer.follow));
+    gameKeys.set('v', () => sceneRenderer.cycleCamera());
 
     gameKeys.set('q', () => {
         refreshQueue();
@@ -636,9 +638,6 @@ export async function load() {
     gameKeys.set('s', () => {
         searchPanel.hidden = false;
         searchInput.focus();
-    });
-    gameKeys.set('v', () => {
-        sceneRenderer.cycleCamera();
     });
     gameKeys.set('u', () => (userPanel.hidden = !userPanel.hidden));
 
