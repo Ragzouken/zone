@@ -470,14 +470,12 @@ export class ZoneSceneRenderer extends EventEmitter {
         this.renderer.domElement.addEventListener('pointerdown', (event) => {
             const info = this.getInfoUnderMouseEvent(event);
 
-            if (info) {
-                if (event.shiftKey && info.spaceCoords) {
-                    client.setBlock(info.spaceCoords, true);
-                } else if (event.ctrlKey && info.blockCoords) {
-                    client.setBlock(info.blockCoords, false);
-                } else {
-                    this.emit('pointerdown', info);
-                }
+            if (event.shiftKey && info.spaceCoords) {
+                client.setBlock(info.spaceCoords, true);
+            } else if (event.ctrlKey && info.blockCoords) {
+                client.setBlock(info.blockCoords, false);
+            } else {
+                this.emit('pointerdown', info);
             }
 
             event.preventDefault();
