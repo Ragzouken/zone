@@ -124,11 +124,9 @@ export class ZoneClient extends EventEmitter {
         return new Promise<AssignMessage>((resolve, reject) => {
             this.expect('assign', this.options.quickResponseTimeout).then(resolve, reject);
             this.expect('reject').then(reject);
-            console.log('joining...');
             this.messaging.send('join', options);
         }).then((assign) => {
             this.assignation = assign;
-            console.log('assigned:', assign);
             this.localUser = this.zone.getUser(assign.userId);
             this.emit('joined', { user: this.localUser });
             return assign;
