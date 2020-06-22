@@ -11,32 +11,32 @@ html
     body
         #scene
             #three-container
-            #top-toolbar.toolbar
-                button#menu-button(title="open menu")
-                    img(src="icons/menu.png")
-                button#search-button(title="search for video (s)")
-                    img(src="icons/search.png")
-                button#queue-button(title="view queue (q)")
-                    img(src="icons/list.png")
-                button#resync-button(title="reload this")
-                    img(src="icons/resync.png")
-                button#camera-button(title="switch view (v)")
-                    img(src="icons/look.png")
-                #player-status
-            #bottom-toolbar.toolbar
-                #tooltip
-                button(title="toggle float emote (1)", data-emote-toggle="wvy")
-                    img(src="icons/wvy.png")
-                button(title="toggle shake emote (2)", data-emote-toggle="shk")
-                    img(src="icons/shk.png")
-                button(title="toggle rave emote (3)", data-emote-toggle="rbw")
-                    img(src="icons/rbw.png")
-                button(title="toggle spin emote (4)", data-emote-toggle="spn")
-                    img(src="icons/spn.png")
-                button#avatar-button(title="change appearance")
-                    img(src="icons/avatar.png")
-                button#users-button(title="open user list")
-                    img(src="icons/users.png")
+                #top-toolbar.toolbar
+                    button#menu-button(title="open menu")
+                        img(src="icons/menu.png")
+                    button#search-button(title="search for video (s)")
+                        img(src="icons/search.png")
+                    button#queue-button(title="view queue (q)")
+                        img(src="icons/list.png")
+                    button#resync-button(title="reload this")
+                        img(src="icons/resync.png")
+                    button#camera-button(title="switch view (v)")
+                        img(src="icons/look.png")
+                    #player-status
+                #bottom-toolbar.toolbar
+                    #tooltip
+                    button(title="toggle float emote (1)", data-emote-toggle="wvy")
+                        img(src="icons/wvy.png")
+                    button(title="toggle shake emote (2)", data-emote-toggle="shk")
+                        img(src="icons/shk.png")
+                    button(title="toggle rave emote (3)", data-emote-toggle="rbw")
+                        img(src="icons/rbw.png")
+                    button(title="toggle spin emote (4)", data-emote-toggle="spn")
+                        img(src="icons/spn.png")
+                    button#avatar-button(title="change appearance")
+                        img(src="icons/avatar.png")
+                    button#users-button(title="open user list")
+                        img(src="icons/users.png")
             #popout-panel.menu-panel(hidden)
                 .menu-title
                     div video pop-out
@@ -76,7 +76,8 @@ html
                     div user list
                     button#users-close(title="hide panel (esc)").icon-button-small
                         img(src="icons/close.png")
-                .menu-body#user-items
+                .menu-body
+                    #user-items
             #avatar-panel(hidden)
                 .menu-title
                     div update appearance

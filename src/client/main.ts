@@ -181,17 +181,17 @@ export async function load() {
     const userItemContainer = document.getElementById('user-items')!;
     const userSelect = document.getElementById('user-select') as HTMLSelectElement;
 
-    function refreshUsers() {
-        function formatName(user: UserState) {
-            if (user.tags.includes('admin')) {
-                return `<span class="user-admin">${user.name}</span>`;
-            } else if (user.tags.includes('dj')) {
-                return `<span class="user-dj">${user.name}</span>`;
-            } else {
-                return user.name || '';
-            }
+    function formatName(user: UserState) {
+        if (user.tags.includes('admin')) {
+            return `<span class="user-admin">${user.name}</span>`;
+        } else if (user.tags.includes('dj')) {
+            return `<span class="user-dj">${user.name}</span>`;
+        } else {
+            return user.name || '';
         }
+    }
 
+    function refreshUsers() {
         const users = Array.from(client.zone.users.values()).filter((user) => !!user.name);
         const names = users.map((user) => formatName(user));
         userItemContainer.innerHTML = `${names.length} people are zoning: ` + names.join(', ');
@@ -203,7 +203,7 @@ export async function load() {
             option.innerHTML = formatName(user);
             userSelect.appendChild(option);
         });
-        userSelect.value = "";
+        userSelect.value = '';
 
         const auth = !!getLocalUser()?.tags.includes('admin');
         authRow.hidden = auth;
@@ -241,8 +241,8 @@ export async function load() {
     function refreshCurrentItem() {
         const count = client.zone.queue.length + (player.hasItem ? 1 : 0);
         let total = player.remaining / 1000;
-        client.zone.queue.forEach((item) => total += item.media.duration / 1000);
-        queueTitle.innerText = `playlist (${count} items, ${secondsToTime(total)})`
+        client.zone.queue.forEach((item) => (total += item.media.duration / 1000));
+        queueTitle.innerText = `playlist (${count} items, ${secondsToTime(total)})`;
 
         skipButton.disabled = false; // TODO: know when it's event mode
         currentItemContainer.hidden = !player.hasItem;
@@ -251,7 +251,7 @@ export async function load() {
 
         if (client.zone.lastPlayedItem?.info.userId) {
             const user = client.zone.getUser(client.zone.lastPlayedItem.info.userId);
-            currentItemTitle.setAttribute('title', 'queued by ' + user.name)
+            currentItemTitle.setAttribute('title', 'queued by ' + user.name);
         }
     }
 
@@ -272,7 +272,7 @@ export async function load() {
             titleElement.innerHTML = item.media.title;
             if (item.info.userId) {
                 const user = client.zone.getUser(item.info.userId);
-                titleElement.setAttribute('title', 'queued by ' + user.name)
+                titleElement.setAttribute('title', 'queued by ' + user.name);
             }
             timeElement.innerHTML = secondsToTime(item.media.duration / 1000);
             cancelButton.disabled = !cancellable;
@@ -410,48 +410,49 @@ export async function load() {
 
         if (user.position) {
             const [px, py, pz] = user.position;
-            let [nx, ny, nz] = [px+dx, py, pz+dz];
+            let [nx, ny, nz] = [px + dx, py, pz + dz];
 
             const grid = client.zone.grid;
 
             const block = grid.has([nx, ny, nz]);
-            const belowMe = grid.has([px, py-1, pz]);
-            const aboveMe = grid.has([px, py+1, pz]);
-            const belowBlock = grid.has([nx, ny-1, nz]);
-            const belowBlock2 = grid.has([nx, ny-2, nz]);
-            const aboveBlock = grid.has([nx, ny+1, nz]);
-            
-            const walled = grid.has([nx-1, ny, nz])
-                        || grid.has([nx+1, ny, nz])
-                        || grid.has([nx, ny, nz-1])
-                        || grid.has([nx, ny, nz+1]);
+            const belowMe = grid.has([px, py - 1, pz]);
+            const aboveMe = grid.has([px, py + 1, pz]);
+            const belowBlock = grid.has([nx, ny - 1, nz]);
+            const belowBlock2 = grid.has([nx, ny - 2, nz]);
+            const aboveBlock = grid.has([nx, ny + 1, nz]);
+
+            const walled =
+                grid.has([nx - 1, ny, nz]) ||
+                grid.has([nx + 1, ny, nz]) ||
+                grid.has([nx, ny, nz - 1]) ||
+                grid.has([nx, ny, nz + 1]);
 
             // walk into empty space along floor
             if (!block && belowBlock) {
                 // great
-            // special step down
+                // special step down
             } else if (belowMe && !block && !belowBlock && belowBlock2) {
                 ny -= 1;
-            // walk into empty space along wall
+                // walk into empty space along wall
             } else if (!block && walled) {
                 // great
-            // walk up wall
+                // walk up wall
             } else if (block && aboveBlock && !aboveMe) {
                 nx = px;
                 nz = pz;
                 ny = py + 1;
-            // step up
+                // step up
             } else if (block && !aboveBlock && !aboveMe) {
                 ny += 1;
-            // fall down wall
+                // fall down wall
             } else if (!block && !belowMe && !walled && !belowBlock) {
                 nx = px;
                 nz = pz;
                 ny = py - 1;
-            // step down
+                // step down
             } else if (!block && !belowBlock) {
                 ny -= 1;
-            // can't move
+                // can't move
             } else {
                 nx = px;
                 ny = py;
@@ -490,9 +491,9 @@ export async function load() {
 
     let painting = false;
     let erase = false;
-    
+
     function paint(px: number, py: number) {
-        withPixels(avatarContext, (pixels) => pixels[py * 8 + px] = erase ? 0 : 0xFFFFFFFF);
+        withPixels(avatarContext, (pixels) => (pixels[py * 8 + px] = erase ? 0 : 0xffffffff));
     }
 
     window.addEventListener('pointerup', (event) => {
@@ -501,7 +502,7 @@ export async function load() {
             event.preventDefault();
             event.stopPropagation();
         }
-    })
+    });
     avatarPaint.addEventListener('pointerdown', (event) => {
         painting = true;
 
@@ -596,14 +597,7 @@ export async function load() {
         }
     });
 
-    chatCommands.set('cancel', (index) => {
-        const item = client.zone.queue[parseInt(index, 10)];
-        if (item) {
-            client.unqueue(item);
-        } else {
-            chat.status('no queue item ' + index);
-        }
-    });
+    chatCommands.set('echo', (message) => client.echo(getLocalUser()!.position!, message));
 
     const emoteToggles = new Map<string, Element>();
     const toggleEmote = (emote: string) => setEmote(emote, !getEmote(emote));
@@ -620,20 +614,32 @@ export async function load() {
         element.addEventListener('click', () => toggleEmote(emote));
     });
 
+    const directions: [number, number][] = [
+        [1, 0],
+        [0, -1],
+        [-1, 0],
+        [0, 1],
+    ];
+
+    function moveVector(direction: number): [number, number] {
+        return directions[(direction + sceneRenderer.rotateStep) % 4];
+    }
+
     const gameKeys = new Map<string, () => void>();
     gameKeys.set('Tab', () => chatInput.focus());
     gameKeys.set('1', () => toggleEmote('wvy'));
     gameKeys.set('2', () => toggleEmote('shk'));
     gameKeys.set('3', () => toggleEmote('rbw'));
     gameKeys.set('4', () => toggleEmote('spn'));
-    gameKeys.set('ArrowLeft', () => move(-1, 0));
-    gameKeys.set('ArrowRight', () => move(1, 0));
-    gameKeys.set('ArrowDown', () => move(0, 1));
-    gameKeys.set('ArrowUp', () => move(0, -1));
+    gameKeys.set('ArrowLeft', () => move(...moveVector(2)));
+    gameKeys.set('ArrowRight', () => move(...moveVector(0)));
+    gameKeys.set('ArrowDown', () => move(...moveVector(3)));
+    gameKeys.set('ArrowUp', () => move(...moveVector(1)));
 
     const rot = Math.PI / 4;
-    gameKeys.set('[', () => sceneRenderer.followCam.angle += rot);
-    gameKeys.set(']', () => sceneRenderer.followCam.angle -= rot);
+    gameKeys.set('[', () => (sceneRenderer.followCam.angle += rot));
+    gameKeys.set(']', () => (sceneRenderer.followCam.angle -= rot));
+    gameKeys.set('v', () => sceneRenderer.cycleCamera());
 
     gameKeys.set('q', () => {
         refreshQueue();
@@ -643,10 +649,7 @@ export async function load() {
         searchPanel.hidden = false;
         searchInput.focus();
     });
-    gameKeys.set('v', () => {
-        sceneRenderer.cycleCamera();
-    });
-    gameKeys.set('u', () => userPanel.hidden = !userPanel.hidden);
+    gameKeys.set('u', () => (userPanel.hidden = !userPanel.hidden));
 
     function closeAllPanels() {
         queuePanel.hidden = true;
@@ -755,12 +758,34 @@ export async function load() {
     document.getElementById('camera-button')!.addEventListener('click', () => sceneRenderer.cycleCamera());
 
     const tooltip = document.getElementById('tooltip')!;
-    sceneRenderer.on('pointerdown', ([x, y, z]) => moveTo(x, y, z));
-    sceneRenderer.on('pointermove', (coords) => {
-        if (coords) {
-            const names = Array.from(client.zone.users.values())
-                .filter((user) => user.position?.join(',') === coords.join(','))
-                .map((user) => user.name);
+    sceneRenderer.on('pointerdown', (info) => {
+        const objectCoords = info.objectCoords?.join(',') || '';
+        const echoes = Array.from(client.zone.echoes)
+            .map(([, echo]) => echo)
+            .filter((echo) => echo.position!.join(',') === objectCoords);
+
+        if (echoes.length > 0) {
+            chat.log(`{clr=#808080}"${echoes[0].text}"`);
+        } else if (info.spaceCoords) {
+            const [x, y, z] = info.spaceCoords;
+            moveTo(x, y, z);
+        }
+    });
+    sceneRenderer.on('pointermove', (info) => {
+        const objectCoords = info.objectCoords?.join(',') || '';
+
+        if (objectCoords) {
+            const users = Array.from(client.zone.users.values()).filter(
+                (user) => user.position?.join(',') === objectCoords,
+            );
+            const echoes = Array.from(client.zone.echoes)
+                .map(([, echo]) => echo)
+                .filter((echo) => echo.position!.join(',') === objectCoords);
+
+            const names = [
+                ...users.map((user) => formatName(user)),
+                ...echoes.map((echo) => 'echo of ' + formatName(echo)),
+            ];
             tooltip.innerHTML = names.join(', ');
         } else {
             tooltip.innerHTML = '';

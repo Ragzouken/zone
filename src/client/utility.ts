@@ -5,7 +5,7 @@ export function fakedownToTag(text: string, fd: string, tag: string) {
 
 const pad2 = (part: number) => (part.toString().length >= 2 ? part.toString() : '0' + part.toString());
 export function secondsToTime(seconds: number) {
-    if (isNaN(seconds)) return "??:??";
+    if (isNaN(seconds)) return '??:??';
 
     const s = Math.floor(seconds % 60);
     const m = Math.floor(seconds / 60) % 60;

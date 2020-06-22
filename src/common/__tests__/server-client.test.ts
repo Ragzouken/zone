@@ -251,7 +251,7 @@ describe('blocks', () => {
     const blocks = new Set([
         [-20, 0, 0],
         [-19, 1, 2],
-        [-18, 5, 6]
+        [-18, 5, 6],
     ]);
 
     it('can add a block', async () => {
@@ -266,7 +266,7 @@ describe('blocks', () => {
 
             const added = await waiter;
             expect(added.coords).toEqual(coords);
-            expect(added.value).toEqual(true); 
+            expect(added.value).toEqual(true);
         });
     });
 
@@ -282,24 +282,66 @@ describe('blocks', () => {
 
             const added = await waiter;
             expect(added.coords).toEqual(coords);
-            expect(added.value).toEqual(false); 
+            expect(added.value).toEqual(false);
         });
     });
 
     it('receives existing blocks', async () => {
         await zoneServer({}, async (server) => {
+            const clien = await server.client();
+            const waiter = clien.expect('blocks');
+            await clien.join();
+
+            const received = await waiter;
+            expect(received.coords).toEqual([[0, -4, 0]]);
+        });
+    });
+});
+
+describe('echoes', () => {
+    const position = [6, 9, 0]
+    const message = "hello";
+
+    it('can add an echo', async () => {
+        await zoneServer({}, async (server) => {
+            const client = await server.client();
+            const initial = client.expect('echoes');
+            await client.join();
+            await initial;
+
+            const waiter = client.expect('echoes');
+            client.echo(position, message);
+
+            const { added, removed } = await waiter;
+            expect(added).not.toBe(undefined);
+            expect(removed).toBe(undefined);
+
+            const first = added![0];
+            expect(first.position).toEqual(position);
+            expect(first.text).toEqual(message);
+        });
+    });
+
+    it('receives existing echoes', async () => {
+        await zoneServer({}, async (server) => {
             const client1 = await server.client();
             await client1.join();
+            client1.echo(position, message);
 
-            blocks.forEach((coord) => client1.setBlock(coord, true));
             await sleep(100);
 
             const client2 = await server.client();
-            const waiter = client2.expect('blocks');
+            const initial2 = client2.expect('echoes');
             await client2.join();
+            const { added, removed } = await initial2;
 
-            const received = await waiter;
-            expect(new Set(received.coords)).toEqual(blocks);
+            expect(added).not.toBe(undefined);
+            expect(removed).toBe(undefined);
+
+            console.log(added, removed);
+            const first = added![0];
+            expect(first.position).toEqual(position);
+            expect(first.text).toEqual(message);
         });
     });
 });
