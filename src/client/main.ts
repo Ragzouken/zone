@@ -758,25 +758,29 @@ export async function load() {
     document.getElementById('camera-button')!.addEventListener('click', () => sceneRenderer.cycleCamera());
 
     const tooltip = document.getElementById('tooltip')!;
-    sceneRenderer.on('pointerdown', ([x, y, z]) => {
+    sceneRenderer.on('pointerdown', (info) => {
+        const objectCoords = info.objectCoords?.join(',') || '';
         const echoes = Array.from(client.zone.echoes)
             .map(([, echo]) => echo)
-            .filter((echo) => echo.position!.join(',') === [x, y, z].join(','));
+            .filter((echo) => echo.position!.join(',') === objectCoords);
 
         if (echoes.length > 0) {
             chat.log(`{clr=#808080}"${echoes[0].text}"`);
-        } else {
+        } else if (info.spaceCoords) {
+            const [x, y, z] = info.spaceCoords;
             moveTo(x, y, z);
         }
     });
-    sceneRenderer.on('pointermove', (coords) => {
-        if (coords) {
+    sceneRenderer.on('pointermove', (info) => {
+        const objectCoords = info.objectCoords?.join(',') || '';
+
+        if (objectCoords) {
             const users = Array.from(client.zone.users.values()).filter(
-                (user) => user.position?.join(',') === coords.join(','),
+                (user) => user.position?.join(',') === objectCoords,
             );
             const echoes = Array.from(client.zone.echoes)
                 .map(([, echo]) => echo)
-                .filter((echo) => echo.position!.join(',') === coords.join(','));
+                .filter((echo) => echo.position!.join(',') === objectCoords);
 
             const names = [
                 ...users.map((user) => formatName(user)),

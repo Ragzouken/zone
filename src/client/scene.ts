@@ -338,9 +338,15 @@ export class FocusCamera {
     depth = 1;
 }
 
+export interface ScenePointerInfo {
+    spaceCoords?: number[],
+    blockCoords?: number[],
+    objectCoords?: number[],
+}
+
 export interface ZoneSceneRenderer {
-    on(event: 'pointerdown', callback: (point: number[]) => void): this;
-    on(event: 'pointermove', callback: (point?: number[]) => void): this;
+    on(event: 'pointerdown', callback: (info: ScenePointerInfo) => void): this;
+    on(event: 'pointermove', callback: (info: ScenePointerInfo) => void): this;
 }
 
 export class ZoneSceneRenderer extends EventEmitter {
@@ -357,8 +363,9 @@ export class ZoneSceneRenderer extends EventEmitter {
     private readonly blockGroup = new THREE.Group();
     private readonly mediaMesh: THREE.Mesh;
 
-    private readonly meshToCoords = new Map<THREE.Object3D, number[]>();
-    private readonly coordsToMesh = new Grid<THREE.Object3D>();
+    private readonly cubeToCoords = new Map<THREE.Object3D, number[]>();
+    private readonly coordsToCube = new Grid<THREE.Object3D>();
+    private readonly avatarToCoords = new Map<THREE.Object3D, number[]>();
 
     private cameraIndex = 0;
     private cursor = new THREE.Mesh(cursorGeo, cursorMat);
@@ -464,12 +471,12 @@ export class ZoneSceneRenderer extends EventEmitter {
             const info = this.getInfoUnderMouseEvent(event);
 
             if (info) {
-                if (event.shiftKey) {
+                if (event.shiftKey && info.spaceCoords) {
                     client.setBlock(info.spaceCoords, true);
-                } else if (event.ctrlKey) {
+                } else if (event.ctrlKey && info.blockCoords) {
                     client.setBlock(info.blockCoords, false);
                 } else {
-                    this.emit('pointerdown', info.spaceCoords);
+                    this.emit('pointerdown', info);
                 }
             }
 
@@ -488,7 +495,7 @@ export class ZoneSceneRenderer extends EventEmitter {
                 this.cursor.position.set(x / 16, y / 16, z / 16);
             }
 
-            this.emit('pointermove', info?.spaceCoords);
+            this.emit('pointermove', info);
         });
     }
 
@@ -501,13 +508,13 @@ export class ZoneSceneRenderer extends EventEmitter {
             this.blockGroup.remove(this.blockGroup.children[0]);
         }
 
-        this.coordsToMesh.clear();
+        this.coordsToCube.clear();
         this.zone.grid.forEach((_, [x, y, z]) => {
             const cube = new THREE.Mesh(blockGeo, blockMaterial);
             this.blockGroup.add(cube);
             cube.position.set(x / 16, y / 16, z / 16);
-            this.meshToCoords.set(cube, [x, y, z]);
-            this.coordsToMesh.set([x, y, z], cube);
+            this.cubeToCoords.set(cube, [x, y, z]);
+            this.coordsToCube.set([x, y, z], cube);
         });
     }
 
@@ -515,18 +522,18 @@ export class ZoneSceneRenderer extends EventEmitter {
         coords.forEach((coord) => {
             const value = this.zone.grid.has(coord);
 
-            if (value && !this.coordsToMesh.has(coord)) {
+            if (value && !this.coordsToCube.has(coord)) {
                 const [x, y, z] = coord;
                 const cube = new THREE.Mesh(blockGeo, blockMaterial);
                 this.blockGroup.add(cube);
                 cube.position.set(x / 16, y / 16, z / 16);
-                this.meshToCoords.set(cube, [x, y, z]);
-                this.coordsToMesh.set([x, y, z], cube);
-            } else if (!value && this.coordsToMesh.has(coord)) {
-                const mesh = this.coordsToMesh.get(coord)!;
+                this.cubeToCoords.set(cube, [x, y, z]);
+                this.coordsToCube.set([x, y, z], cube);
+            } else if (!value && this.coordsToCube.has(coord)) {
+                const mesh = this.coordsToCube.get(coord)!;
                 this.blockGroup.remove(mesh);
-                this.meshToCoords.delete(mesh);
-                this.coordsToMesh.delete(coord);
+                this.cubeToCoords.delete(mesh);
+                this.coordsToCube.delete(coord);
             }
         });
     }
@@ -602,6 +609,7 @@ export class ZoneSceneRenderer extends EventEmitter {
             mesh.rotation.y = angle + da;
 
             this.avatarGroup.add(mesh);
+            this.avatarToCoords.set(mesh, user.position);
         };
 
         this.zone.users.forEach((user) => showAvatar(user));
@@ -626,37 +634,44 @@ export class ZoneSceneRenderer extends EventEmitter {
         return this.raycaster.intersectObject(this.blockGroup, true)[0];
     }
 
-    getInfoUnderMouseEvent(event: PointerEvent) {
+    objectIntersectCameraPoint(point: THREE.Vector2): THREE.Intersection | undefined {
+        this.raycaster.setFromCamera(point, this.camera);
+        return this.raycaster.intersectObject(this.avatarGroup, true)[0];
+    }
+
+    getAvatarCoordsUnderMouseEvent(event: PointerEvent) {
         const point = this.cameraPointFromMouseEvent(event);
-        const intersection = this.blockIntersectCameraPoint(point);
+        const intersection = this.objectIntersectCameraPoint(point);
 
         if (!intersection) return undefined;
 
-        const blockCoords = this.meshToCoords.get(intersection.object)!;
-
-        let [x, y, z] = blockCoords;
-        const delta = intersection.point.sub(intersection.object.position);
-
-        if (Math.abs(delta.y) > Math.abs(delta.x) && Math.abs(delta.y) > Math.abs(delta.z)) {
-            y += Math.sign(delta.y);
-        } else if (Math.abs(delta.x) > Math.abs(delta.y) && Math.abs(delta.x) > Math.abs(delta.z)) {
-            x += Math.sign(delta.x);
-        } else if (Math.abs(delta.z) > Math.abs(delta.x) && Math.abs(delta.z) > Math.abs(delta.y)) {
-            z += Math.sign(delta.z);
-        }
-
-        const spaceCoords = [x, y, z];
-
-        return {
-            blockCoords,
-            spaceCoords,
-        };
+       return this.avatarToCoords.get(intersection.object)!;
     }
 
-    getPointUnderMouseEvent(event: PointerEvent) {
-        const info = this.getInfoUnderMouseEvent(event);
-        if (!info) return undefined;
-        const [x, y, z] = info.spaceCoords;
-        return { x, y, z };
+    getInfoUnderMouseEvent(event: PointerEvent): ScenePointerInfo {
+        const point = this.cameraPointFromMouseEvent(event);
+        const intersection = this.blockIntersectCameraPoint(point);
+        const objectCoords = this.getAvatarCoordsUnderMouseEvent(event);
+
+        const info: ScenePointerInfo = { objectCoords };
+
+        if (intersection) {
+            info.blockCoords = this.cubeToCoords.get(intersection.object)!;
+
+            let [x, y, z] = info.blockCoords;
+            const delta = intersection.point.sub(intersection.object.position);
+
+            if (Math.abs(delta.y) > Math.abs(delta.x) && Math.abs(delta.y) > Math.abs(delta.z)) {
+                y += Math.sign(delta.y);
+            } else if (Math.abs(delta.x) > Math.abs(delta.y) && Math.abs(delta.x) > Math.abs(delta.z)) {
+                x += Math.sign(delta.x);
+            } else if (Math.abs(delta.z) > Math.abs(delta.x) && Math.abs(delta.z) > Math.abs(delta.y)) {
+                z += Math.sign(delta.z);
+            }
+
+            info.spaceCoords = [x, y, z];
+        }
+
+        return info;
     }
 }
