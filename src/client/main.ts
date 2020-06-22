@@ -620,7 +620,7 @@ export async function load() {
         [-1, 0],
         [0, 1],
     ];
-    
+
     function moveVector(direction: number): [number, number] {
         return directions[(direction + sceneRenderer.rotateStep) % 4];
     }

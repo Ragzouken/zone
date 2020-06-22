@@ -315,13 +315,7 @@ function setAvatarCount(count: number) {
     }
 }
 
-function orientCamera(
-    camera: THREE.Camera, 
-    focus: THREE.Vector3, 
-    angle: number, 
-    pitch: number,
-    depth: number,
-) {
+function orientCamera(camera: THREE.Camera, focus: THREE.Vector3, angle: number, pitch: number, depth: number) {
     const euler = new THREE.Euler(-pitch, angle, 0, 'ZYX');
     const position = new THREE.Vector3(0, 0, depth);
     position.applyEuler(euler);
@@ -339,14 +333,13 @@ export class FocusCamera {
 }
 
 export interface ScenePointerInfo {
-    spaceCoords?: number[],
-    blockCoords?: number[],
-    objectCoords?: number[],
+    spaceCoords?: number[];
+    blockCoords?: number[];
+    objectCoords?: number[];
 }
 
 export interface ZoneSceneRenderer {
-    on(event: 'pointerdown', callback: (info: ScenePointerInfo) => void): this;
-    on(event: 'pointermove', callback: (info: ScenePointerInfo) => void): this;
+    on(event: 'pointerdown' | 'pointermove', callback: (info: ScenePointerInfo) => void): this;
 }
 
 export class ZoneSceneRenderer extends EventEmitter {
@@ -385,7 +378,7 @@ export class ZoneSceneRenderer extends EventEmitter {
 
     get rotateStep() {
         if (!this.cameras[this.cameraIndex][2]) return 0;
-        const increment = Math.round(2 * this.followCam.angle / Math.PI);
+        const increment = Math.round((2 * this.followCam.angle) / Math.PI);
         return (increment % 4) + 4;
     }
 
@@ -420,8 +413,8 @@ export class ZoneSceneRenderer extends EventEmitter {
         this.flatCamera = new THREE.OrthographicCamera(
             (1 * aspect) / -2,
             (1 * aspect) / 2,
-            .5 / factor,
-            -.5 / factor,
+            0.5 / factor,
+            -0.5 / factor,
             0.01,
             10,
         );
@@ -545,8 +538,20 @@ export class ZoneSceneRenderer extends EventEmitter {
             this.followCam.focus.set(0.5 / 16, 0, 0);
         }
 
-        orientCamera(this.isoCamera, this.followCam.focus, this.followCam.angle, this.followCam.pitch, this.followCam.depth);
-        orientCamera(this.cinemaCamera, this.followCam.focus, this.followCam.angle, this.followCam.pitch, this.followCam.depth);
+        orientCamera(
+            this.isoCamera,
+            this.followCam.focus,
+            this.followCam.angle,
+            this.followCam.pitch,
+            this.followCam.depth,
+        );
+        orientCamera(
+            this.cinemaCamera,
+            this.followCam.focus,
+            this.followCam.angle,
+            this.followCam.pitch,
+            this.followCam.depth,
+        );
 
         this.renderer.setClearColor(this.connecting() ? red : black);
         this.mediaTexture.image = this.mediaElement;
@@ -643,7 +648,7 @@ export class ZoneSceneRenderer extends EventEmitter {
 
         if (!intersection) return undefined;
 
-       return this.avatarToCoords.get(intersection.object)!;
+        return this.avatarToCoords.get(intersection.object)!;
     }
 
     getInfoUnderMouseEvent(event: PointerEvent): ScenePointerInfo {
