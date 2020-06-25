@@ -1,7 +1,8 @@
-import { createContext2D, decodeFont, fonts, makeVector2 } from 'blitsy';
+import { createContext2D, decodeFont, fonts, makeVector2, imageToContext } from 'blitsy';
 import { Page, scriptToPages, getPageHeight, PageRenderer } from './text';
 import { hex2rgb, rgb2num, hslToRgb } from './utility';
 import { randomInt } from '../common/utility';
+import { WebGLIndexedBufferRenderer } from 'three';
 
 const font = decodeFont(fonts['ascii-small']);
 const layout = { font, lineWidth: 240, lineCount: 9999 };
@@ -15,6 +16,7 @@ export class ChatPanel {
     public chatPages: Page[] = [];
 
     private pageRenderer = new PageRenderer(256, 256);
+    private cached = new Map<Page, CanvasImageSource>();
 
     public status(text: string) {
         this.log('{clr=#FF00FF}! ' + text);
@@ -23,6 +25,7 @@ export class ChatPanel {
     public log(text: string) {
         text = filterDrawable(text);
         this.chatPages.push(scriptToPages(text, layout)[0]);
+        this.chatPages.slice(0, -32).forEach((page) => this.cached.delete(page));
         this.chatPages = this.chatPages.slice(-32);
     }
 
@@ -35,15 +38,22 @@ export class ChatPanel {
 
             const y = bottom - messageHeight;
 
-            animatePage(page);
-            this.pageRenderer.renderPage(page, 8, y);
-            this.context.drawImage(this.pageRenderer.pageImage, 0, 0);
+            let render = this.cached.get(page);
+            if (!render) {
+                const animated = animatePage(page);
+                this.pageRenderer.renderPage(page, 8, 8);
+                render = this.pageRenderer.pageImage;
+                if (!animated) this.cached.set(page, imageToContext(render as any).canvas);
+            }
+            
+            this.context.drawImage(render, 0, y-8);
             bottom = y;
         }
     }
 }
 
 export function animatePage(page: Page) {
+    let animated = false;
     page.forEach((glyph, i) => {
         glyph.hidden = false;
         if (glyph.styles.has('r')) glyph.hidden = false;
@@ -52,12 +62,20 @@ export function animatePage(page: Page) {
             const rgb = hex2rgb(hex);
             glyph.color = rgb2num(...rgb);
         }
-        if (glyph.styles.has('shk')) glyph.offset = makeVector2(randomInt(-1, 1), randomInt(-1, 1));
-        if (glyph.styles.has('wvy')) glyph.offset.y = (Math.sin(i + (performance.now() * 5) / 1000) * 3) | 0;
+        if (glyph.styles.has('shk')) {
+            animated = true;
+            glyph.offset = makeVector2(randomInt(-1, 1), randomInt(-1, 1));
+        }
+        if (glyph.styles.has('wvy')) {
+            animated = true;
+            glyph.offset.y = (Math.sin(i + (performance.now() * 5) / 1000) * 3) | 0;
+        }
         if (glyph.styles.has('rbw')) {
+            animated = true;
             const h = Math.abs(Math.sin(performance.now() / 600 - i / 8));
             const [r, g, b] = hslToRgb(h, 1, 0.5);
             glyph.color = rgb2num(r, g, b);
         }
     });
+    return animated;
 }
