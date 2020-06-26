@@ -1,8 +1,7 @@
 import * as blitsy from 'blitsy';
 import { secondsToTime, fakedownToTag, eventToElementPixel, withPixels } from './utility';
-import { sleep, randomInt, clamp, timeToSeconds } from '../common/utility';
-import { scriptToPages, PageRenderer, getPageHeight } from './text';
-import { ChatPanel, animatePage, filterDrawable } from './chat';
+import { sleep } from '../common/utility';
+import { ChatPanel } from './chat';
 
 import ZoneClient from '../common/client';
 import { YoutubeVideo } from '../server/youtube';
@@ -765,7 +764,7 @@ export async function load() {
             .filter((echo) => echo.position!.join(',') === objectCoords);
 
         if (echoes.length > 0) {
-            chat.log(`{clr=#808080}"${echoes[0].text}"`);
+            chat.log(`{clr=#808080}"${parseFakedown(echoes[0].text)}"`);
         } else if (info.spaceCoords) {
             const [x, y, z] = info.spaceCoords;
             moveTo(x, y, z);

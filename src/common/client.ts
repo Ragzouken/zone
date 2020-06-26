@@ -2,7 +2,7 @@ import Messaging from './messaging';
 import { EventEmitter } from 'events';
 import { YoutubeVideo } from '../server/youtube';
 import { specifically } from './utility';
-import { ZoneState, UserState, QueueItem, UserEcho, UserId } from './zone';
+import { ZoneState, UserState, QueueItem, UserEcho } from './zone';
 import fetch from 'node-fetch';
 
 export type StatusMesage = { text: string };
@@ -26,6 +26,8 @@ export type BlockMessage = { coords: number[]; value: boolean };
 
 export type EchoMessage = { position: number[]; text: string };
 export type EchoesMessage = { added?: UserEcho[]; removed?: number[][] };
+
+export type DataMessage = { update: any };
 
 export interface MessageMap {
     heartbeat: {};
