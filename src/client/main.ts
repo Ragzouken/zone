@@ -739,7 +739,7 @@ export async function load() {
         chatContext.clearRect(0, 0, 512, 512);
 
         chat.render(fullChat);
-        chatContext.drawImage(chat.context.canvas, 0, 0, 512, 512);
+        chatContext.drawImage(chat.context.canvas, 0, -48, 512, 512);
 
         window.requestAnimationFrame(redraw);
     }
