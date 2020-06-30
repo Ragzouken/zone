@@ -5,8 +5,6 @@ import { randomInt, Grid } from '../common/utility';
 import { rgbaToColor, decodeAsciiTexture, createContext2D } from 'blitsy';
 import { EventEmitter } from 'events';
 import ZoneClient from '../common/client';
-import { text } from 'express';
-import { number } from '@hapi/joi';
 
 function recolor(context: CanvasRenderingContext2D) {
     withPixels(context, (pixels) => {
@@ -309,6 +307,7 @@ function setAvatarCount(count: number) {
         const material = new THREE.MeshBasicMaterial({
             map: new THREE.CanvasTexture(avatarImage.canvas),
             transparent: true,
+            alphaTest: .25,
             side: THREE.DoubleSide,
         });
         avatarMeshes.push(new THREE.Mesh(avatarQuad, material));
