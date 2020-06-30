@@ -46,7 +46,8 @@ input[type="text"]:focus {
 }
 
 #chat-inputs > input {
-    width: 512px;
+    width: 100%;
+    height: 32px;
 }
 
 #entry-panel {
@@ -344,9 +345,9 @@ body {
 
 #chat-inputs {
     position: absolute;
-    left: 0; bottom: -32px;
+    right: 0; bottom: 16px;
 
-    width: 512px;
+    width: 448px;
 
     display: flex;
     flex-direction: column;

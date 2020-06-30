@@ -39,12 +39,12 @@ export class ChatPanel {
         this.context.clearRect(0, 0, 256, 256);
 
         if (full) {
-            this.context.globalAlpha = .5;
+            this.context.globalAlpha = .65;
             this.context.fillStyle = "rgb(0 0 0)";
             this.context.fillRect(0, 0, 256, 256);
             this.context.globalAlpha = 1;
         } else {
-            this.context.globalAlpha = .5;
+            this.context.globalAlpha = .65;
         }
 
         const now = performance.now();
