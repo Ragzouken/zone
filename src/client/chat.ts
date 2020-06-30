@@ -18,7 +18,7 @@ export class ChatPanel {
     private cached = new Map<Page, CanvasImageSource>();
     private timers = new Map<Page, number>();
 
-    constructor(public previewTime = 3000) {
+    constructor(public previewTime = 5000) {
     }
 
     public status(text: string) {
