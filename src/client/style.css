@@ -340,7 +340,13 @@ body {
     bottom: 0px; left: 0;
     width: 512px;
     height: 512px;
+
     pointer-events: none;
+}
+
+#chat-canvas.open {
+    pointer-events: initial;
+    cursor: pointer;
 }
 
 #chat-inputs {

@@ -623,9 +623,11 @@ export async function load() {
         if (fullChat) {
             chatInput.hidden = false;
             chatInput.focus();
+            chatContext.canvas.classList.toggle('open', true);
         } else {
             chatInput.hidden = true;
             chatInput.blur();
+            chatContext.canvas.classList.toggle('open', false);
         }
     });
 
@@ -732,6 +734,14 @@ export async function load() {
     const playerStatus = document.getElementById('player-status')!;
     const chatContext = document.querySelector<HTMLCanvasElement>('#chat-canvas')!.getContext('2d')!;
     chatContext.imageSmoothingEnabled = false;
+
+    chatContext.canvas.addEventListener('click', (event) => {
+        if (fullChat) {
+            event.preventDefault();
+            event.stopPropagation();
+            chatToggle.click();
+        }
+    });
 
     function redraw() {
         refreshCurrentItem();
