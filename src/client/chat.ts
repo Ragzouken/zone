@@ -48,7 +48,7 @@ export class ChatPanel {
         }
 
         const now = performance.now();
-        let bottom = 256 - 32;
+        let bottom = 256 - 28;
         for (let i = this.chatPages.length - 1; i >= 0 && bottom >= 0; --i) {
             const page = this.chatPages[i];
             const messageHeight = getPageHeight(page, font);
