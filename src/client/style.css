@@ -118,7 +118,7 @@ input[type="text"]:focus {
 #tooltip {
     flex: 1;
     margin: 16px;
-    margin-top: 0px;
+    margin-bottom: 0px;
 }
 
 .toolbar > button.active {

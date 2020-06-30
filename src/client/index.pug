@@ -22,6 +22,7 @@ html
                         img(src="icons/resync.png")
                     button#camera-button(title="switch view (v)")
                         img(src="icons/look.png")
+                    #tooltip
                     #player-status
                 #bottom-toolbar.toolbar
                     button#chat-toggle(title="chat (tab)")
@@ -39,7 +40,6 @@ html
                         img(src="icons/rbw.png")
                     button(title="toggle spin emote (4)", data-emote-toggle="spn")
                         img(src="icons/spn.png")
-                    #tooltip
                 canvas#chat-canvas(width=512, height=512)
                 #chat-inputs
                     input#chat-input(hidden type="text" placeholder="chat message..." maxlength="160" autocomplete="off")
