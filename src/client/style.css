@@ -98,12 +98,12 @@ input[type="text"]:focus {
 }
 
 #bottom-toolbar {
-    bottom: 0; right: 0;
+    bottom: 0; left: 0;
     align-items: flex-end;
 }
 
 #bottom-toolbar > button {
-    margin-right: 16px; margin-bottom: 16px;
+    margin-left: 16px; margin-bottom: 16px;
 }
 
 #player-status {
@@ -327,18 +327,26 @@ body {
     align-items: center;
     justify-content: flex-end;
 
-    max-width: 1024px;
+    width: 512px;
+}
+
+.spacer {
+    flex: 1;
 }
 
 #chat-canvas {
-    flex: 0;
-    width: 512px;
-    height: 512px;
+    position: absolute;
+    bottom: 64px; left: 0;
+    width: 256px;
+    height: 256px;
+    pointer-events: none;
 }
 
 #chat-inputs {
+    position: absolute;
+    left: 0; bottom: -32px;
+
     width: 512px;
-    margin-bottom: 16px;
 
     display: flex;
     flex-direction: column;

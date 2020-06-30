@@ -613,6 +613,22 @@ export async function load() {
         element.addEventListener('click', () => toggleEmote(emote));
     });
 
+    let fullChat = false;
+    const chatToggle = document.getElementById('chat-toggle') as HTMLButtonElement;
+    chatToggle.addEventListener('click', (event) => {
+        event.stopPropagation();
+
+        fullChat = !fullChat;
+        chatToggle.classList.toggle("active", fullChat);
+        if (fullChat) {
+            chatInput.hidden = false;
+            chatInput.focus();
+        } else {
+            chatInput.hidden = true;
+            chatInput.blur();
+        }
+    });
+
     const directions: [number, number][] = [
         [1, 0],
         [0, -1],
@@ -625,7 +641,7 @@ export async function load() {
     }
 
     const gameKeys = new Map<string, () => void>();
-    gameKeys.set('Tab', () => chatInput.focus());
+    gameKeys.set('Tab', () => chatToggle.click());
     gameKeys.set('1', () => toggleEmote('wvy'));
     gameKeys.set('2', () => toggleEmote('shk'));
     gameKeys.set('3', () => toggleEmote('rbw'));
@@ -685,7 +701,12 @@ export async function load() {
     document.addEventListener('keydown', (event) => {
         if (event.key === 'Escape') {
             if (isInputElement(document.activeElement)) {
-                document.activeElement.blur();
+                if (fullChat) {
+                    chatToggle.click();
+                } else {
+                    document.activeElement.blur();
+                }
+
                 event.preventDefault();
             }
             closeAllPanels();
@@ -693,7 +714,7 @@ export async function load() {
 
         if (isInputElement(document.activeElement)) {
             if (event.key === 'Tab' && document.activeElement === chatInput) {
-                document.activeElement.blur();
+                chatToggle.click();
                 event.preventDefault();
             } else if (event.key === 'Enter') {
                 sendChat();
@@ -717,10 +738,11 @@ export async function load() {
         playerStatus.innerHTML = player.status;
 
         chatContext.fillStyle = 'rgb(0, 0, 0)';
-        chatContext.fillRect(0, 0, 512, 512);
+        chatContext.fillRect(0, 0, 256, 256);
+        chatContext.clearRect(0, 0, 256, 256);
 
-        chat.render();
-        chatContext.drawImage(chat.context.canvas, 0, 0, 512, 512);
+        chat.render(fullChat);
+        chatContext.drawImage(chat.context.canvas, 0, 0, 256, 256);
 
         window.requestAnimationFrame(redraw);
     }
