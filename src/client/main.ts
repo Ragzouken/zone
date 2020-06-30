@@ -736,13 +736,10 @@ export async function load() {
     function redraw() {
         refreshCurrentItem();
         playerStatus.innerHTML = player.status;
-
-        chatContext.fillStyle = 'rgb(0, 0, 0)';
-        chatContext.fillRect(0, 0, 256, 256);
-        chatContext.clearRect(0, 0, 256, 256);
+        chatContext.clearRect(0, 0, 512, 512);
 
         chat.render(fullChat);
-        chatContext.drawImage(chat.context.canvas, 0, 0, 256, 256);
+        chatContext.drawImage(chat.context.canvas, 0, 0, 512, 512);
 
         window.requestAnimationFrame(redraw);
     }

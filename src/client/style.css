@@ -336,9 +336,9 @@ body {
 
 #chat-canvas {
     position: absolute;
-    bottom: 64px; left: 0;
-    width: 256px;
-    height: 256px;
+    bottom: 48px; left: 0;
+    width: 512px;
+    height: 512px;
     pointer-events: none;
 }
 
