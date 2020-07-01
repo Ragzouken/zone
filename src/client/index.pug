@@ -22,9 +22,16 @@ html
                         img(src="icons/resync.png")
                     button#camera-button(title="switch view (v)")
                         img(src="icons/look.png")
+                    #tooltip
                     #player-status
                 #bottom-toolbar.toolbar
-                    #tooltip
+                    button#chat-toggle(title="chat (tab)")
+                        img(src="icons/chat.png")                    
+                    button#avatar-button(title="change appearance")
+                        img(src="icons/avatar.png")
+                    button#users-button(title="open user list")
+                        img(src="icons/users.png")
+                    .spacer
                     button(title="toggle float emote (1)", data-emote-toggle="wvy")
                         img(src="icons/wvy.png")
                     button(title="toggle shake emote (2)", data-emote-toggle="shk")
@@ -33,10 +40,8 @@ html
                         img(src="icons/rbw.png")
                     button(title="toggle spin emote (4)", data-emote-toggle="spn")
                         img(src="icons/spn.png")
-                    button#avatar-button(title="change appearance")
-                        img(src="icons/avatar.png")
-                    button#users-button(title="open user list")
-                        img(src="icons/users.png")
+                canvas#chat-canvas(width=512, height=512)
+                input#chat-input(hidden type="text" placeholder="chat message..." maxlength="160" autocomplete="off")
             #popout-panel.menu-panel(hidden)
                 .menu-title
                     div video pop-out
@@ -111,9 +116,6 @@ html
                         div
                             button#event-mode-on event mode on
                             button#event-mode-off event mode off
-        canvas#chat-canvas(width=512, height=512)
-        #chat-inputs
-            input#chat-input(type="text" placeholder="chat message..." maxlength="160" autocomplete="off")
         #entry-splash
             #entry-panel
                 img#entry-logo(src="./zone-logo.png")

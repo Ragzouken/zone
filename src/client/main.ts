@@ -1,8 +1,7 @@
 import * as blitsy from 'blitsy';
 import { secondsToTime, fakedownToTag, eventToElementPixel, withPixels } from './utility';
-import { sleep, randomInt, clamp, timeToSeconds } from '../common/utility';
-import { scriptToPages, PageRenderer, getPageHeight } from './text';
-import { ChatPanel, animatePage, filterDrawable } from './chat';
+import { sleep } from '../common/utility';
+import { ChatPanel } from './chat';
 
 import ZoneClient from '../common/client';
 import { YoutubeVideo } from '../server/youtube';
@@ -614,6 +613,24 @@ export async function load() {
         element.addEventListener('click', () => toggleEmote(emote));
     });
 
+    let fullChat = false;
+    const chatToggle = document.getElementById('chat-toggle') as HTMLButtonElement;
+    chatToggle.addEventListener('click', (event) => {
+        event.stopPropagation();
+
+        fullChat = !fullChat;
+        chatToggle.classList.toggle("active", fullChat);
+        if (fullChat) {
+            chatInput.hidden = false;
+            chatInput.focus();
+            chatContext.canvas.classList.toggle('open', true);
+        } else {
+            chatInput.hidden = true;
+            chatInput.blur();
+            chatContext.canvas.classList.toggle('open', false);
+        }
+    });
+
     const directions: [number, number][] = [
         [1, 0],
         [0, -1],
@@ -626,7 +643,7 @@ export async function load() {
     }
 
     const gameKeys = new Map<string, () => void>();
-    gameKeys.set('Tab', () => chatInput.focus());
+    gameKeys.set('Tab', () => chatToggle.click());
     gameKeys.set('1', () => toggleEmote('wvy'));
     gameKeys.set('2', () => toggleEmote('shk'));
     gameKeys.set('3', () => toggleEmote('rbw'));
@@ -686,7 +703,12 @@ export async function load() {
     document.addEventListener('keydown', (event) => {
         if (event.key === 'Escape') {
             if (isInputElement(document.activeElement)) {
-                document.activeElement.blur();
+                if (fullChat) {
+                    chatToggle.click();
+                } else {
+                    document.activeElement.blur();
+                }
+
                 event.preventDefault();
             }
             closeAllPanels();
@@ -694,7 +716,7 @@ export async function load() {
 
         if (isInputElement(document.activeElement)) {
             if (event.key === 'Tab' && document.activeElement === chatInput) {
-                document.activeElement.blur();
+                chatToggle.click();
                 event.preventDefault();
             } else if (event.key === 'Enter') {
                 sendChat();
@@ -713,14 +735,20 @@ export async function load() {
     const chatContext = document.querySelector<HTMLCanvasElement>('#chat-canvas')!.getContext('2d')!;
     chatContext.imageSmoothingEnabled = false;
 
+    chatContext.canvas.addEventListener('click', (event) => {
+        if (fullChat) {
+            event.preventDefault();
+            event.stopPropagation();
+            chatToggle.click();
+        }
+    });
+
     function redraw() {
         refreshCurrentItem();
         playerStatus.innerHTML = player.status;
+        chatContext.clearRect(0, 0, 512, 512);
 
-        chatContext.fillStyle = 'rgb(0, 0, 0)';
-        chatContext.fillRect(0, 0, 512, 512);
-
-        chat.render();
+        chat.render(fullChat);
         chatContext.drawImage(chat.context.canvas, 0, 0, 512, 512);
 
         window.requestAnimationFrame(redraw);
@@ -765,7 +793,7 @@ export async function load() {
             .filter((echo) => echo.position!.join(',') === objectCoords);
 
         if (echoes.length > 0) {
-            chat.log(`{clr=#808080}"${echoes[0].text}"`);
+            chat.log(`{clr=#808080}"${parseFakedown(echoes[0].text)}"`);
         } else if (info.spaceCoords) {
             const [x, y, z] = info.spaceCoords;
             moveTo(x, y, z);

@@ -5,8 +5,6 @@ import { randomInt, Grid } from '../common/utility';
 import { rgbaToColor, decodeAsciiTexture, createContext2D } from 'blitsy';
 import { EventEmitter } from 'events';
 import ZoneClient from '../common/client';
-import { text } from 'express';
-import { number } from '@hapi/joi';
 
 function recolor(context: CanvasRenderingContext2D) {
     withPixels(context, (pixels) => {
@@ -309,6 +307,7 @@ function setAvatarCount(count: number) {
         const material = new THREE.MeshBasicMaterial({
             map: new THREE.CanvasTexture(avatarImage.canvas),
             transparent: true,
+            alphaTest: .25,
             side: THREE.DoubleSide,
         });
         avatarMeshes.push(new THREE.Mesh(avatarQuad, material));
@@ -364,9 +363,9 @@ export class ZoneSceneRenderer extends EventEmitter {
     private cursor = new THREE.Mesh(cursorGeo, cursorMat);
 
     public readonly followCam: FocusCamera;
-    private readonly cinemaCamera: THREE.Camera;
-    private readonly isoCamera: THREE.Camera;
-    private readonly flatCamera: THREE.Camera;
+    private readonly cinemaCamera: THREE.PerspectiveCamera;
+    private readonly isoCamera: THREE.OrthographicCamera;
+    private readonly flatCamera: THREE.OrthographicCamera;
 
     private get camera() {
         return this.cameras[this.cameraIndex][0];
@@ -425,6 +424,19 @@ export class ZoneSceneRenderer extends EventEmitter {
         cinemaCamera.position.set(0.5 / 16, 0, 0.8);
         cinemaCamera.lookAt(0.5 / 16, 0, 0);
         this.cinemaCamera = cinemaCamera;
+
+        const setAspect = (aspect: number) => {
+            this.cinemaCamera.aspect = aspect;
+            this.cinemaCamera.updateProjectionMatrix();
+
+            this.isoCamera.left = (frustumSize * aspect) / -2;
+            this.isoCamera.right = (frustumSize * aspect) / 2;
+            this.isoCamera.updateProjectionMatrix();
+
+            this.flatCamera.left = (1 * aspect) / -2;
+            this.flatCamera.right = (1 * aspect) / 2;
+            this.flatCamera.updateProjectionMatrix();
+        }
 
         this.cameras.push([this.isoCamera, false, false]);
         this.cameras.push([this.cinemaCamera, true, true]);
@@ -487,6 +499,11 @@ export class ZoneSceneRenderer extends EventEmitter {
             }
 
             this.emit('pointermove', info);
+        });
+
+        window.addEventListener('resize', () => {
+            setAspect(container.clientWidth / container.clientHeight);
+            this.renderer.setSize(container.clientWidth, container.clientHeight);
         });
     }
 
