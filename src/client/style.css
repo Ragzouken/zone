@@ -144,6 +144,8 @@ input[type="text"]:focus {
 #search-form {
     width: 100%;
     display: flex;
+    padding: 16px;
+    padding-bottom: 0;
 }
 
 #search-input {
