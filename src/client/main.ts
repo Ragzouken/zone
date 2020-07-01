@@ -134,11 +134,64 @@ function textToYoutubeVideoId(text: string) {
 }
 
 export async function load() {
+    const titles = document.querySelectorAll('.menu-title') as NodeListOf<HTMLElement>;
+    titles.forEach((titleElement) => {
+        const windowElement = titleElement.parentElement;
+        if (!windowElement) return;
+
+        let dragging = false;
+        let sx = 0;
+        let sy = 0;
+
+        titleElement.addEventListener('pointerdown', (event) => {
+            sx = event.clientX;
+            sy = event.clientY;
+            dragging = true;
+
+            event.preventDefault();
+            event.stopPropagation();
+        });
+        titleElement.addEventListener('click', (event) => {
+            event.preventDefault();
+            event.stopPropagation();
+        });
+
+        window.addEventListener('pointerup', (event) => {
+            dragging = false;
+        });
+
+        window.addEventListener('pointermove', (event) => {
+            if (!dragging) return;
+
+            const dx = sx - event.clientX;
+            const dy = sy - event.clientY;
+            sx = event.clientX;
+            sy = event.clientY;
+
+            let minX = windowElement.offsetLeft - dx;
+            let minY = windowElement.offsetTop - dy;
+
+            const maxX = minX + windowElement.clientWidth;
+            const maxY = minY + windowElement.clientHeight;
+
+            const shiftX = Math.min(0, window.innerWidth - maxX);
+            const shiftY = Math.min(0, window.innerHeight - maxY);
+        
+            minX = Math.max(0, minX + shiftX);
+            minY = Math.max(0, minY + shiftY);
+
+            windowElement.style.left = minX + "px";
+            windowElement.style.top = minY + "px";
+
+            event.preventDefault();
+            event.stopPropagation();
+        });
+    });
+    
     const popoutPanel = document.getElementById('popout-panel') as HTMLElement;
     const video = document.createElement('video');
     popoutPanel.appendChild(video);
     document.getElementById('popout-button')?.addEventListener('click', () => (popoutPanel.hidden = false));
-    popoutPanel.addEventListener('click', () => (popoutPanel.hidden = true));
 
     const player = new Player(video);
     const zoneLogo = document.createElement('img');
@@ -165,6 +218,7 @@ export async function load() {
     volumeSlider.addEventListener('input', () => (player.volume = parseFloat(volumeSlider.value)));
     document.getElementById('menu-button')?.addEventListener('click', openMenu);
     document.getElementById('menu-close')?.addEventListener('click', () => (menuPanel.hidden = true));
+    document.getElementById('popout-close')?.addEventListener('click', () => (popoutPanel.hidden = true));
 
     function openMenu() {
         menuPanel.hidden = false;
