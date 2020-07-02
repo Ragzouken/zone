@@ -834,7 +834,7 @@ export async function load() {
     function renderScene() {
         requestAnimationFrame(renderScene);
 
-        sceneRenderer.mediaElement = player.hasVideo ? video : zoneLogo;
+        sceneRenderer.mediaElement = (popoutPanel.hidden && player.hasVideo) ? video : zoneLogo;
         sceneRenderer.update();
         sceneRenderer.render();
     }
