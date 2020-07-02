@@ -183,19 +183,19 @@ export async function load() {
 
                 const shiftX = Math.min(0, window.innerWidth - maxX);
                 const shiftY = Math.min(0, window.innerHeight - maxY);
-            
+
                 minX = Math.max(0, minX + shiftX);
                 minY = Math.max(0, minY + shiftY);
 
-                windowElement.style.left = minX + "px";
-                windowElement.style.top = minY + "px";
+                windowElement.style.left = minX + 'px';
+                windowElement.style.top = minY + 'px';
 
                 event.preventDefault();
                 event.stopPropagation();
             });
         }
     });
-    
+
     const popoutPanel = document.getElementById('popout-panel') as HTMLElement;
     const video = document.createElement('video');
     popoutPanel.appendChild(video);
@@ -677,7 +677,7 @@ export async function load() {
         event.stopPropagation();
 
         fullChat = !fullChat;
-        chatToggle.classList.toggle("active", fullChat);
+        chatToggle.classList.toggle('active', fullChat);
         if (fullChat) {
             chatInput.hidden = false;
             chatInput.focus();

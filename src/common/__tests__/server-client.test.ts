@@ -299,8 +299,8 @@ describe('blocks', () => {
 });
 
 describe('echoes', () => {
-    const position = [6, 9, 0]
-    const message = "hello";
+    const position = [6, 9, 0];
+    const message = 'hello';
 
     it('can add an echo', async () => {
         await zoneServer({}, async (server) => {
