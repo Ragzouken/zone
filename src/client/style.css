@@ -284,8 +284,7 @@ input[type="text"]:focus {
 
 #user-panel {
     position: absolute;
-    right: 0; bottom: 0;
-    margin: 8px;
+    left: calc(100vw - 256px); top: 0;
 
     width: 256px;
 
@@ -297,8 +296,7 @@ input[type="text"]:focus {
 
 #avatar-panel {
     position: absolute;
-    right: 0; bottom: 0;
-    margin: 8px;
+    left: calc(100vw - 256px); top: 0;
 
     width: 256px;
 

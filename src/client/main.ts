@@ -134,58 +134,66 @@ function textToYoutubeVideoId(text: string) {
 }
 
 export async function load() {
-    const titles = document.querySelectorAll('.menu-title') as NodeListOf<HTMLElement>;
-    titles.forEach((titleElement) => {
-        const windowElement = titleElement.parentElement;
-        if (!windowElement) return;
+    const windowElements = document.querySelectorAll<HTMLElement>('[data-window]');
+    windowElements.forEach((windowElement) => {
+        windowElement.hidden = true;
+        const closeButton = windowElement.querySelector<HTMLButtonElement>('[data-window-close]');
+        const dragElement = windowElement.querySelector<HTMLElement>('[data-window-drag]');
 
-        let dragging = false;
-        let sx = 0;
-        let sy = 0;
+        if (closeButton) {
+            closeButton.addEventListener('click', (event) => {
+                event.stopPropagation();
+                event.preventDefault();
+                windowElement.hidden = true;
+            });
+        }
 
-        titleElement.addEventListener('pointerdown', (event) => {
-            sx = event.clientX;
-            sy = event.clientY;
-            dragging = true;
+        if (dragElement) {
+            let offset: number[] | undefined = undefined;
 
-            event.preventDefault();
-            event.stopPropagation();
-        });
-        titleElement.addEventListener('click', (event) => {
-            event.preventDefault();
-            event.stopPropagation();
-        });
+            dragElement.addEventListener('pointerdown', (event) => {
+                const dx = windowElement.offsetLeft - event.clientX;
+                const dy = windowElement.offsetTop - event.clientY;
+                offset = [dx, dy];
 
-        window.addEventListener('pointerup', (event) => {
-            dragging = false;
-        });
+                event.preventDefault();
+                event.stopPropagation();
+            });
+            dragElement.addEventListener('click', (event) => {
+                event.preventDefault();
+                event.stopPropagation();
+            });
 
-        window.addEventListener('pointermove', (event) => {
-            if (!dragging) return;
+            window.addEventListener('pointerup', (event) => {
+                offset = undefined;
+            });
 
-            const dx = sx - event.clientX;
-            const dy = sy - event.clientY;
-            sx = event.clientX;
-            sy = event.clientY;
+            window.addEventListener('pointermove', (event) => {
+                if (!offset) return;
 
-            let minX = windowElement.offsetLeft - dx;
-            let minY = windowElement.offsetTop - dy;
+                const [dx, dy] = offset;
+                const tx = event.clientX + dx;
+                const ty = event.clientY + dy;
 
-            const maxX = minX + windowElement.clientWidth;
-            const maxY = minY + windowElement.clientHeight;
+                let minX = tx;
+                let minY = ty;
 
-            const shiftX = Math.min(0, window.innerWidth - maxX);
-            const shiftY = Math.min(0, window.innerHeight - maxY);
-        
-            minX = Math.max(0, minX + shiftX);
-            minY = Math.max(0, minY + shiftY);
+                const maxX = minX + windowElement.clientWidth;
+                const maxY = minY + windowElement.clientHeight;
 
-            windowElement.style.left = minX + "px";
-            windowElement.style.top = minY + "px";
+                const shiftX = Math.min(0, window.innerWidth - maxX);
+                const shiftY = Math.min(0, window.innerHeight - maxY);
+            
+                minX = Math.max(0, minX + shiftX);
+                minY = Math.max(0, minY + shiftY);
 
-            event.preventDefault();
-            event.stopPropagation();
-        });
+                windowElement.style.left = minX + "px";
+                windowElement.style.top = minY + "px";
+
+                event.preventDefault();
+                event.stopPropagation();
+            });
+        }
     });
     
     const popoutPanel = document.getElementById('popout-panel') as HTMLElement;
@@ -217,8 +225,6 @@ export async function load() {
 
     volumeSlider.addEventListener('input', () => (player.volume = parseFloat(volumeSlider.value)));
     document.getElementById('menu-button')?.addEventListener('click', openMenu);
-    document.getElementById('menu-close')?.addEventListener('click', () => (menuPanel.hidden = true));
-    document.getElementById('popout-close')?.addEventListener('click', () => (popoutPanel.hidden = true));
 
     function openMenu() {
         menuPanel.hidden = false;
@@ -263,7 +269,6 @@ export async function load() {
         authContent.hidden = !auth;
     }
 
-    document.getElementById('users-close')!.addEventListener('click', () => (userPanel.hidden = true));
     document.getElementById('users-button')!.addEventListener('click', () => {
         userPanel.hidden = false;
         refreshUsers();
@@ -338,7 +343,6 @@ export async function load() {
         refreshCurrentItem();
     }
 
-    document.getElementById('queue-close')!.addEventListener('click', () => (queuePanel.hidden = true));
     document.getElementById('queue-button')!.addEventListener('click', () => {
         refreshQueue();
         queuePanel.hidden = false;

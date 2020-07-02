@@ -42,15 +42,15 @@ html
                         img(src="icons/spn.png")
                 canvas#chat-canvas(width=512, height=512)
                 input#chat-input(hidden type="text" placeholder="chat message..." maxlength="160" autocomplete="off")
-            #popout-panel.menu-panel(hidden)
-                .menu-title
+            #popout-panel.menu-panel(data-window)
+                .menu-title(data-window-drag)
                     div video pop-out
-                    button#popout-close(title="hide panel (esc)").icon-button-small
+                    button#popout-close(title="hide panel (esc)" data-window-close).icon-button-small
                         img(src="icons/close.png")
-            #search-panel.menu-panel(hidden)
-                .menu-title
+            #search-panel.menu-panel(data-window)
+                .menu-title(data-window-drag)
                     div youtube
-                    button#search-close(title="hide panel (esc)", type="button").icon-button-small
+                    button#search-close(title="hide panel (esc)" data-window-close).icon-button-small
                         img(src="icons/close.png")
                 form#search-form
                     input#search-input(placeholder="search for a video" type="text" autocomplete="off")
@@ -60,10 +60,10 @@ html
                     #search-result-template.search-result
                         div title
                         img
-            #queue-panel.menu-panel(hidden)
-                .menu-title
+            #queue-panel.menu-panel(data-window)
+                .menu-title(data-window-drag)
                     #queue-title play queue
-                    button#queue-close(title="hide panel (esc)").icon-button-small
+                    button#queue-close(title="hide panel (esc)" data-window-close).icon-button-small
                         img(src="icons/close.png")
                 .menu-body
                     .queue-item#current-item
@@ -77,26 +77,26 @@ html
                             .queue-item-time 00:00
                             button.queue-item-cancel(title="unqueue this")
                                 img(src="icons/cancel.png")
-            #user-panel(shidden)
-                .menu-title
+            #user-panel(data-window)
+                .menu-title(data-window-drag)
                     div user list
-                    button#users-close(title="hide panel (esc)").icon-button-small
+                    button#users-close(title="hide panel (esc)" data-window-close).icon-button-small
                         img(src="icons/close.png")
                 .menu-body
                     #user-items
-            #avatar-panel(hidden)
-                .menu-title
+            #avatar-panel(data-window)
+                .menu-title(data-window-drag)
                     div update appearance
-                    button#avatar-cancel(title="hide panel (esc)").icon-button-small
+                    button#avatar-cancel(title="hide panel (esc)" data-window-close).icon-button-small
                         img(src="icons/close.png")
                 .menu-body
                     canvas#avatar-paint(width=8, height=8)
                     input#avatar-name(type="text")
                     button#avatar-update update
-            #menu-panel.menu-panel(hidden)
-                .menu-title
+            #menu-panel.menu-panel(data-window)
+                .menu-title(data-window-drag)
                     div miscellanious options
-                    button#menu-close(title="hide panel (esc)").icon-button-small
+                    button#menu-close(title="hide panel (esc)" data-window-close).icon-button-small
                         img(src="icons/close.png")
                 .menu-body
                     div
