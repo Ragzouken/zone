@@ -45,7 +45,7 @@ html
             #menu-panel.menu-panel(data-window)
                 .menu-title(data-window-drag)
                     div miscellanious options
-                    button#menu-close(title="hide panel (esc)" data-window-close).icon-button-small
+                    button(title="hide panel (esc)" data-window-close).icon-button-small
                         img(src="icons/close.png")
                 .menu-body
                     div
@@ -69,12 +69,12 @@ html
             #popout-panel.menu-panel(data-window)
                 .menu-title(data-window-drag)
                     div video pop-out
-                    button#popout-close(title="hide panel (esc)" data-window-close).icon-button-small
+                    button(title="hide panel (esc)" data-window-close).icon-button-small
                         img(src="icons/close.png")
             #search-panel.menu-panel(data-window)
                 .menu-title(data-window-drag)
                     div youtube
-                    button#search-close(title="hide panel (esc)" data-window-close).icon-button-small
+                    button(title="hide panel (esc)" data-window-close).icon-button-small
                         img(src="icons/close.png")
                 form#search-form
                     input#search-input(placeholder="search for a video" type="text" autocomplete="off")
@@ -87,7 +87,7 @@ html
             #queue-panel.menu-panel(data-window)
                 .menu-title(data-window-drag)
                     #queue-title play queue
-                    button#queue-close(title="hide panel (esc)" data-window-close).icon-button-small
+                    button(title="hide panel (esc)" data-window-close).icon-button-small
                         img(src="icons/close.png")
                 .menu-body
                     .queue-item#current-item
@@ -104,7 +104,7 @@ html
             #user-panel(data-window)
                 .menu-title(data-window-drag)
                     div user list
-                    button#users-close(title="hide panel (esc)" data-window-close).icon-button-small
+                    button(title="hide panel (esc)" data-window-close).icon-button-small
                         img(src="icons/close.png")
                 .menu-body
                     #user-items

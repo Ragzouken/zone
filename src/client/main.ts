@@ -312,7 +312,6 @@ export async function load() {
     const searchResultTemplate = document.getElementById('search-result-template')!;
     searchResultTemplate.parentElement?.removeChild(searchResultTemplate);
 
-    document.getElementById('search-close')?.addEventListener('click', () => (searchPanel.hidden = true));
     document.getElementById('search-form')?.addEventListener('submit', (event) => {
         event.preventDefault();
         event.stopPropagation();
@@ -531,7 +530,6 @@ export async function load() {
         if (avatarName.value !== getLocalUser()?.name) rename(avatarName.value);
         client.avatar(blitsy.encodeTexture(avatarContext, 'M1').data);
     });
-    avatarCancel.addEventListener('click', () => (avatarPanel.hidden = true));
 
     let lastSearchResults: YoutubeVideo[] = [];
 
@@ -668,15 +666,6 @@ export async function load() {
     });
     gameKeys.set('u', () => (userPanel.hidden = !userPanel.hidden));
 
-    function closeAllPanels() {
-        queuePanel.hidden = true;
-        searchPanel.hidden = true;
-        menuPanel.hidden = true;
-        userPanel.hidden = true;
-        popoutPanel.hidden = true;
-        avatarPanel.hidden = true;
-    }
-
     function sendChat() {
         const line = chatInput.value;
         const slash = line.match(/^\/(\w+)(.*)/);
@@ -711,7 +700,7 @@ export async function load() {
 
                 event.preventDefault();
             }
-            closeAllPanels();
+            htmlui.hideAllWindows();
         }
 
         if (isInputElement(document.activeElement)) {
