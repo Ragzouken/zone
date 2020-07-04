@@ -42,60 +42,10 @@ html
                         img(src="icons/spn.png")
                 canvas#chat-canvas(width=512, height=512)
                 input#chat-input(hidden type="text" placeholder="chat message..." maxlength="160" autocomplete="off")
-            #popout-panel.menu-panel(hidden)
-                .menu-title
-                    div video pop-out
-                    button#popout-close(title="hide panel (esc)").icon-button-small
-                        img(src="icons/close.png")
-            #search-panel.menu-panel(hidden)
-                .menu-title
-                    form#search-form
-                        input#search-input(placeholder="search for a video" type="text" autocomplete="off")
-                        input#search-submit(type="submit" value="search" disabled)
-                        button#play-banger(title="queue random song", type="button") random
-                        button#search-close(title="hide panel (esc)", type="button").icon-button-small
-                            img(src="icons/close.png")
-                .menu-body#search-results
-                    #search-result-template.search-result
-                        div title
-                        img
-            #queue-panel.menu-panel(hidden)
-                .menu-title
-                    #queue-title play queue
-                    button#queue-close(title="hide panel (esc)").icon-button-small
-                        img(src="icons/close.png")
-                .menu-body
-                    .queue-item#current-item
-                        .queue-item-title#current-item-title title
-                        .queue-item-time#current-item-time 00:00
-                        button.queue-item-cancel#skip-button(title="vote to skip this")
-                            img(src="icons/skip.png")
-                    #queue-items
-                        .queue-item#queue-item-template
-                            .queue-item-title title
-                            .queue-item-time 00:00
-                            button.queue-item-cancel(title="unqueue this")
-                                img(src="icons/cancel.png")
-            #user-panel(hidden)
-                .menu-title
-                    div user list
-                    button#users-close(title="hide panel (esc)").icon-button-small
-                        img(src="icons/close.png")
-                .menu-body
-                    #user-items
-            #avatar-panel(hidden)
-                .menu-title
-                    div update appearance
-                    button#avatar-cancel(title="hide panel (esc)").icon-button-small
-                        img(src="icons/close.png")
-                .menu-body
-                    canvas#avatar-paint(width=8, height=8)
-                    input#avatar-name(type="text")
-                    button#avatar-update update
-            #menu-panel.menu-panel(hidden)
-                .menu-title
+            #menu-panel.menu-panel(data-window)
+                .menu-title(data-window-drag)
                     div miscellanious options
-                    button#menu-close(title="hide panel (esc)").icon-button-small
+                    button#menu-close(title="hide panel (esc)" data-window-close).icon-button-small
                         img(src="icons/close.png")
                 .menu-body
                     div
@@ -116,6 +66,57 @@ html
                         div
                             button#event-mode-on event mode on
                             button#event-mode-off event mode off
+            #popout-panel.menu-panel(data-window)
+                .menu-title(data-window-drag)
+                    div video pop-out
+                    button#popout-close(title="hide panel (esc)" data-window-close).icon-button-small
+                        img(src="icons/close.png")
+            #search-panel.menu-panel(data-window)
+                .menu-title(data-window-drag)
+                    div youtube
+                    button#search-close(title="hide panel (esc)" data-window-close).icon-button-small
+                        img(src="icons/close.png")
+                form#search-form
+                    input#search-input(placeholder="search for a video" type="text" autocomplete="off")
+                    input#search-submit(type="submit" value="search" disabled)
+                    button#play-banger(title="queue random song", type="button") random
+                .menu-body#search-results
+                    #search-result-template.search-result
+                        div title
+                        img
+            #queue-panel.menu-panel(data-window)
+                .menu-title(data-window-drag)
+                    #queue-title play queue
+                    button#queue-close(title="hide panel (esc)" data-window-close).icon-button-small
+                        img(src="icons/close.png")
+                .menu-body
+                    .queue-item#current-item
+                        .queue-item-title#current-item-title title
+                        .queue-item-time#current-item-time 00:00
+                        button.queue-item-cancel#skip-button(title="vote to skip this")
+                            img(src="icons/skip.png")
+                    #queue-items
+                        .queue-item#queue-item-template
+                            .queue-item-title title
+                            .queue-item-time 00:00
+                            button.queue-item-cancel(title="unqueue this")
+                                img(src="icons/cancel.png")
+            #user-panel(data-window)
+                .menu-title(data-window-drag)
+                    div user list
+                    button#users-close(title="hide panel (esc)" data-window-close).icon-button-small
+                        img(src="icons/close.png")
+                .menu-body
+                    #user-items
+            #avatar-panel(data-window)
+                .menu-title(data-window-drag)
+                    div update appearance
+                    button#avatar-cancel(title="hide panel (esc)" data-window-close).icon-button-small
+                        img(src="icons/close.png")
+                .menu-body
+                    canvas#avatar-paint(width=8, height=8)
+                    input#avatar-name(type="text")
+                    button#avatar-update update
         #entry-splash
             #entry-panel
                 img#entry-logo(src="./zone-logo.png")

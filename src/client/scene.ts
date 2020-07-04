@@ -307,7 +307,7 @@ function setAvatarCount(count: number) {
         const material = new THREE.MeshBasicMaterial({
             map: new THREE.CanvasTexture(avatarImage.canvas),
             transparent: true,
-            alphaTest: .25,
+            alphaTest: 0.25,
             side: THREE.DoubleSide,
         });
         avatarMeshes.push(new THREE.Mesh(avatarQuad, material));
@@ -436,7 +436,7 @@ export class ZoneSceneRenderer extends EventEmitter {
             this.flatCamera.left = (1 * aspect) / -2;
             this.flatCamera.right = (1 * aspect) / 2;
             this.flatCamera.updateProjectionMatrix();
-        }
+        };
 
         this.cameras.push([this.isoCamera, false, false]);
         this.cameras.push([this.cinemaCamera, true, true]);

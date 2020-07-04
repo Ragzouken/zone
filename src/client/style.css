@@ -19,6 +19,7 @@ canvas, img {
 html, body {
     margin: 0;
     padding: 0;
+    overflow: hidden;
 }
 
 html {
@@ -143,6 +144,8 @@ input[type="text"]:focus {
 #search-form {
     width: 100%;
     display: flex;
+    padding: 16px;
+    padding-bottom: 0;
 }
 
 #search-input {
@@ -265,8 +268,11 @@ input[type="text"]:focus {
 
 #popout-panel {
     position: absolute;
-    width: 100%;
     background: black;
+
+    left: calc(50vw - 256px); top: 0;
+    min-width: 512px;
+    max-width: max(50vw, 512px);
 
     display: flex;
     flex-direction: column;
@@ -276,13 +282,12 @@ input[type="text"]:focus {
 }
 
 #popout-panel > video {
-    width: 448px; height: 252px;
+    width: 100%;
 }
 
 #user-panel {
     position: absolute;
-    right: 0; bottom: 0;
-    margin: 8px;
+    left: calc(100vw - 256px); top: 0;
 
     width: 256px;
 
@@ -294,8 +299,7 @@ input[type="text"]:focus {
 
 #avatar-panel {
     position: absolute;
-    right: 0; bottom: 0;
-    margin: 8px;
+    left: calc(100vw - 256px); top: 0;
 
     width: 256px;
 

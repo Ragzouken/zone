@@ -8,11 +8,12 @@ import { YoutubeVideo } from '../server/youtube';
 import { ZoneSceneRenderer, avatarImage } from './scene';
 import { Player } from './player';
 import { UserState } from '../common/zone';
-import THREE = require('three');
+import { HTMLUI } from './html-ui';
 
 window.addEventListener('load', () => load());
 
 export const client = new ZoneClient();
+export const htmlui = new HTMLUI();
 
 const avatarTiles = new Map<string | undefined, CanvasRenderingContext2D>();
 avatarTiles.set(undefined, avatarImage);
@@ -134,11 +135,13 @@ function textToYoutubeVideoId(text: string) {
 }
 
 export async function load() {
+    htmlui.addElementsInRoot(document.body);
+    htmlui.hideAllWindows();
+
     const popoutPanel = document.getElementById('popout-panel') as HTMLElement;
     const video = document.createElement('video');
     popoutPanel.appendChild(video);
     document.getElementById('popout-button')?.addEventListener('click', () => (popoutPanel.hidden = false));
-    popoutPanel.addEventListener('click', () => (popoutPanel.hidden = true));
 
     const player = new Player(video);
     const zoneLogo = document.createElement('img');
@@ -164,7 +167,6 @@ export async function load() {
 
     volumeSlider.addEventListener('input', () => (player.volume = parseFloat(volumeSlider.value)));
     document.getElementById('menu-button')?.addEventListener('click', openMenu);
-    document.getElementById('menu-close')?.addEventListener('click', () => (menuPanel.hidden = true));
 
     function openMenu() {
         menuPanel.hidden = false;
@@ -209,7 +211,6 @@ export async function load() {
         authContent.hidden = !auth;
     }
 
-    document.getElementById('users-close')!.addEventListener('click', () => (userPanel.hidden = true));
     document.getElementById('users-button')!.addEventListener('click', () => {
         userPanel.hidden = false;
         refreshUsers();
@@ -284,7 +285,6 @@ export async function load() {
         refreshCurrentItem();
     }
 
-    document.getElementById('queue-close')!.addEventListener('click', () => (queuePanel.hidden = true));
     document.getElementById('queue-button')!.addEventListener('click', () => {
         refreshQueue();
         queuePanel.hidden = false;
@@ -619,7 +619,7 @@ export async function load() {
         event.stopPropagation();
 
         fullChat = !fullChat;
-        chatToggle.classList.toggle("active", fullChat);
+        chatToggle.classList.toggle('active', fullChat);
         if (fullChat) {
             chatInput.hidden = false;
             chatInput.focus();
@@ -776,7 +776,7 @@ export async function load() {
     function renderScene() {
         requestAnimationFrame(renderScene);
 
-        sceneRenderer.mediaElement = player.hasVideo ? video : zoneLogo;
+        sceneRenderer.mediaElement = popoutPanel.hidden && player.hasVideo ? video : zoneLogo;
         sceneRenderer.update();
         sceneRenderer.render();
     }
