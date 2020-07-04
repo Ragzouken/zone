@@ -6,8 +6,9 @@ import { rgbaToColor, decodeAsciiTexture, createContext2D } from 'blitsy';
 import { EventEmitter } from 'events';
 import ZoneClient from '../common/client';
 
-const midBlue = rgbaToColor({ r: 32, g: 40, b: 64, a: 255 });
-const darkBlue = rgbaToColor({ r: 0, g: 21, b: 51, a: 255 });
+const midBlue = rgbaToColor({ r: 50, g: 70, b: 100, a: 255 });
+const darkBlue = rgbaToColor({ r: 0, g: 40, b: 80, a: 255 });
+const pink = rgbaToColor({ r: 230, g: 50, b: 220, a: 255 });
 
 function recolor(context: CanvasRenderingContext2D, fg: number, bg: number) {
     withPixels(context, (pixels) => {
@@ -86,7 +87,6 @@ const trussTile = decodeAsciiTexture(
 recolor(floorTile, midBlue, darkBlue);
 recolor(brickTile, midBlue, darkBlue);
 
-const pink = rgbaToColor({ r: 255, g: 80, b: 240, a: 255 });
 recolor(grateTile, pink, 0);
 recolor(trussTile, pink, 0);
 
