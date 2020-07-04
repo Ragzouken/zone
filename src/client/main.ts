@@ -8,11 +8,12 @@ import { YoutubeVideo } from '../server/youtube';
 import { ZoneSceneRenderer, avatarImage } from './scene';
 import { Player } from './player';
 import { UserState } from '../common/zone';
-import THREE = require('three');
+import { HTMLUI } from './html-ui';
 
 window.addEventListener('load', () => load());
 
 export const client = new ZoneClient();
+export const htmlui = new HTMLUI();
 
 const avatarTiles = new Map<string | undefined, CanvasRenderingContext2D>();
 avatarTiles.set(undefined, avatarImage);
@@ -134,67 +135,8 @@ function textToYoutubeVideoId(text: string) {
 }
 
 export async function load() {
-    const windowElements = document.querySelectorAll<HTMLElement>('[data-window]');
-    windowElements.forEach((windowElement) => {
-        windowElement.hidden = true;
-        const closeButton = windowElement.querySelector<HTMLButtonElement>('[data-window-close]');
-        const dragElement = windowElement.querySelector<HTMLElement>('[data-window-drag]');
-
-        if (closeButton) {
-            closeButton.addEventListener('click', (event) => {
-                event.stopPropagation();
-                event.preventDefault();
-                windowElement.hidden = true;
-            });
-        }
-
-        if (dragElement) {
-            let offset: number[] | undefined = undefined;
-
-            dragElement.addEventListener('pointerdown', (event) => {
-                const dx = windowElement.offsetLeft - event.clientX;
-                const dy = windowElement.offsetTop - event.clientY;
-                offset = [dx, dy];
-
-                event.preventDefault();
-                event.stopPropagation();
-            });
-            dragElement.addEventListener('click', (event) => {
-                event.preventDefault();
-                event.stopPropagation();
-            });
-
-            window.addEventListener('pointerup', (event) => {
-                offset = undefined;
-            });
-
-            window.addEventListener('pointermove', (event) => {
-                if (!offset) return;
-
-                const [dx, dy] = offset;
-                const tx = event.clientX + dx;
-                const ty = event.clientY + dy;
-
-                let minX = tx;
-                let minY = ty;
-
-                const maxX = minX + windowElement.clientWidth;
-                const maxY = minY + windowElement.clientHeight;
-
-                const shiftX = Math.min(0, window.innerWidth - maxX);
-                const shiftY = Math.min(0, window.innerHeight - maxY);
-
-                minX = Math.max(0, minX + shiftX);
-                minY = Math.max(0, minY + shiftY);
-
-                windowElement.style.left = minX + 'px';
-                windowElement.style.top = minY + 'px';
-
-                event.preventDefault();
-                event.stopPropagation();
-            });
-        }
-    });
+    htmlui.addElementsInRoot(document.body);
+    htmlui.hideAllWindows();
 
     const popoutPanel = document.getElementById('popout-panel') as HTMLElement;
     const video = document.createElement('video');
@@ -834,7 +776,7 @@ export async function load() {
     function renderScene() {
         requestAnimationFrame(renderScene);
 
-        sceneRenderer.mediaElement = (popoutPanel.hidden && player.hasVideo) ? video : zoneLogo;
+        sceneRenderer.mediaElement = popoutPanel.hidden && player.hasVideo ? video : zoneLogo;
         sceneRenderer.update();
         sceneRenderer.render();
     }
