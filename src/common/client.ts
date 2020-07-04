@@ -21,8 +21,8 @@ export type RecvChat = { text: string; userId: string };
 export type SendAuth = { password: string };
 export type SendCommand = { name: string; args: any[] };
 
-export type BlocksMessage = { coords: number[][] };
-export type BlockMessage = { coords: number[]; value: boolean };
+export type BlocksMessage = { cells: [number[], number][] };
+export type BlockMessage = { coords: number[]; value: number };
 
 export type EchoMessage = { position: number[]; text: string };
 export type EchoesMessage = { added?: UserEcho[]; removed?: number[][] };
@@ -179,7 +179,7 @@ export class ZoneClient extends EventEmitter {
         this.messaging.send('user', { emotes });
     }
 
-    async setBlock(coords: number[], value: boolean) {
+    async setBlock(coords: number[], value: number) {
         this.messaging.send('block', { coords, value });
     }
 
@@ -261,14 +261,16 @@ export class ZoneClient extends EventEmitter {
             });
         });
         this.messaging.messages.on('blocks', (message: BlocksMessage) => {
-            message.coords.forEach((coords) => {
-                this.zone.grid.set(coords, true);
+            const coords: number[][] = [];
+            message.cells.forEach(([coord, block]) => {
+                this.zone.grid.set(coord, block);
+                coords.push(coord);
             });
-            this.emit('blocks', { coords: message.coords });
+            this.emit('blocks', { coords });
         });
         this.messaging.messages.on('block', (message: BlockMessage) => {
             if (message.value) {
-                this.zone.grid.set(message.coords, true);
+                this.zone.grid.set(message.coords, message.value);
             } else {
                 this.zone.grid.delete(message.coords);
             }

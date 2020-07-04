@@ -595,6 +595,7 @@ export async function load() {
     });
 
     chatCommands.set('echo', (message) => client.echo(getLocalUser()!.position!, message));
+    chatCommands.set('block', (args) => sceneRenderer.buildBlock = parseInt(args, 10));
 
     const emoteToggles = new Map<string, Element>();
     const toggleEmote = (emote: string) => setEmote(emote, !getEmote(emote));

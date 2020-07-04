@@ -6,10 +6,11 @@ import { rgbaToColor, decodeAsciiTexture, createContext2D } from 'blitsy';
 import { EventEmitter } from 'events';
 import ZoneClient from '../common/client';
 
-function recolor(context: CanvasRenderingContext2D) {
+const midBlue = rgbaToColor({ r: 32, g: 40, b: 64, a: 255 });
+const darkBlue = rgbaToColor({ r: 0, g: 21, b: 51, a: 255 });
+
+function recolor(context: CanvasRenderingContext2D, fg: number, bg: number) {
     withPixels(context, (pixels) => {
-        const fg = rgbaToColor({ r: 32, g: 40, b: 64, a: 255 });
-        const bg = rgbaToColor({ r: 0, g: 21, b: 51, a: 255 });
         for (let i = 0; i < pixels.length; ++i) pixels[i] = pixels[i] === 0xffffffff ? fg : bg;
     });
 }
@@ -56,12 +57,46 @@ ________
     '#',
 );
 
-recolor(floorTile);
-recolor(brickTile);
+const grateTile = decodeAsciiTexture(
+`
+########
+#_#__#_#
+########
+#_#__#_#
+#_#__#_#
+########
+#_#__#_#
+########
+`, '#'
+);
+
+const trussTile = decodeAsciiTexture(
+`
+########
+##____##
+#_#__#_#
+#__##__#
+#__##__#
+#_#__#_#
+##____##
+########
+`, '#'
+);
+
+recolor(floorTile, midBlue, darkBlue);
+recolor(brickTile, midBlue, darkBlue);
+
+const pink = rgbaToColor({ r: 255, g: 80, b: 240, a: 255 });
+recolor(grateTile, pink, 0);
+recolor(trussTile, pink, 0);
 
 const texture = createContext2D(16, 8);
 texture.drawImage(floorTile.canvas, 0, 0);
 texture.drawImage(brickTile.canvas, 8, 0);
+
+const texture2 = createContext2D(16, 8);
+texture2.drawImage(grateTile.canvas, 0, 0);
+texture2.drawImage(trussTile.canvas, 8, 0);
 
 const cursorTile = decodeAsciiTexture(
     `
@@ -81,9 +116,14 @@ const black = new THREE.Color(0, 0, 0);
 const red = new THREE.Color(255, 0, 0);
 
 const blockTexture = makeTileCanvasTexture(texture.canvas);
+const blockTexture2 = makeTileCanvasTexture(texture2.canvas);
 const cursorTexture = makeTileCanvasTexture(cursorTile.canvas);
 
-const blockMaterial = new THREE.MeshBasicMaterial({ map: blockTexture });
+const blockMaterials = [
+    undefined,
+    new THREE.MeshBasicMaterial({ map: blockTexture }),
+    new THREE.MeshBasicMaterial({ map: blockTexture2 }),
+];
 
 const cursorGeo = new THREE.BoxBufferGeometry(1 / 16, 1 / 16, 1 / 16);
 const cursorMat = new THREE.MeshBasicMaterial({ map: cursorTexture, side: THREE.DoubleSide, transparent: true });
@@ -367,6 +407,8 @@ export class ZoneSceneRenderer extends EventEmitter {
     private readonly isoCamera: THREE.OrthographicCamera;
     private readonly flatCamera: THREE.OrthographicCamera;
 
+    public buildBlock = 1;
+
     private get camera() {
         return this.cameras[this.cameraIndex][0];
     }
@@ -476,9 +518,9 @@ export class ZoneSceneRenderer extends EventEmitter {
             const info = this.getInfoUnderMouseEvent(event);
 
             if (event.shiftKey && info.spaceCoords) {
-                client.setBlock(info.spaceCoords, true);
+                client.setBlock(info.spaceCoords, this.buildBlock);
             } else if (event.ctrlKey && info.blockCoords) {
-                client.setBlock(info.blockCoords, false);
+                client.setBlock(info.blockCoords, 0);
             } else {
                 this.emit('pointerdown', info);
             }
@@ -517,8 +559,8 @@ export class ZoneSceneRenderer extends EventEmitter {
         }
 
         this.coordsToCube.clear();
-        this.zone.grid.forEach((_, [x, y, z]) => {
-            const cube = new THREE.Mesh(blockGeo, blockMaterial);
+        this.zone.grid.forEach((block, [x, y, z]) => {
+            const cube = new THREE.Mesh(blockGeo, blockMaterials[block]);
             this.blockGroup.add(cube);
             cube.position.set(x / 16, y / 16, z / 16);
             this.cubeToCoords.set(cube, [x, y, z]);
@@ -528,16 +570,16 @@ export class ZoneSceneRenderer extends EventEmitter {
 
     rebuildAtCoords(coords: number[][]) {
         coords.forEach((coord) => {
-            const value = this.zone.grid.has(coord);
+            const block = this.zone.grid.get(coord);
 
-            if (value && !this.coordsToCube.has(coord)) {
+            if (block && !this.coordsToCube.has(coord)) {
                 const [x, y, z] = coord;
-                const cube = new THREE.Mesh(blockGeo, blockMaterial);
+                const cube = new THREE.Mesh(blockGeo, blockMaterials[block]);
                 this.blockGroup.add(cube);
                 cube.position.set(x / 16, y / 16, z / 16);
                 this.cubeToCoords.set(cube, [x, y, z]);
                 this.coordsToCube.set([x, y, z], cube);
-            } else if (!value && this.coordsToCube.has(coord)) {
+            } else if (!block && this.coordsToCube.has(coord)) {
                 const mesh = this.coordsToCube.get(coord)!;
                 this.blockGroup.remove(mesh);
                 this.cubeToCoords.delete(mesh);

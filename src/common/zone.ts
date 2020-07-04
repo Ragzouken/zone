@@ -36,7 +36,7 @@ export class ZoneState {
     readonly queue: QueueItem[] = [];
     lastPlayedItem?: QueueItem;
 
-    public readonly grid = new Grid<true>();
+    public readonly grid = new Grid<number>();
     public readonly echoes = new Grid<UserEcho>();
 
     public clear() {
