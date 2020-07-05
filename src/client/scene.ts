@@ -115,11 +115,11 @@ recolor(slimeTile, slime, dirt);
 const tilemapContext = createContext2D(128, 16);
 tilemapContext.drawImage(floorTile.canvas, 0, 0);
 tilemapContext.drawImage(brickTile.canvas, 0, 8);
-tilemapContext.drawImage(grateTile.canvas, 8, 0);
-tilemapContext.drawImage(trussTile.canvas, 8, 8);
+tilemapContext.drawImage(grateTile.canvas, 16, 0);
+tilemapContext.drawImage(trussTile.canvas, 16, 8);
 tilemapContext.fillStyle = '#6eaa65';
-tilemapContext.fillRect(16, 0, 8, 8);
-tilemapContext.drawImage(slimeTile.canvas, 16, 8);
+tilemapContext.fillRect(32, 0, 8, 8);
+tilemapContext.drawImage(slimeTile.canvas, 32, 8);
 
 const cursorTile = decodeAsciiTexture(
     `
@@ -170,8 +170,8 @@ for (let i = 0; i < 8; ++i) {
     blockGeometries.push(geo);
     geo.setShape(cubeShape);
 
-    sides.forEach((faceId) => setGeoTile(geo, faceId, i, 0));
-    ends.forEach((faceId) => setGeoTile(geo, faceId, i, 1));
+    sides.forEach((faceId) => setGeoTile(geo, faceId, i*2, 0));
+    ends.forEach((faceId) => setGeoTile(geo, faceId, i*2, 1));
 }
 
 blockGeometries[1].geometry.translate(-0.5, -0.5, -0.5);
