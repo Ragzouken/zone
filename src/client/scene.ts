@@ -141,8 +141,6 @@ const red = new THREE.Color(255, 0, 0);
 const blockTexture = makeTileCanvasTexture(tilemapContext.canvas);
 const cursorTexture = makeTileCanvasTexture(cursorTile.canvas);
 
-window.addEventListener('load', () => document.body.appendChild(tilemapContext.canvas));
-
 const blockMaterial = new THREE.MeshBasicMaterial({ map: blockTexture });
 const blockGeometries: BlockGeometry[] = [new BlockGeometry()];
 
