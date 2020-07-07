@@ -515,7 +515,7 @@ export function host(xws: expressWs.Instance, adapter: low.AdapterSync, options:
             const coords = message.coords.map((coord: number) => ~~coord);
             const value = message.value || 0;
 
-            if (value >= 8) return;
+            if (value > 8) return;
             if (coords[0] >= -7 && !user.tags.includes('admin')) return;
 
             if (value !== 0) {

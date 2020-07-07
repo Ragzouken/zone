@@ -1,40 +1,13 @@
 import * as THREE from 'three';
 import { ZoneState, UserState } from '../common/zone';
-import { hslToRgb, withPixels, eventToElementPixel } from './utility';
+import { hslToRgb, eventToElementPixel } from './utility';
 import { randomInt, Grid } from '../common/utility';
-import { rgbaToColor, decodeAsciiTexture, createContext2D, hexToColor } from 'blitsy';
+import { decodeAsciiTexture, createContext2D } from 'blitsy';
 import { EventEmitter } from 'events';
 import ZoneClient from '../common/client';
 import { cubeData } from './blocks';
 import { BlockShape } from './blocks/block-shape';
 import { BlockGeometry } from './blocks/block-geometry';
-import { dir } from 'console';
-
-const midBlue = rgbaToColor({ r: 50, g: 70, b: 100, a: 255 });
-const darkBlue = rgbaToColor({ r: 0, g: 40, b: 80, a: 255 });
-const pink = rgbaToColor({ r: 230, g: 50, b: 220, a: 255 });
-const slime = hexToColor('6eaa65');
-const dirt = hexToColor('6b421d');
-
-function recolor(context: CanvasRenderingContext2D, fg: number, bg: number) {
-    withPixels(context, (pixels) => {
-        for (let i = 0; i < pixels.length; ++i) pixels[i] = pixels[i] === 0xffffffff ? fg : bg;
-    });
-}
-
-const slimeTile = decodeAsciiTexture(
-    `
-########
-########
-##_#_###
-_#___##_
-______#_
-________
-________
-________
-`,
-    '#',
-);
 
 export const avatarImage = decodeAsciiTexture(
     `
@@ -50,76 +23,7 @@ __X__X__
     'X',
 );
 
-const floorTile = decodeAsciiTexture(
-    `
-________
-_X_X_X_X
-________
-__X_____
-________
-X_X_X_X_
-________
-_____X__
-`,
-    'X',
-);
-
-const brickTile = decodeAsciiTexture(
-    `
-###_####
-###_####
-###_####
-________
-#######_
-#######_
-#######_
-________
-`,
-    '#',
-);
-
-const grateTile = decodeAsciiTexture(
-`
-########
-#_#__#_#
-########
-#_#__#_#
-#_#__#_#
-########
-#_#__#_#
-########
-`, '#'
-);
-
-const trussTile = decodeAsciiTexture(
-`
-########
-##____##
-#_#__#_#
-#__##__#
-#__##__#
-#_#__#_#
-##____##
-########
-`, '#'
-);
-
-recolor(floorTile, midBlue, darkBlue);
-recolor(brickTile, midBlue, darkBlue);
-
-recolor(grateTile, pink, 0);
-recolor(trussTile, pink, 0);
-
-recolor(slimeTile, slime, dirt);
-
-const tilemapContext = createContext2D(128, 16);
-tilemapContext.drawImage(floorTile.canvas, 0, 0);
-tilemapContext.drawImage(brickTile.canvas, 0, 8);
-tilemapContext.drawImage(grateTile.canvas, 16, 0);
-tilemapContext.drawImage(trussTile.canvas, 16, 8);
-tilemapContext.fillStyle = '#6eaa65';
-tilemapContext.fillRect(32, 0, 8, 8);
-tilemapContext.drawImage(slimeTile.canvas, 32, 8);
+export const tilemapContext = createContext2D(16 * 8, 16);
 
 const cursorTile = decodeAsciiTexture(
     `
@@ -138,7 +42,7 @@ const cursorTile = decodeAsciiTexture(
 const black = new THREE.Color(0, 0, 0);
 const red = new THREE.Color(255, 0, 0);
 
-const blockTexture = makeTileCanvasTexture(tilemapContext.canvas);
+export const blockTexture = makeTileCanvasTexture(tilemapContext.canvas);
 const cursorTexture = makeTileCanvasTexture(cursorTile.canvas);
 
 const blockMaterial = new THREE.MeshBasicMaterial({ map: blockTexture });

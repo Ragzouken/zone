@@ -5,10 +5,11 @@ import { ChatPanel } from './chat';
 
 import ZoneClient from '../common/client';
 import { YoutubeVideo } from '../server/youtube';
-import { ZoneSceneRenderer, avatarImage } from './scene';
+import { ZoneSceneRenderer, avatarImage, tilemapContext, blockTexture } from './scene';
 import { Player } from './player';
 import { UserState } from '../common/zone';
 import { HTMLUI } from './html-ui';
+import { createContext2D } from 'blitsy';
 
 window.addEventListener('load', () => load());
 
@@ -472,11 +473,39 @@ export async function load() {
 
     document.getElementById('play-banger')?.addEventListener('click', () => client.messaging.send('banger', {}));
 
+    document.getElementById('blocks-button')!.addEventListener('click', () => htmlui.showWindowById('blocks-panel'));
+    const blockListContainer = document.getElementById('blocks-list') as HTMLElement;
+
+    const blockButtons: HTMLElement[] = [];
+    const setBlock = (blockId: number) => {
+        sceneRenderer.buildBlock = blockId;
+        for (let i = 0; i < 8; ++i) {
+            blockButtons[i].classList.toggle('selected', i === blockId - 1);
+        }
+    }
+
+    const tileset = document.createElement('img');
+    tileset.src = "./tileset.png";
+    tileset.addEventListener('load', () => {
+        tilemapContext.drawImage(tileset, 0, 0);
+        blockTexture.needsUpdate = true;
+        for (let i = 0; i < 8; ++i) {
+            const context = createContext2D(8, 16);
+            context.drawImage(tilemapContext.canvas, -i * 16, 0);
+            blockListContainer.appendChild(context.canvas);
+            blockButtons.push(context.canvas);
+    
+            const blockId = i + 1;
+            context.canvas.addEventListener('click', () => setBlock(blockId));
+        }
+
+        setBlock(1);
+    });
+
     const avatarPanel = document.querySelector('#avatar-panel') as HTMLElement;
     const avatarName = document.querySelector('#avatar-name') as HTMLInputElement;
     const avatarPaint = document.querySelector('#avatar-paint') as HTMLCanvasElement;
     const avatarUpdate = document.querySelector('#avatar-update') as HTMLButtonElement;
-    const avatarCancel = document.querySelector('#avatar-cancel') as HTMLButtonElement;
     const avatarContext = avatarPaint.getContext('2d')!;
 
     function openAvatarEditor() {
