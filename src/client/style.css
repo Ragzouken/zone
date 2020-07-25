@@ -318,11 +318,11 @@ input[type="text"]:focus {
     grid-template-rows: repeat(2, 96px);
 }
 
-#blocks-list > canvas {
+#blocks-list > * {
     width: 100%; height: 100%;
 }
 
-#blocks-list > canvas.selected {
+#blocks-list > *.selected {
     outline: 4px solid var(--button-color);
 }
 

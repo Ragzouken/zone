@@ -183,6 +183,7 @@ export class ZoneSceneRenderer extends EventEmitter {
     private readonly isoCamera: THREE.OrthographicCamera;
     private readonly flatCamera: THREE.OrthographicCamera;
 
+    public building = false;
     public buildBlock = 1;
 
     private get camera() {
@@ -292,11 +293,12 @@ export class ZoneSceneRenderer extends EventEmitter {
 
         this.renderer.domElement.addEventListener('pointerdown', (event) => {
             const info = this.getInfoUnderMouseEvent(event);
+            const erase = (this.buildBlock == 0 && info.blockCoords);
 
-            if (event.shiftKey && info.spaceCoords) {
+            if (this.building && erase && info.blockCoords) {
+                client.setBlock(info.blockCoords, this.buildBlock);
+            } else if (this.building && info.spaceCoords) {
                 client.setBlock(info.spaceCoords, this.buildBlock);
-            } else if (event.ctrlKey && info.blockCoords) {
-                client.setBlock(info.blockCoords, 0);
             } else {
                 this.emit('pointerdown', info);
             }
@@ -304,9 +306,6 @@ export class ZoneSceneRenderer extends EventEmitter {
             event.preventDefault();
             event.stopPropagation();
         });
-
-        document.addEventListener('keydown', (event) => (this.cursor.visible = event.shiftKey || event.ctrlKey));
-        document.addEventListener('keyup', (event) => (this.cursor.visible = event.shiftKey || event.ctrlKey));
 
         document.addEventListener('pointermove', (event) => {
             const info = this.getInfoUnderMouseEvent(event);
@@ -316,6 +315,7 @@ export class ZoneSceneRenderer extends EventEmitter {
                 this.cursor.position.set(x / 16, y / 16, z / 16);
             }
 
+            this.cursor.visible = this.building;
             this.emit('pointermove', info);
         });
 

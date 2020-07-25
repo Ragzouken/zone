@@ -480,23 +480,29 @@ export async function load() {
     const setBlock = (blockId: number) => {
         sceneRenderer.buildBlock = blockId;
         for (let i = 0; i < 8; ++i) {
-            blockButtons[i].classList.toggle('selected', i === blockId - 1);
+            blockButtons[i].classList.toggle('selected', i === blockId);
         }
+    }
+
+    const addBlockButton = (element: HTMLElement, blockId: number) => {
+        element.addEventListener('click', () => setBlock(blockId));
+        blockListContainer.appendChild(element);
+        blockButtons.push(element);
     }
 
     const tileset = document.createElement('img');
     tileset.src = "./tileset.png";
     tileset.addEventListener('load', () => {
+        const eraseImage = document.createElement('img');
+        eraseImage.src = "./erase-tile.png";
+        addBlockButton(eraseImage, 0);
+
         tilemapContext.drawImage(tileset, 0, 0);
         blockTexture.needsUpdate = true;
-        for (let i = 0; i < 8; ++i) {
+        for (let i = 1; i < 8; ++i) {
             const context = createContext2D(8, 16);
-            context.drawImage(tilemapContext.canvas, -i * 16, 0);
-            blockListContainer.appendChild(context.canvas);
-            blockButtons.push(context.canvas);
-    
-            const blockId = i + 1;
-            context.canvas.addEventListener('click', () => setBlock(blockId));
+            context.drawImage(tilemapContext.canvas, -(i - 1) * 16, 0);
+            addBlockButton(context.canvas, i);
         }
 
         setBlock(1);
@@ -624,7 +630,6 @@ export async function load() {
     });
 
     chatCommands.set('echo', (message) => client.echo(getLocalUser()!.position!, message));
-    chatCommands.set('block', (args) => sceneRenderer.buildBlock = parseInt(args, 10));
 
     const emoteToggles = new Map<string, Element>();
     const toggleEmote = (emote: string) => setEmote(emote, !getEmote(emote));
@@ -794,6 +799,8 @@ export async function load() {
 
     function renderScene() {
         requestAnimationFrame(renderScene);
+
+        sceneRenderer.building = !htmlui.idToWindowElement.get('blocks-panel')!.hidden;
 
         sceneRenderer.mediaElement = popoutPanel.hidden && player.hasVideo ? video : zoneLogo;
         sceneRenderer.update();
