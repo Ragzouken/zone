@@ -12,6 +12,7 @@ html
         #scene
             #three-container
                 #top-toolbar.toolbar
+                    #player-status
                     button#menu-button(title="open menu")
                         img(src="icons/menu.png")
                     button#search-button(title="search for video (s)")
@@ -20,10 +21,14 @@ html
                         img(src="icons/list.png")
                     button#resync-button(title="reload this")
                         img(src="icons/resync.png")
+                    #tooltip
+                    .spacer
+                    button#rotate-l-button(title="rotate view ([)")
+                        img(src="icons/rotate-l.png")
                     button#camera-button(title="switch view (v)")
                         img(src="icons/look.png")
-                    #tooltip
-                    #player-status
+                    button#rotate-r-button(title="rotate view (])")
+                        img(src="icons/rotate-r.png")
                 #bottom-toolbar.toolbar
                     button#chat-toggle(title="chat (tab)")
                         img(src="icons/chat.png")                    

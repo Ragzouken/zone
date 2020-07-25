@@ -687,8 +687,12 @@ export async function load() {
     gameKeys.set('ArrowUp', () => move(...moveVector(1)));
 
     const rot = Math.PI / 4;
-    gameKeys.set('[', () => (sceneRenderer.followCam.angle += rot));
-    gameKeys.set(']', () => (sceneRenderer.followCam.angle -= rot));
+
+    document.getElementById('rotate-l-button')?.addEventListener('click', () => (sceneRenderer.followCam.angle -= rot));
+    document.getElementById('rotate-r-button')?.addEventListener('click', () => (sceneRenderer.followCam.angle += rot));
+
+    gameKeys.set('[', () => (sceneRenderer.followCam.angle -= rot));
+    gameKeys.set(']', () => (sceneRenderer.followCam.angle += rot));
     gameKeys.set('v', () => sceneRenderer.cycleCamera());
 
     gameKeys.set('q', () => {
