@@ -286,6 +286,8 @@ export class ZoneSceneRenderer extends EventEmitter {
         this.scene.add(this.mediaMesh);
         this.scene.add(this.cursor);
 
+        this.scene.fog = new THREE.Fog(0, 0.0025, 10);
+
         this.rebuild();
 
         this.renderer.setSize(container.clientWidth, container.clientHeight);
