@@ -60,11 +60,7 @@ function setGeoTile(geo: BlockGeometry, faceId: string, x: number, y: number) {
     const sx = 8 / tilemapContext.canvas.width;
     const sy = 8 / tilemapContext.canvas.height;
 
-    geo.setFaceTile(
-        faceId, 
-        x * sx, y * sy,
-        (x + 1) * sx, (y + 1) * sy,
-    );
+    geo.setFaceTile(faceId, x * sx, y * sy, (x + 1) * sx, (y + 1) * sy);
 }
 
 for (let i = 0; i < 8; ++i) {
@@ -72,8 +68,8 @@ for (let i = 0; i < 8; ++i) {
     blockGeometries.push(geo);
     geo.setShape(cubeShape);
 
-    sides.forEach((faceId) => setGeoTile(geo, faceId, i*2, 0));
-    ends.forEach((faceId) => setGeoTile(geo, faceId, i*2, 1));
+    sides.forEach((faceId) => setGeoTile(geo, faceId, i * 2, 0));
+    ends.forEach((faceId) => setGeoTile(geo, faceId, i * 2, 1));
 }
 
 blockGeometries[1].geometry.translate(-0.5, -0.5, -0.5);
@@ -295,7 +291,7 @@ export class ZoneSceneRenderer extends EventEmitter {
 
         this.renderer.domElement.addEventListener('pointerdown', (event) => {
             const info = this.getInfoUnderMouseEvent(event);
-            const erase = (this.buildBlock == 0 && info.blockCoords);
+            const erase = this.buildBlock === 0 && info.blockCoords;
 
             if (this.building && erase && info.blockCoords) {
                 client.setBlock(info.blockCoords, this.buildBlock);

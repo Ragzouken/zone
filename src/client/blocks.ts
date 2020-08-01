@@ -2,7 +2,7 @@ import { BlockShapeData } from './blocks/block-shape';
 
 export const cubeData: BlockShapeData = {
     faces: {
-        'top': {
+        top: {
             positions: [
                 [0, 1, 1],
                 [1, 1, 1],
@@ -21,7 +21,7 @@ export const cubeData: BlockShapeData = {
             ],
         },
 
-        'front': {
+        front: {
             positions: [
                 [0, 1, 1],
                 [0, 0, 1],
@@ -40,7 +40,7 @@ export const cubeData: BlockShapeData = {
             ],
         },
 
-        'back': {
+        back: {
             positions: [
                 [1, 0, 0],
                 [0, 0, 0],
@@ -59,7 +59,7 @@ export const cubeData: BlockShapeData = {
             ],
         },
 
-        'left': {
+        left: {
             positions: [
                 [1, 1, 1],
                 [1, 0, 1],
@@ -78,7 +78,7 @@ export const cubeData: BlockShapeData = {
             ],
         },
 
-        'right': {
+        right: {
             positions: [
                 [0, 1, 0],
                 [0, 0, 0],
@@ -97,7 +97,7 @@ export const cubeData: BlockShapeData = {
             ],
         },
 
-        'bottom': {
+        bottom: {
             positions: [
                 [0, 0, 1],
                 [0, 0, 0],

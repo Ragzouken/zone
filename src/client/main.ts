@@ -482,19 +482,19 @@ export async function load() {
         for (let i = 0; i < 8; ++i) {
             blockButtons[i].classList.toggle('selected', i === blockId);
         }
-    }
+    };
 
     const addBlockButton = (element: HTMLElement, blockId: number) => {
         element.addEventListener('click', () => setBlock(blockId));
         blockListContainer.appendChild(element);
         blockButtons.push(element);
-    }
+    };
 
     const tileset = document.createElement('img');
-    tileset.src = "./tileset.png";
+    tileset.src = './tileset.png';
     tileset.addEventListener('load', () => {
         const eraseImage = document.createElement('img');
-        eraseImage.src = "./erase-tile.png";
+        eraseImage.src = './erase-tile.png';
         addBlockButton(eraseImage, 0);
 
         tilemapContext.drawImage(tileset, 0, 0);
