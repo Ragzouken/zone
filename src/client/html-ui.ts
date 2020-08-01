@@ -6,6 +6,11 @@ export class HTMLUI {
         this.windowElements.forEach((element) => (element.hidden = true));
     }
 
+    showWindowById(id: string) {
+        const windowElement = this.idToWindowElement.get(id);
+        if (windowElement) windowElement.hidden = false;
+    }
+
     hideWindowById(id: string) {
         const windowElement = this.idToWindowElement.get(id);
         if (windowElement) windowElement.hidden = true;

@@ -74,7 +74,7 @@ export function host(xws: expressWs.Instance, adapter: low.AdapterSync, options:
     db.defaults({
         playback: { current: undefined, queue: [], time: 0 },
         bans: [],
-        blocks: { coords: [[0, -4, 0]] },
+        blocks: { cells: [[[0, -4, 0], 1]] },
         echoes: [],
     }).write();
 
@@ -185,8 +185,15 @@ export function host(xws: expressWs.Instance, adapter: low.AdapterSync, options:
         banlist.forEach((ban) => bans.set(ban.ip, ban));
 
         zone.grid.clear();
+
+        const cells = db.get('blocks.cells').value() as [number[], number][];
         const coords = db.get('blocks.coords').value() as number[][];
-        coords.forEach((coord) => zone.grid.set(coord, true));
+
+        if (!cells) {
+            coords.forEach((coord) => zone.grid.set(coord, 1));
+        } else {
+            cells.forEach(([coord, block]) => zone.grid.set(coord, block));
+        }
 
         zone.echoes.clear();
         const echoes = db.get('echoes').value() as UserEcho[];
@@ -197,9 +204,12 @@ export function host(xws: expressWs.Instance, adapter: low.AdapterSync, options:
         db.set('playback', playback.copyState()).write();
         db.set('bans', Array.from(bans.values())).write();
 
+        const cells: [number[], number][] = [];
+        zone.grid.forEach((block, coord) => cells.push([coord, block]));
+
         const coords: number[][] = [];
         zone.grid.forEach((_, coord) => coords.push(coord));
-        db.set('blocks', { coords }).write();
+        db.set('blocks', { coords, cells }).write();
         db.set(
             'echoes',
             Array.from(zone.echoes).map(([, echo]) => echo),
@@ -309,13 +319,13 @@ export function host(xws: expressWs.Instance, adapter: low.AdapterSync, options:
     }
 
     function sendAllState(user: UserState) {
-        const coords: number[][] = [];
-        zone.grid.forEach((_, coord) => coords.push(coord));
+        const cells: [number[], number][] = [];
+        zone.grid.forEach((block, coord) => cells.push([coord, block]));
 
         const users = Array.from(zone.users.values());
         sendOnly('users', { users }, user.userId);
         sendOnly('queue', { items: playback.queue }, user.userId);
-        sendOnly('blocks', { coords }, user.userId);
+        sendOnly('blocks', { cells }, user.userId);
         sendOnly('echoes', { added: Array.from(zone.echoes).map(([, echo]) => echo) }, user.userId);
         sendCurrent(user);
     }
@@ -503,12 +513,13 @@ export function host(xws: expressWs.Instance, adapter: low.AdapterSync, options:
 
         messaging.messages.on('block', (message) => {
             const coords = message.coords.map((coord: number) => ~~coord);
-            const value = !!message.value;
+            const value = message.value || 0;
 
+            if (value > 8) return;
             if (coords[0] >= -7 && !user.tags.includes('admin')) return;
 
-            if (value) {
-                zone.grid.set(coords, true);
+            if (value !== 0) {
+                zone.grid.set(coords, value);
             } else {
                 zone.grid.delete(coords);
             }

@@ -199,6 +199,7 @@ input[type="text"]:focus {
     display: flex;
     flex-direction: column;
     padding: 8px;
+    background: rgb(0 21 51);
 }
 
 .icon-button-small {
@@ -297,6 +298,34 @@ input[type="text"]:focus {
     background: black;
 }
 
+#blocks-panel {
+    position: absolute;
+    left: 0; top: 0;
+
+    display: flex;
+    flex-direction: column;
+
+    align-items: center;
+}
+
+#blocks-list {
+    display: grid;
+    align-items: center;
+    align-content: center;
+    padding: 8px;
+    gap: 16px 16px;
+    grid-template-columns: repeat(4, 48px);
+    grid-template-rows: repeat(2, 96px);
+}
+
+#blocks-list > * {
+    width: 100%; height: 100%;
+}
+
+#blocks-list > *.selected {
+    outline: 4px solid var(--button-color);
+}
+
 #avatar-panel {
     position: absolute;
     left: calc(100vw - 256px); top: 0;
@@ -305,10 +334,6 @@ input[type="text"]:focus {
 
     display: flex;
     flex-direction: column;
-
-    padding: 8px;
-
-    background: black;
 
     align-items: center;
 }

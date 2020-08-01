@@ -12,6 +12,7 @@ html
         #scene
             #three-container
                 #top-toolbar.toolbar
+                    #player-status
                     button#menu-button(title="open menu")
                         img(src="icons/menu.png")
                     button#search-button(title="search for video (s)")
@@ -20,10 +21,14 @@ html
                         img(src="icons/list.png")
                     button#resync-button(title="reload this")
                         img(src="icons/resync.png")
+                    #tooltip
+                    .spacer
+                    button#rotate-l-button(title="rotate view ([)")
+                        img(src="icons/rotate-l.png")
                     button#camera-button(title="switch view (v)")
                         img(src="icons/look.png")
-                    #tooltip
-                    #player-status
+                    button#rotate-r-button(title="rotate view (])")
+                        img(src="icons/rotate-r.png")
                 #bottom-toolbar.toolbar
                     button#chat-toggle(title="chat (tab)")
                         img(src="icons/chat.png")                    
@@ -31,6 +36,8 @@ html
                         img(src="icons/avatar.png")
                     button#users-button(title="open user list")
                         img(src="icons/users.png")
+                    button#blocks-button(title="open block menu")
+                        img(src="icons/blocks.png")
                     .spacer
                     button(title="toggle float emote (1)", data-emote-toggle="wvy")
                         img(src="icons/wvy.png")
@@ -45,7 +52,7 @@ html
             #menu-panel.menu-panel(data-window)
                 .menu-title(data-window-drag)
                     div miscellanious options
-                    button#menu-close(title="hide panel (esc)" data-window-close).icon-button-small
+                    button(title="hide panel (esc)" data-window-close).icon-button-small
                         img(src="icons/close.png")
                 .menu-body
                     div
@@ -69,12 +76,12 @@ html
             #popout-panel.menu-panel(data-window)
                 .menu-title(data-window-drag)
                     div video pop-out
-                    button#popout-close(title="hide panel (esc)" data-window-close).icon-button-small
+                    button(title="hide panel (esc)" data-window-close).icon-button-small
                         img(src="icons/close.png")
             #search-panel.menu-panel(data-window)
                 .menu-title(data-window-drag)
                     div youtube
-                    button#search-close(title="hide panel (esc)" data-window-close).icon-button-small
+                    button(title="hide panel (esc)" data-window-close).icon-button-small
                         img(src="icons/close.png")
                 form#search-form
                     input#search-input(placeholder="search for a video" type="text" autocomplete="off")
@@ -87,7 +94,7 @@ html
             #queue-panel.menu-panel(data-window)
                 .menu-title(data-window-drag)
                     #queue-title play queue
-                    button#queue-close(title="hide panel (esc)" data-window-close).icon-button-small
+                    button(title="hide panel (esc)" data-window-close).icon-button-small
                         img(src="icons/close.png")
                 .menu-body
                     .queue-item#current-item
@@ -104,19 +111,26 @@ html
             #user-panel(data-window)
                 .menu-title(data-window-drag)
                     div user list
-                    button#users-close(title="hide panel (esc)" data-window-close).icon-button-small
+                    button(title="hide panel (esc)" data-window-close).icon-button-small
                         img(src="icons/close.png")
                 .menu-body
                     #user-items
             #avatar-panel(data-window)
                 .menu-title(data-window-drag)
                     div update appearance
-                    button#avatar-cancel(title="hide panel (esc)" data-window-close).icon-button-small
+                    button(title="hide panel (esc)" data-window-close).icon-button-small
                         img(src="icons/close.png")
                 .menu-body
                     canvas#avatar-paint(width=8, height=8)
                     input#avatar-name(type="text")
                     button#avatar-update update
+            #blocks-panel(data-window)
+                .menu-title(data-window-drag)
+                    div select block
+                    button(title="hide panel (esc)" data-window-close).icon-button-small
+                        img(src="icons/close.png")
+                .menu-body
+                    #blocks-list
         #entry-splash
             #entry-panel
                 img#entry-logo(src="./zone-logo.png")

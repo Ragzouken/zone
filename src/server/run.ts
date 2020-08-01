@@ -43,7 +43,7 @@ async function run() {
     server.on('error', (error) => console.log('server error', error));
 
     const dataPath = process.env.ZONE_DATA_PATH || '.data/db.json';
-    const adapter = new FileSync(dataPath);
+    const adapter = new FileSync(dataPath, { serialize: JSON.stringify, deserialize: JSON.parse });
 
     const { save, sendAll, authCommands, localLibrary, youtubeCache } = host(xws, adapter, {
         joinPassword: process.env.JOIN_PASSWORD,

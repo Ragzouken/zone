@@ -1,18 +1,13 @@
 import * as THREE from 'three';
 import { ZoneState, UserState } from '../common/zone';
-import { hslToRgb, withPixels, eventToElementPixel } from './utility';
+import { hslToRgb, eventToElementPixel } from './utility';
 import { randomInt, Grid } from '../common/utility';
-import { rgbaToColor, decodeAsciiTexture, createContext2D } from 'blitsy';
+import { decodeAsciiTexture, createContext2D } from 'blitsy';
 import { EventEmitter } from 'events';
 import ZoneClient from '../common/client';
-
-function recolor(context: CanvasRenderingContext2D) {
-    withPixels(context, (pixels) => {
-        const fg = rgbaToColor({ r: 32, g: 40, b: 64, a: 255 });
-        const bg = rgbaToColor({ r: 0, g: 21, b: 51, a: 255 });
-        for (let i = 0; i < pixels.length; ++i) pixels[i] = pixels[i] === 0xffffffff ? fg : bg;
-    });
-}
+import { cubeData } from './blocks';
+import { BlockShape } from './blocks/block-shape';
+import { BlockGeometry } from './blocks/block-geometry';
 
 export const avatarImage = decodeAsciiTexture(
     `
@@ -28,40 +23,7 @@ __X__X__
     'X',
 );
 
-const floorTile = decodeAsciiTexture(
-    `
-________
-_X_X_X_X
-________
-__X_____
-________
-X_X_X_X_
-________
-_____X__
-`,
-    'X',
-);
-
-const brickTile = decodeAsciiTexture(
-    `
-###_####
-###_####
-###_####
-________
-#######_
-#######_
-#######_
-________
-`,
-    '#',
-);
-
-recolor(floorTile);
-recolor(brickTile);
-
-const texture = createContext2D(16, 8);
-texture.drawImage(floorTile.canvas, 0, 0);
-texture.drawImage(brickTile.canvas, 8, 0);
+export const tilemapContext = createContext2D(16 * 8, 16);
 
 const cursorTile = decodeAsciiTexture(
     `
@@ -80,189 +42,39 @@ const cursorTile = decodeAsciiTexture(
 const black = new THREE.Color(0, 0, 0);
 const red = new THREE.Color(255, 0, 0);
 
-const blockTexture = makeTileCanvasTexture(texture.canvas);
+export const blockTexture = makeTileCanvasTexture(tilemapContext.canvas);
 const cursorTexture = makeTileCanvasTexture(cursorTile.canvas);
 
 const blockMaterial = new THREE.MeshBasicMaterial({ map: blockTexture });
+const blockGeometries: BlockGeometry[] = [new BlockGeometry()];
 
 const cursorGeo = new THREE.BoxBufferGeometry(1 / 16, 1 / 16, 1 / 16);
 const cursorMat = new THREE.MeshBasicMaterial({ map: cursorTexture, side: THREE.DoubleSide, transparent: true });
 
-const cubeData = {
-    faces: [
-        {
-            name: 'top',
-            positions: [
-                [0, 1, 1],
-                [1, 1, 1],
-                [1, 1, 0],
-                [0, 1, 0],
-            ],
-            texturing: [
-                [0.5, 0],
-                [0.5, 1],
-                [0, 1],
-                [0, 0],
-            ],
-            triangles: [
-                [0, 1, 2],
-                [0, 2, 3],
-            ],
-        },
+const cubeShape = new BlockShape().fromData(cubeData);
 
-        {
-            name: 'front',
-            positions: [
-                [0, 1, 1],
-                [0, 0, 1],
-                [1, 0, 1],
-                [1, 1, 1],
-            ],
-            texturing: [
-                [1, 0],
-                [1, 1],
-                [0.5, 1],
-                [0.5, 0],
-            ],
-            triangles: [
-                [0, 1, 2],
-                [0, 2, 3],
-            ],
-        },
+const sides = ['left', 'right', 'back', 'front'];
+const ends = ['top', 'bottom'];
 
-        {
-            name: 'back',
-            positions: [
-                [1, 0, 0],
-                [0, 0, 0],
-                [0, 1, 0],
-                [1, 1, 0],
-            ],
-            texturing: [
-                [0.5, 1],
-                [1, 1],
-                [1, 0],
-                [0.5, 0],
-            ],
-            triangles: [
-                [0, 1, 2],
-                [0, 2, 3],
-            ],
-        },
+function setGeoTile(geo: BlockGeometry, faceId: string, x: number, y: number) {
+    const sx = 8 / tilemapContext.canvas.width;
+    const sy = 8 / tilemapContext.canvas.height;
 
-        {
-            name: 'left',
-            positions: [
-                [1, 1, 1],
-                [1, 0, 1],
-                [1, 0, 0],
-                [1, 1, 0],
-            ],
-            texturing: [
-                [1, 0],
-                [1, 1],
-                [0.5, 1],
-                [0.5, 0],
-            ],
-            triangles: [
-                [0, 1, 2],
-                [0, 2, 3],
-            ],
-        },
-
-        {
-            name: 'right',
-            positions: [
-                [0, 1, 0],
-                [0, 0, 0],
-                [0, 0, 1],
-                [0, 1, 1],
-            ],
-            texturing: [
-                [1, 0],
-                [1, 1],
-                [0.5, 1],
-                [0.5, 0],
-            ],
-            triangles: [
-                [0, 1, 2],
-                [0, 2, 3],
-            ],
-        },
-
-        {
-            name: 'bottom',
-            positions: [
-                [0, 0, 1],
-                [0, 0, 0],
-                [1, 0, 0],
-                [1, 0, 1],
-            ],
-            texturing: [
-                [0.5, 0],
-                [0.5, 1],
-                [0, 1],
-                [0, 0],
-            ],
-            triangles: [
-                [0, 1, 2],
-                [0, 2, 3],
-            ],
-        },
-    ],
-};
-
-function dataToGeo(data: any): THREE.BufferGeometry {
-    let indexOffset = 0;
-    const indices: number[] = [];
-    const positions: number[] = [];
-    const texcoords: number[] = [];
-    const normals: number[] = [];
-
-    data.faces.forEach((face: any) => {
-        // offset indices relative to existing vertices
-        // const indexOffset = this.vertexCount;
-        const faceIndexes = face.triangles
-            .reduce((a: number[], b: number[]) => [...a, ...b], [])
-            .map((index: number) => index + indexOffset);
-
-        indices.push(...faceIndexes);
-        // faces.set(face.name, faceIndexes);
-        // face.triangles.forEach(_ => this.tri2face.push(face.name));
-
-        // compute shared normal and add all positions/texcoords/normals
-        const positions2 = face.positions.slice(0, 3).map((position: number[]) => new THREE.Vector3(...position));
-
-        const normal = new THREE.Vector3();
-        normal.crossVectors(positions2[1].clone().sub(positions2[0]), positions2[2].clone().sub(positions2[0]));
-
-        face.positions.forEach((position: number[], i: number) => {
-            positions.push(...face.positions[i]);
-            texcoords.push(...face.texturing[i]);
-            normals.push(normal.x, normal.y, normal.z);
-        });
-
-        indexOffset += face.positions.length;
-    });
-
-    // threejs stuff
-    const positionBuffer = new THREE.Float32BufferAttribute(positions, 3);
-    const normalBuffer = new THREE.Float32BufferAttribute(normals, 3);
-    const texcoordBuffer = new THREE.Float32BufferAttribute(texcoords, 2);
-
-    const geometry = new THREE.BufferGeometry();
-    geometry.setAttribute('position', positionBuffer);
-    geometry.setAttribute('normal', normalBuffer);
-    geometry.setAttribute('uv', texcoordBuffer);
-    geometry.setIndex(indices);
-
-    geometry.translate(-0.5, -0.5, -0.5);
-    geometry.scale(1 / 16, 1 / 16, 1 / 16);
-    geometry.rotateY(Math.PI / 2);
-    return geometry;
+    geo.setFaceTile(faceId, x * sx, y * sy, (x + 1) * sx, (y + 1) * sy);
 }
 
-const blockGeo = dataToGeo(cubeData);
+for (let i = 0; i < 8; ++i) {
+    const geo = new BlockGeometry();
+    blockGeometries.push(geo);
+    geo.setShape(cubeShape);
+
+    sides.forEach((faceId) => setGeoTile(geo, faceId, i * 2, 0));
+    ends.forEach((faceId) => setGeoTile(geo, faceId, i * 2, 1));
+}
+
+blockGeometries[1].geometry.translate(-0.5, -0.5, -0.5);
+blockGeometries[1].geometry.scale(1 / 16, 1 / 16, 1 / 16);
+blockGeometries[1].geometry.rotateY(Math.PI / 2);
 
 function makeTileCanvasTexture(canvas: HTMLCanvasElement) {
     const texture = new THREE.CanvasTexture(canvas);
@@ -367,6 +179,9 @@ export class ZoneSceneRenderer extends EventEmitter {
     private readonly isoCamera: THREE.OrthographicCamera;
     private readonly flatCamera: THREE.OrthographicCamera;
 
+    public building = false;
+    public buildBlock = 1;
+
     private get camera() {
         return this.cameras[this.cameraIndex][0];
     }
@@ -467,6 +282,8 @@ export class ZoneSceneRenderer extends EventEmitter {
         this.scene.add(this.mediaMesh);
         this.scene.add(this.cursor);
 
+        this.scene.fog = new THREE.Fog(0, 0.0025, 10);
+
         this.rebuild();
 
         this.renderer.setSize(container.clientWidth, container.clientHeight);
@@ -474,11 +291,12 @@ export class ZoneSceneRenderer extends EventEmitter {
 
         this.renderer.domElement.addEventListener('pointerdown', (event) => {
             const info = this.getInfoUnderMouseEvent(event);
+            const erase = this.buildBlock === 0 && info.blockCoords;
 
-            if (event.shiftKey && info.spaceCoords) {
-                client.setBlock(info.spaceCoords, true);
-            } else if (event.ctrlKey && info.blockCoords) {
-                client.setBlock(info.blockCoords, false);
+            if (this.building && erase && info.blockCoords) {
+                client.setBlock(info.blockCoords, this.buildBlock);
+            } else if (this.building && info.spaceCoords) {
+                client.setBlock(info.spaceCoords, this.buildBlock);
             } else {
                 this.emit('pointerdown', info);
             }
@@ -486,9 +304,6 @@ export class ZoneSceneRenderer extends EventEmitter {
             event.preventDefault();
             event.stopPropagation();
         });
-
-        document.addEventListener('keydown', (event) => (this.cursor.visible = event.shiftKey || event.ctrlKey));
-        document.addEventListener('keyup', (event) => (this.cursor.visible = event.shiftKey || event.ctrlKey));
 
         document.addEventListener('pointermove', (event) => {
             const info = this.getInfoUnderMouseEvent(event);
@@ -498,6 +313,7 @@ export class ZoneSceneRenderer extends EventEmitter {
                 this.cursor.position.set(x / 16, y / 16, z / 16);
             }
 
+            this.cursor.visible = this.building;
             this.emit('pointermove', info);
         });
 
@@ -517,8 +333,8 @@ export class ZoneSceneRenderer extends EventEmitter {
         }
 
         this.coordsToCube.clear();
-        this.zone.grid.forEach((_, [x, y, z]) => {
-            const cube = new THREE.Mesh(blockGeo, blockMaterial);
+        this.zone.grid.forEach((block, [x, y, z]) => {
+            const cube = new THREE.Mesh(blockGeometries[block].geometry, blockMaterial);
             this.blockGroup.add(cube);
             cube.position.set(x / 16, y / 16, z / 16);
             this.cubeToCoords.set(cube, [x, y, z]);
@@ -528,16 +344,16 @@ export class ZoneSceneRenderer extends EventEmitter {
 
     rebuildAtCoords(coords: number[][]) {
         coords.forEach((coord) => {
-            const value = this.zone.grid.has(coord);
+            const block = this.zone.grid.get(coord);
 
-            if (value && !this.coordsToCube.has(coord)) {
+            if (block && !this.coordsToCube.has(coord)) {
                 const [x, y, z] = coord;
-                const cube = new THREE.Mesh(blockGeo, blockMaterial);
+                const cube = new THREE.Mesh(blockGeometries[block].geometry, blockMaterial);
                 this.blockGroup.add(cube);
                 cube.position.set(x / 16, y / 16, z / 16);
                 this.cubeToCoords.set(cube, [x, y, z]);
                 this.coordsToCube.set([x, y, z], cube);
-            } else if (!value && this.coordsToCube.has(coord)) {
+            } else if (!block && this.coordsToCube.has(coord)) {
                 const mesh = this.coordsToCube.get(coord)!;
                 this.blockGroup.remove(mesh);
                 this.cubeToCoords.delete(mesh);

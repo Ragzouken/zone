@@ -256,17 +256,18 @@ describe('blocks', () => {
 
     it('can add a block', async () => {
         const coords = [-99, -88, -77];
+        const value = 6;
 
         await zoneServer({}, async (server) => {
             const client = await server.client();
             await client.join();
 
             const waiter = client.expect('block');
-            client.setBlock(coords, true);
+            client.setBlock(coords, value);
 
             const added = await waiter;
             expect(added.coords).toEqual(coords);
-            expect(added.value).toEqual(true);
+            expect(added.value).toEqual(value);
         });
     });
 
@@ -278,11 +279,11 @@ describe('blocks', () => {
             await client.join();
 
             const waiter = client.expect('block');
-            client.setBlock(coords, false);
+            client.setBlock(coords, 0);
 
             const added = await waiter;
             expect(added.coords).toEqual(coords);
-            expect(added.value).toEqual(false);
+            expect(added.value).toEqual(0);
         });
     });
 
@@ -293,7 +294,7 @@ describe('blocks', () => {
             await clien.join();
 
             const received = await waiter;
-            expect(received.coords).toEqual([[0, -4, 0]]);
+            expect(received.cells).toEqual([[[0, -4, 0], 1]]);
         });
     });
 });
@@ -338,7 +339,6 @@ describe('echoes', () => {
             expect(added).not.toBe(undefined);
             expect(removed).toBe(undefined);
 
-            console.log(added, removed);
             const first = added![0];
             expect(first.position).toEqual(position);
             expect(first.text).toEqual(message);

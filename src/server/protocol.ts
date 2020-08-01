@@ -5,7 +5,7 @@ export const MESSAGE_SCHEMAS = new Map<string, Joi.ObjectSchema>();
 MESSAGE_SCHEMAS.set(
     'user',
     Joi.object({
-        name: Joi.string(),
+        name: Joi.string().min(1).max(32),
         avatar: Joi.string().base64(),
         emotes: Joi.array().items(Joi.string().valid('shk', 'wvy', 'rbw', 'spn')),
         position: Joi.array().ordered(Joi.number().required(), Joi.number().required(), Joi.number().required()),

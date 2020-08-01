@@ -5,10 +5,11 @@ import { ChatPanel } from './chat';
 
 import ZoneClient from '../common/client';
 import { YoutubeVideo } from '../server/youtube';
-import { ZoneSceneRenderer, avatarImage } from './scene';
+import { ZoneSceneRenderer, avatarImage, tilemapContext, blockTexture } from './scene';
 import { Player } from './player';
 import { UserState } from '../common/zone';
 import { HTMLUI } from './html-ui';
+import { createContext2D } from 'blitsy';
 
 window.addEventListener('load', () => load());
 
@@ -312,7 +313,6 @@ export async function load() {
     const searchResultTemplate = document.getElementById('search-result-template')!;
     searchResultTemplate.parentElement?.removeChild(searchResultTemplate);
 
-    document.getElementById('search-close')?.addEventListener('click', () => (searchPanel.hidden = true));
     document.getElementById('search-form')?.addEventListener('submit', (event) => {
         event.preventDefault();
         event.stopPropagation();
@@ -473,11 +473,45 @@ export async function load() {
 
     document.getElementById('play-banger')?.addEventListener('click', () => client.messaging.send('banger', {}));
 
+    document.getElementById('blocks-button')!.addEventListener('click', () => htmlui.showWindowById('blocks-panel'));
+    const blockListContainer = document.getElementById('blocks-list') as HTMLElement;
+
+    const blockButtons: HTMLElement[] = [];
+    const setBlock = (blockId: number) => {
+        sceneRenderer.buildBlock = blockId;
+        for (let i = 0; i < 8; ++i) {
+            blockButtons[i].classList.toggle('selected', i === blockId);
+        }
+    };
+
+    const addBlockButton = (element: HTMLElement, blockId: number) => {
+        element.addEventListener('click', () => setBlock(blockId));
+        blockListContainer.appendChild(element);
+        blockButtons.push(element);
+    };
+
+    const tileset = document.createElement('img');
+    tileset.src = './tileset.png';
+    tileset.addEventListener('load', () => {
+        const eraseImage = document.createElement('img');
+        eraseImage.src = './erase-tile.png';
+        addBlockButton(eraseImage, 0);
+
+        tilemapContext.drawImage(tileset, 0, 0);
+        blockTexture.needsUpdate = true;
+        for (let i = 1; i < 8; ++i) {
+            const context = createContext2D(8, 16);
+            context.drawImage(tilemapContext.canvas, -(i - 1) * 16, 0);
+            addBlockButton(context.canvas, i);
+        }
+
+        setBlock(1);
+    });
+
     const avatarPanel = document.querySelector('#avatar-panel') as HTMLElement;
     const avatarName = document.querySelector('#avatar-name') as HTMLInputElement;
     const avatarPaint = document.querySelector('#avatar-paint') as HTMLCanvasElement;
     const avatarUpdate = document.querySelector('#avatar-update') as HTMLButtonElement;
-    const avatarCancel = document.querySelector('#avatar-cancel') as HTMLButtonElement;
     const avatarContext = avatarPaint.getContext('2d')!;
 
     function openAvatarEditor() {
@@ -531,7 +565,6 @@ export async function load() {
         if (avatarName.value !== getLocalUser()?.name) rename(avatarName.value);
         client.avatar(blitsy.encodeTexture(avatarContext, 'M1').data);
     });
-    avatarCancel.addEventListener('click', () => (avatarPanel.hidden = true));
 
     let lastSearchResults: YoutubeVideo[] = [];
 
@@ -654,8 +687,12 @@ export async function load() {
     gameKeys.set('ArrowUp', () => move(...moveVector(1)));
 
     const rot = Math.PI / 4;
-    gameKeys.set('[', () => (sceneRenderer.followCam.angle += rot));
-    gameKeys.set(']', () => (sceneRenderer.followCam.angle -= rot));
+
+    document.getElementById('rotate-l-button')?.addEventListener('click', () => (sceneRenderer.followCam.angle -= rot));
+    document.getElementById('rotate-r-button')?.addEventListener('click', () => (sceneRenderer.followCam.angle += rot));
+
+    gameKeys.set('[', () => (sceneRenderer.followCam.angle -= rot));
+    gameKeys.set(']', () => (sceneRenderer.followCam.angle += rot));
     gameKeys.set('v', () => sceneRenderer.cycleCamera());
 
     gameKeys.set('q', () => {
@@ -667,15 +704,6 @@ export async function load() {
         searchInput.focus();
     });
     gameKeys.set('u', () => (userPanel.hidden = !userPanel.hidden));
-
-    function closeAllPanels() {
-        queuePanel.hidden = true;
-        searchPanel.hidden = true;
-        menuPanel.hidden = true;
-        userPanel.hidden = true;
-        popoutPanel.hidden = true;
-        avatarPanel.hidden = true;
-    }
 
     function sendChat() {
         const line = chatInput.value;
@@ -711,7 +739,7 @@ export async function load() {
 
                 event.preventDefault();
             }
-            closeAllPanels();
+            htmlui.hideAllWindows();
         }
 
         if (isInputElement(document.activeElement)) {
@@ -775,6 +803,8 @@ export async function load() {
 
     function renderScene() {
         requestAnimationFrame(renderScene);
+
+        sceneRenderer.building = !htmlui.idToWindowElement.get('blocks-panel')!.hidden;
 
         sceneRenderer.mediaElement = popoutPanel.hidden && player.hasVideo ? video : zoneLogo;
         sceneRenderer.update();

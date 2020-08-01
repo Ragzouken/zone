@@ -42,7 +42,7 @@
     "three": "^0.116.1",
     "tmp": "^0.2.1",
     "ytdl-core": "^2.1.2",
-    "ytpl": "^0.1.21",
+    "ytpl": "^0.2.3",
     "ytsr": "^0.1.15"
   },
   "devDependencies": {
