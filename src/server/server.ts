@@ -74,7 +74,7 @@ export function host(xws: expressWs.Instance, adapter: low.AdapterSync, options:
     db.defaults({
         playback: { current: undefined, queue: [], time: 0 },
         bans: [],
-        blocks: { coords: [[0, -4, 0]], cells: [] },
+        blocks: { cells: [[[0, -4, 0], 1]] },
         echoes: [],
     }).write();
 

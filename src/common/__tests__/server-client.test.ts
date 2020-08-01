@@ -256,7 +256,7 @@ describe('blocks', () => {
 
     it('can add a block', async () => {
         const coords = [-99, -88, -77];
-        const value = 69;
+        const value = 6;
 
         await zoneServer({}, async (server) => {
             const client = await server.client();
@@ -339,7 +339,6 @@ describe('echoes', () => {
             expect(added).not.toBe(undefined);
             expect(removed).toBe(undefined);
 
-            console.log(added, removed);
             const first = added![0];
             expect(first.position).toEqual(position);
             expect(first.text).toEqual(message);
