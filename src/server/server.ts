@@ -5,11 +5,11 @@ import * as low from 'lowdb';
 import * as youtube from './youtube';
 import Playback from './playback';
 import Messaging from '../common/messaging';
-import { ZoneState, UserId, UserState, mediaEquals, Media, QueueItem } from '../common/zone';
+import { ZoneState, UserId, UserState, mediaEquals, Media, QueueItem, UserEcho } from '../common/zone';
 import { nanoid } from 'nanoid';
 import { getDefault } from '../common/utility';
 import { MESSAGE_SCHEMAS } from './protocol';
-import { JoinMessage, SendAuth, SendCommand } from '../common/client';
+import { JoinMessage, SendAuth, SendCommand, EchoMessage } from '../common/client';
 
 const SECONDS = 1000;
 
@@ -58,11 +58,11 @@ function getNetworkIdFromIp(ip: unknown) {
 }
 
 interface Ban {
-    ip: unknown,
-    bannee: string,
-    banner: string,
-    reason?: string,
-    date: string,
+    ip: unknown;
+    bannee: string;
+    banner: string;
+    reason?: string;
+    date: string;
 }
 
 export function host(xws: expressWs.Instance, adapter: low.AdapterSync, options: Partial<HostOptions> = {}) {
@@ -74,6 +74,8 @@ export function host(xws: expressWs.Instance, adapter: low.AdapterSync, options:
     db.defaults({
         playback: { current: undefined, queue: [], time: 0 },
         bans: [],
+        blocks: { cells: [[[0, -4, 0], 1]] },
+        echoes: [],
     }).write();
 
     // this zone's websocket endpoint
@@ -181,11 +183,37 @@ export function host(xws: expressWs.Instance, adapter: low.AdapterSync, options:
         playback.loadState(db.get('playback').value());
         const banlist = db.get('bans').value() as Ban[];
         banlist.forEach((ban) => bans.set(ban.ip, ban));
+
+        zone.grid.clear();
+
+        const cells = db.get('blocks.cells').value() as [number[], number][];
+        const coords = db.get('blocks.coords').value() as number[][];
+
+        if (!cells) {
+            coords.forEach((coord) => zone.grid.set(coord, 1));
+        } else {
+            cells.forEach(([coord, block]) => zone.grid.set(coord, block));
+        }
+
+        zone.echoes.clear();
+        const echoes = db.get('echoes').value() as UserEcho[];
+        echoes.forEach((echo) => zone.echoes.set(echo.position!, echo));
     }
 
     function save() {
         db.set('playback', playback.copyState()).write();
         db.set('bans', Array.from(bans.values())).write();
+
+        const cells: [number[], number][] = [];
+        zone.grid.forEach((block, coord) => cells.push([coord, block]));
+
+        const coords: number[][] = [];
+        zone.grid.forEach((_, coord) => coords.push(coord));
+        db.set('blocks', { coords, cells }).write();
+        db.set(
+            'echoes',
+            Array.from(zone.echoes).map(([, echo]) => echo),
+        ).write();
     }
 
     const userToConnections = new Map<UserState, Set<Messaging>>();
@@ -291,9 +319,14 @@ export function host(xws: expressWs.Instance, adapter: low.AdapterSync, options:
     }
 
     function sendAllState(user: UserState) {
+        const cells: [number[], number][] = [];
+        zone.grid.forEach((block, coord) => cells.push([coord, block]));
+
         const users = Array.from(zone.users.values());
         sendOnly('users', { users }, user.userId);
         sendOnly('queue', { items: playback.queue }, user.userId);
+        sendOnly('blocks', { cells }, user.userId);
+        sendOnly('echoes', { added: Array.from(zone.echoes).map(([, echo]) => echo) }, user.userId);
         sendCurrent(user);
     }
 
@@ -326,7 +359,7 @@ export function host(xws: expressWs.Instance, adapter: low.AdapterSync, options:
                 banner: admin.name!,
                 reason,
                 date: JSON.stringify(new Date()),
-            }
+            };
             bans.set(ban.ip, ban);
             status(`${user.name} is banned`);
 
@@ -475,6 +508,40 @@ export function host(xws: expressWs.Instance, adapter: low.AdapterSync, options:
                 command(user, ...args);
             } else {
                 status(`no command "${name}"`, user);
+            }
+        });
+
+        messaging.messages.on('block', (message) => {
+            const coords = message.coords.map((coord: number) => ~~coord);
+            const value = message.value || 0;
+
+            if (value > 8) return;
+            if (coords[0] >= -7 && !user.tags.includes('admin')) return;
+
+            if (value !== 0) {
+                zone.grid.set(coords, value);
+            } else {
+                zone.grid.delete(coords);
+            }
+
+            sendAll('block', { coords, value });
+        });
+
+        messaging.messages.on('echo', (message: EchoMessage) => {
+            const { text, position } = message;
+
+            const admin = !!zone.echoes.get(position)?.tags.includes('admin');
+            const valid = !admin || user.tags.includes('admin');
+
+            if (!valid) {
+                status("can't remove admin echo", user);
+            } else if (text.length > 0) {
+                const echo = { ...user, position, text: text.slice(0, 512) };
+                zone.echoes.set(position, echo);
+                sendAll('echoes', { added: [echo] });
+            } else {
+                zone.echoes.delete(position);
+                sendAll('echoes', { removed: [position] });
             }
         });
     }

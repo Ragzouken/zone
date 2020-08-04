@@ -70,7 +70,7 @@ export async function media(videoId: string): Promise<Media> {
 
 export async function search(query: string): Promise<YoutubeVideo[]> {
     const results = await ytsr(query, { limit: 5 });
-    const videos = results.items.filter((item) => item.type === 'video' && !item.live);
+    const videos = results.items.filter((item) => item.type === 'video' && !(item as any).live);
     return videos.map((item) => {
         const videoId = new URL(item.link).searchParams.get('v')!;
         const duration = timeToSeconds(item.duration) * 1000;
@@ -83,7 +83,7 @@ export async function search(query: string): Promise<YoutubeVideo[]> {
 
 export const BANGER_PLAYLIST_ID = 'PLUkMc2z58ECZFcxvdwncKK1qDYZzVHrbB';
 export async function banger(): Promise<Media> {
-    const result = await ytpl(BANGER_PLAYLIST_ID);
+    const result = await ytpl(BANGER_PLAYLIST_ID, { limit: Infinity });
     const chosen = result.items[randomInt(0, result.items.length - 1)];
     const videoId = new URL(chosen.url).searchParams.get('v')!;
     const duration = timeToSeconds(chosen.duration) * 1000;

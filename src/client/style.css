@@ -19,6 +19,7 @@ canvas, img {
 html, body {
     margin: 0;
     padding: 0;
+    overflow: hidden;
 }
 
 html {
@@ -45,8 +46,10 @@ input[type="text"]:focus {
     border-bottom: solid red 3px;
 }
 
-#chat-inputs > input {
-    width: 512px;
+#chat-input {
+    position: absolute;
+    bottom: 16px; left: 64px;
+    width: 432px; height: 32px;
 }
 
 #entry-panel {
@@ -70,6 +73,12 @@ input[type="text"]:focus {
     display: flex;
     flex-direction: row;
     align-items: stretch;
+
+    pointer-events: none;
+}
+
+.toolbar > *:last-child {
+    margin-right: 16px;
 }
 
 .toolbar > button {
@@ -79,6 +88,8 @@ input[type="text"]:focus {
     padding: 4px;
     background-color: var(--button-color);
     border-color: var(--button-color);
+
+    pointer-events: initial;
 }
 
 .toolbar > button > img {
@@ -94,11 +105,12 @@ input[type="text"]:focus {
 }
 
 #bottom-toolbar {
-    bottom: 0; right: 0;
+    bottom: 0; left: 0;
+    align-items: flex-end;
 }
 
 #bottom-toolbar > button {
-    margin-right: 16px; margin-bottom: 16px;
+    margin-left: 16px; margin-bottom: 16px;
 }
 
 #player-status {
@@ -112,7 +124,7 @@ input[type="text"]:focus {
 #tooltip {
     flex: 1;
     margin: 16px;
-    margin-top: 0px;
+    margin-bottom: 0px;
 }
 
 .toolbar > button.active {
@@ -122,6 +134,7 @@ input[type="text"]:focus {
 .menu-panel {
     position: absolute;
     width: 100%;
+    max-width: 512px;
     background: rgb(0 21 51);
 
     display: flex;
@@ -131,6 +144,8 @@ input[type="text"]:focus {
 #search-form {
     width: 100%;
     display: flex;
+    padding: 16px;
+    padding-bottom: 0;
 }
 
 #search-input {
@@ -184,6 +199,7 @@ input[type="text"]:focus {
     display: flex;
     flex-direction: column;
     padding: 8px;
+    background: rgb(0 21 51);
 }
 
 .icon-button-small {
@@ -253,10 +269,11 @@ input[type="text"]:focus {
 
 #popout-panel {
     position: absolute;
-    width: 100%;
     background: black;
 
-    padding: 16px;
+    left: calc(50vw - 256px); top: 0;
+    min-width: 512px;
+    max-width: max(50vw, 512px);
 
     display: flex;
     flex-direction: column;
@@ -266,15 +283,14 @@ input[type="text"]:focus {
 }
 
 #popout-panel > video {
-    width: 448px; height: 252px;
+    width: 100%;
 }
 
 #user-panel {
     position: absolute;
-    right: 0; bottom: 0;
-    margin: 8px;
+    left: calc(100vw - 256px); top: 0;
 
-    width: 50%;
+    width: 256px;
 
     display: flex;
     flex-direction: column;
@@ -282,19 +298,42 @@ input[type="text"]:focus {
     background: black;
 }
 
-#avatar-panel {
+#blocks-panel {
     position: absolute;
-    right: 0; bottom: 0;
-    margin: 8px;
-
-    width: 50%;
+    left: 0; top: 0;
 
     display: flex;
     flex-direction: column;
 
-    padding: 8px;
+    align-items: center;
+}
 
-    background: black;
+#blocks-list {
+    display: grid;
+    align-items: center;
+    align-content: center;
+    padding: 8px;
+    gap: 16px 16px;
+    grid-template-columns: repeat(4, 48px);
+    grid-template-rows: repeat(2, 96px);
+}
+
+#blocks-list > * {
+    width: 100%; height: 100%;
+}
+
+#blocks-list > *.selected {
+    outline: 4px solid var(--button-color);
+}
+
+#avatar-panel {
+    position: absolute;
+    left: calc(100vw - 256px); top: 0;
+
+    width: 256px;
+
+    display: flex;
+    flex-direction: column;
 
     align-items: center;
 }
@@ -308,7 +347,7 @@ input[type="text"]:focus {
     flex: 1;
 }
 
-html {
+html, body {
     width: 100%;
     height: 100%;
     display: flex;
@@ -316,34 +355,22 @@ html {
     justify-content: center;
 }
 
-body {
-    margin: auto;
-    display: flex;
-    flex-direction: row;
-    flex-wrap: wrap;
-    align-items: center;
-    justify-content: flex-end;
-
-    max-width: 1024px;
+.spacer {
+    flex: 1;
 }
 
 #chat-canvas {
-    flex: 0;
+    position: absolute;
+    bottom: 0px; left: 0;
     width: 512px;
     height: 512px;
+
+    pointer-events: none;
 }
 
-#chat-inputs {
-    width: 512px;
-    margin-bottom: 16px;
-
-    display: flex;
-    flex-direction: column;
-    justify-content: right;
-}
-
-#chat-inputs > * {
-    width: 512px;
+#chat-canvas.open {
+    pointer-events: initial;
+    cursor: pointer;
 }
 
 #user-list {
@@ -369,8 +396,7 @@ body {
 
 #scene {
     position: relative;
-    width: 512px;
-    height: 512px;
+    width: 100%; height: 100%;
 }
 
 .controls > button {
@@ -382,13 +408,14 @@ body {
 }
 
 #avatar-paint {
-    width: 128px; height: 128px;
+    width: 200px; height: 200px;
     background-color: var(--button-color);
+    margin: auto;
 }
 
 #three-container {
     position: absolute;
-    width: 512px; height: 512px;
+    width: 100%; height: 100%;
 }
 
 .player {

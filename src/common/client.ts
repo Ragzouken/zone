@@ -2,7 +2,7 @@ import Messaging from './messaging';
 import { EventEmitter } from 'events';
 import { YoutubeVideo } from '../server/youtube';
 import { specifically } from './utility';
-import { ZoneState, UserState, QueueItem } from './zone';
+import { ZoneState, UserState, QueueItem, UserEcho } from './zone';
 import fetch from 'node-fetch';
 
 export type StatusMesage = { text: string };
@@ -21,6 +21,14 @@ export type RecvChat = { text: string; userId: string };
 export type SendAuth = { password: string };
 export type SendCommand = { name: string; args: any[] };
 
+export type BlocksMessage = { cells: [number[], number][] };
+export type BlockMessage = { coords: number[]; value: number };
+
+export type EchoMessage = { position: number[]; text: string };
+export type EchoesMessage = { added?: UserEcho[]; removed?: number[][] };
+
+export type DataMessage = { update: any };
+
 export interface MessageMap {
     heartbeat: {};
     assign: AssignMessage;
@@ -32,6 +40,10 @@ export interface MessageMap {
 
     chat: SendChat;
     user: UserState;
+
+    block: BlockMessage;
+    blocks: BlocksMessage;
+    echoes: EchoesMessage;
 }
 
 export interface ClientOptions {
@@ -65,6 +77,8 @@ export interface ClientEventMap {
     emotes: (event: { user: UserState; emotes: string[]; local: boolean }) => void;
     avatar: (event: { user: UserState; data: string; local: boolean }) => void;
     tags: (event: { user: UserState; tags: string[]; local: boolean }) => void;
+
+    blocks: (event: { coords: number[][] }) => void;
 }
 
 export interface ZoneClient {
@@ -165,6 +179,14 @@ export class ZoneClient extends EventEmitter {
         this.messaging.send('user', { emotes });
     }
 
+    async setBlock(coords: number[], value: number) {
+        this.messaging.send('block', { coords, value });
+    }
+
+    async echo(position: number[], text: string) {
+        this.messaging.send('echo', { position, text });
+    }
+
     async search(query: string): Promise<YoutubeVideo[]> {
         const url = this.options.urlRoot + '/youtube?q=' + encodeURIComponent(query);
         return fetch(url).then(async (res) => {
@@ -220,7 +242,6 @@ export class ZoneClient extends EventEmitter {
                 this.emit('unqueue', { item });
             }
         };
-
         this.messaging.on('close', (code) => {
             const clean = code <= 1001 || code >= 4000;
             this.emit('disconnect', { clean });
@@ -238,6 +259,29 @@ export class ZoneClient extends EventEmitter {
             message.users.forEach((user: UserState) => {
                 this.zone.users.set(user.userId, user);
             });
+        });
+        this.messaging.messages.on('blocks', (message: BlocksMessage) => {
+            const coords: number[][] = [];
+            message.cells.forEach(([coord, block]) => {
+                this.zone.grid.set(coord, block);
+                coords.push(coord);
+            });
+            this.emit('blocks', { coords });
+        });
+        this.messaging.messages.on('block', (message: BlockMessage) => {
+            if (message.value) {
+                this.zone.grid.set(message.coords, message.value);
+            } else {
+                this.zone.grid.delete(message.coords);
+            }
+            this.emit('blocks', { coords: [message.coords] });
+        });
+        this.messaging.messages.on('echoes', (message: EchoesMessage) => {
+            if (message.added) {
+                message.added.forEach((echo) => this.zone.echoes.set(echo.position!, echo));
+            } else if (message.removed) {
+                message.removed.forEach((coord) => this.zone.echoes.delete(coord));
+            }
         });
         this.messaging.messages.on('chat', (message: RecvChat) => {
             const user = this.zone.getUser(message.userId);

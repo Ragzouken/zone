@@ -1,4 +1,4 @@
-import { getDefault } from './utility';
+import { getDefault, Grid } from './utility';
 
 export type UserId = string;
 
@@ -18,6 +18,10 @@ export type Media = {
     thumbnail?: string;
 };
 
+export type UserEcho = UserState & {
+    text: string;
+};
+
 export type QueueInfo = { userId?: UserId; ip?: unknown };
 export type QueueItem = { media: Media; info: QueueInfo; itemId: number };
 
@@ -32,8 +36,12 @@ export class ZoneState {
     readonly queue: QueueItem[] = [];
     lastPlayedItem?: QueueItem;
 
+    public readonly grid = new Grid<number>();
+    public readonly echoes = new Grid<UserEcho>();
+
     public clear() {
         this.users.clear();
+        this.echoes.clear();
         this.queue.length = 0;
         this.lastPlayedItem = undefined;
     }

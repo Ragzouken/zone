@@ -1,18 +1,20 @@
 import * as blitsy from 'blitsy';
 import { secondsToTime, fakedownToTag, eventToElementPixel, withPixels } from './utility';
-import { sleep, randomInt, clamp, timeToSeconds } from '../common/utility';
-import { scriptToPages, PageRenderer, getPageHeight } from './text';
-import { ChatPanel, animatePage, filterDrawable } from './chat';
+import { sleep } from '../common/utility';
+import { ChatPanel } from './chat';
 
 import ZoneClient from '../common/client';
 import { YoutubeVideo } from '../server/youtube';
-import { ZoneSceneRenderer, avatarImage } from './scene';
+import { ZoneSceneRenderer, avatarImage, tilemapContext, blockTexture } from './scene';
 import { Player } from './player';
 import { UserState } from '../common/zone';
+import { HTMLUI } from './html-ui';
+import { createContext2D } from 'blitsy';
 
 window.addEventListener('load', () => load());
 
 export const client = new ZoneClient();
+export const htmlui = new HTMLUI();
 
 const avatarTiles = new Map<string | undefined, CanvasRenderingContext2D>();
 avatarTiles.set(undefined, avatarImage);
@@ -134,11 +136,13 @@ function textToYoutubeVideoId(text: string) {
 }
 
 export async function load() {
+    htmlui.addElementsInRoot(document.body);
+    htmlui.hideAllWindows();
+
     const popoutPanel = document.getElementById('popout-panel') as HTMLElement;
     const video = document.createElement('video');
     popoutPanel.appendChild(video);
     document.getElementById('popout-button')?.addEventListener('click', () => (popoutPanel.hidden = false));
-    popoutPanel.addEventListener('click', () => (popoutPanel.hidden = true));
 
     const player = new Player(video);
     const zoneLogo = document.createElement('img');
@@ -164,7 +168,6 @@ export async function load() {
 
     volumeSlider.addEventListener('input', () => (player.volume = parseFloat(volumeSlider.value)));
     document.getElementById('menu-button')?.addEventListener('click', openMenu);
-    document.getElementById('menu-close')?.addEventListener('click', () => (menuPanel.hidden = true));
 
     function openMenu() {
         menuPanel.hidden = false;
@@ -180,18 +183,18 @@ export async function load() {
     const userItemContainer = document.getElementById('user-items')!;
     const userSelect = document.getElementById('user-select') as HTMLSelectElement;
 
-    function refreshUsers() {
-        function formatName(user: UserState) {
-            if (user.tags.includes('admin')) {
-                return `<span class="user-admin">${user.name}</span>`;
-            } else if (user.tags.includes('dj')) {
-                return `<span class="user-dj">${user.name}</span>`;
-            } else {
-                return user.name || '';
-            }
+    function formatName(user: UserState) {
+        if (user.tags.includes('admin')) {
+            return `<span class="user-admin">${user.name}</span>`;
+        } else if (user.tags.includes('dj')) {
+            return `<span class="user-dj">${user.name}</span>`;
+        } else {
+            return user.name || '';
         }
+    }
 
-        const users = Array.from(client.zone.users.values());
+    function refreshUsers() {
+        const users = Array.from(client.zone.users.values()).filter((user) => !!user.name);
         const names = users.map((user) => formatName(user));
         userItemContainer.innerHTML = `${names.length} people are zoning: ` + names.join(', ');
 
@@ -202,20 +205,17 @@ export async function load() {
             option.innerHTML = formatName(user);
             userSelect.appendChild(option);
         });
-        userSelect.value = "";
+        userSelect.value = '';
 
         const auth = !!getLocalUser()?.tags.includes('admin');
         authRow.hidden = auth;
         authContent.hidden = !auth;
     }
 
-    document.getElementById('users-close')!.addEventListener('click', () => (userPanel.hidden = true));
     document.getElementById('users-button')!.addEventListener('click', () => {
         userPanel.hidden = false;
         refreshUsers();
     });
-
-    console.log(client.on, client.off);
 
     document.getElementById('ban-ip-button')!.addEventListener('click', () => {
         client.command('ban', [userSelect.value]);
@@ -242,8 +242,8 @@ export async function load() {
     function refreshCurrentItem() {
         const count = client.zone.queue.length + (player.hasItem ? 1 : 0);
         let total = player.remaining / 1000;
-        client.zone.queue.forEach((item) => total += item.media.duration / 1000);
-        queueTitle.innerText = `playlist (${count} items, ${secondsToTime(total)})`
+        client.zone.queue.forEach((item) => (total += item.media.duration / 1000));
+        queueTitle.innerText = `playlist (${count} items, ${secondsToTime(total)})`;
 
         skipButton.disabled = false; // TODO: know when it's event mode
         currentItemContainer.hidden = !player.hasItem;
@@ -252,7 +252,7 @@ export async function load() {
 
         if (client.zone.lastPlayedItem?.info.userId) {
             const user = client.zone.getUser(client.zone.lastPlayedItem.info.userId);
-            currentItemTitle.setAttribute('title', 'queued by ' + user.name)
+            currentItemTitle.setAttribute('title', 'queued by ' + user.name);
         }
     }
 
@@ -273,7 +273,7 @@ export async function load() {
             titleElement.innerHTML = item.media.title;
             if (item.info.userId) {
                 const user = client.zone.getUser(item.info.userId);
-                titleElement.setAttribute('title', 'queued by ' + user.name)
+                titleElement.setAttribute('title', 'queued by ' + user.name);
             }
             timeElement.innerHTML = secondsToTime(item.media.duration / 1000);
             cancelButton.disabled = !cancellable;
@@ -286,7 +286,6 @@ export async function load() {
         refreshCurrentItem();
     }
 
-    document.getElementById('queue-close')!.addEventListener('click', () => (queuePanel.hidden = true));
     document.getElementById('queue-button')!.addEventListener('click', () => {
         refreshQueue();
         queuePanel.hidden = false;
@@ -314,7 +313,6 @@ export async function load() {
     const searchResultTemplate = document.getElementById('search-result-template')!;
     searchResultTemplate.parentElement?.removeChild(searchResultTemplate);
 
-    document.getElementById('search-close')?.addEventListener('click', () => (searchPanel.hidden = true));
     document.getElementById('search-form')?.addEventListener('submit', (event) => {
         event.preventDefault();
         event.stopPropagation();
@@ -396,21 +394,71 @@ export async function load() {
         }
     });
 
+    client.on('blocks', ({ coords }) => sceneRenderer.rebuildAtCoords(coords));
+
     setInterval(() => client.heartbeat(), 30 * 1000);
 
-    function moveTo(x: number, y: number) {
+    function moveTo(x: number, y: number, z: number) {
         const user = getLocalUser()!;
-        user.position = [x, y];
+        user.position = [x, y, z];
         client.move(user.position);
     }
 
-    function move(dx: number, dy: number) {
+    function move(dx: number, dz: number) {
         const user = getLocalUser()!;
 
         if (user.position) {
-            moveTo(clamp(0, 15, user.position[0] + dx), clamp(0, 15, user.position[1] + dy));
-        } else {
-            moveTo(randomInt(0, 15), 15);
+            const [px, py, pz] = user.position;
+            let [nx, ny, nz] = [px + dx, py, pz + dz];
+
+            const grid = client.zone.grid;
+
+            const block = grid.has([nx, ny, nz]);
+            const belowMe = grid.has([px, py - 1, pz]);
+            const aboveMe = grid.has([px, py + 1, pz]);
+            const belowBlock = grid.has([nx, ny - 1, nz]);
+            const belowBlock2 = grid.has([nx, ny - 2, nz]);
+            const aboveBlock = grid.has([nx, ny + 1, nz]);
+
+            const walled =
+                grid.has([nx - 1, ny, nz]) ||
+                grid.has([nx + 1, ny, nz]) ||
+                grid.has([nx, ny, nz - 1]) ||
+                grid.has([nx, ny, nz + 1]);
+
+            // walk into empty space along floor
+            if (!block && belowBlock) {
+                // great
+                // special step down
+            } else if (belowMe && !block && !belowBlock && belowBlock2) {
+                ny -= 1;
+                // walk into empty space along wall
+            } else if (!block && walled) {
+                // great
+                // walk up wall
+            } else if (block && aboveBlock && !aboveMe) {
+                nx = px;
+                nz = pz;
+                ny = py + 1;
+                // step up
+            } else if (block && !aboveBlock && !aboveMe) {
+                ny += 1;
+                // fall down wall
+            } else if (!block && !belowMe && !walled && !belowBlock) {
+                nx = px;
+                nz = pz;
+                ny = py - 1;
+                // step down
+            } else if (!block && !belowBlock) {
+                ny -= 1;
+                // can't move
+            } else {
+                nx = px;
+                ny = py;
+                nz = pz;
+            }
+
+            moveTo(nx, ny, nz);
         }
     }
 
@@ -425,11 +473,45 @@ export async function load() {
 
     document.getElementById('play-banger')?.addEventListener('click', () => client.messaging.send('banger', {}));
 
+    document.getElementById('blocks-button')!.addEventListener('click', () => htmlui.showWindowById('blocks-panel'));
+    const blockListContainer = document.getElementById('blocks-list') as HTMLElement;
+
+    const blockButtons: HTMLElement[] = [];
+    const setBlock = (blockId: number) => {
+        sceneRenderer.buildBlock = blockId;
+        for (let i = 0; i < 8; ++i) {
+            blockButtons[i].classList.toggle('selected', i === blockId);
+        }
+    };
+
+    const addBlockButton = (element: HTMLElement, blockId: number) => {
+        element.addEventListener('click', () => setBlock(blockId));
+        blockListContainer.appendChild(element);
+        blockButtons.push(element);
+    };
+
+    const tileset = document.createElement('img');
+    tileset.src = './tileset.png';
+    tileset.addEventListener('load', () => {
+        const eraseImage = document.createElement('img');
+        eraseImage.src = './erase-tile.png';
+        addBlockButton(eraseImage, 0);
+
+        tilemapContext.drawImage(tileset, 0, 0);
+        blockTexture.needsUpdate = true;
+        for (let i = 1; i < 8; ++i) {
+            const context = createContext2D(8, 16);
+            context.drawImage(tilemapContext.canvas, -(i - 1) * 16, 0);
+            addBlockButton(context.canvas, i);
+        }
+
+        setBlock(1);
+    });
+
     const avatarPanel = document.querySelector('#avatar-panel') as HTMLElement;
     const avatarName = document.querySelector('#avatar-name') as HTMLInputElement;
     const avatarPaint = document.querySelector('#avatar-paint') as HTMLCanvasElement;
     const avatarUpdate = document.querySelector('#avatar-update') as HTMLButtonElement;
-    const avatarCancel = document.querySelector('#avatar-cancel') as HTMLButtonElement;
     const avatarContext = avatarPaint.getContext('2d')!;
 
     function openAvatarEditor() {
@@ -440,20 +522,49 @@ export async function load() {
         avatarPanel.hidden = false;
     }
 
+    let painting = false;
+    let erase = false;
+
+    function paint(px: number, py: number) {
+        withPixels(avatarContext, (pixels) => (pixels[py * 8 + px] = erase ? 0 : 0xffffffff));
+    }
+
+    window.addEventListener('pointerup', (event) => {
+        if (painting) {
+            painting = false;
+            event.preventDefault();
+            event.stopPropagation();
+        }
+    });
     avatarPaint.addEventListener('pointerdown', (event) => {
+        painting = true;
+
         const scaling = 8 / avatarPaint.clientWidth;
         const [cx, cy] = eventToElementPixel(event, avatarPaint);
         const [px, py] = [Math.floor(cx * scaling), Math.floor(cy * scaling)];
+
         withPixels(avatarContext, (pixels) => {
-            pixels[py * 8 + px] = 0xffffffff - pixels[py * 8 + px];
+            erase = pixels[py * 8 + px] > 0;
         });
+
+        paint(px, py);
+
+        event.preventDefault();
+        event.stopPropagation();
+    });
+    avatarPaint.addEventListener('pointermove', (event) => {
+        if (painting) {
+            const scaling = 8 / avatarPaint.clientWidth;
+            const [cx, cy] = eventToElementPixel(event, avatarPaint);
+            const [px, py] = [Math.floor(cx * scaling), Math.floor(cy * scaling)];
+            paint(px, py);
+        }
     });
 
     avatarUpdate.addEventListener('click', () => {
         if (avatarName.value !== getLocalUser()?.name) rename(avatarName.value);
         client.avatar(blitsy.encodeTexture(avatarContext, 'M1').data);
     });
-    avatarCancel.addEventListener('click', () => (avatarPanel.hidden = true));
 
     let lastSearchResults: YoutubeVideo[] = [];
 
@@ -518,14 +629,7 @@ export async function load() {
         }
     });
 
-    chatCommands.set('cancel', (index) => {
-        const item = client.zone.queue[parseInt(index, 10)];
-        if (item) {
-            client.unqueue(item);
-        } else {
-            chat.status('no queue item ' + index);
-        }
-    });
+    chatCommands.set('echo', (message) => client.echo(getLocalUser()!.position!, message));
 
     const emoteToggles = new Map<string, Element>();
     const toggleEmote = (emote: string) => setEmote(emote, !getEmote(emote));
@@ -542,16 +646,64 @@ export async function load() {
         element.addEventListener('click', () => toggleEmote(emote));
     });
 
+    let fullChat = false;
+    const chatToggle = document.getElementById('chat-toggle') as HTMLButtonElement;
+    chatToggle.addEventListener('click', (event) => {
+        event.stopPropagation();
+
+        fullChat = !fullChat;
+        chatToggle.classList.toggle('active', fullChat);
+        if (fullChat) {
+            chatInput.hidden = false;
+            chatInput.focus();
+            chatContext.canvas.classList.toggle('open', true);
+        } else {
+            chatInput.hidden = true;
+            chatInput.blur();
+            chatContext.canvas.classList.toggle('open', false);
+        }
+    });
+
+    const directions: [number, number][] = [
+        [1, 0],
+        [0, -1],
+        [-1, 0],
+        [0, 1],
+    ];
+
+    function moveVector(direction: number): [number, number] {
+        return directions[(direction + sceneRenderer.rotateStep) % 4];
+    }
+
     const gameKeys = new Map<string, () => void>();
-    gameKeys.set('Tab', () => chatInput.focus());
+    gameKeys.set('Tab', () => chatToggle.click());
     gameKeys.set('1', () => toggleEmote('wvy'));
     gameKeys.set('2', () => toggleEmote('shk'));
     gameKeys.set('3', () => toggleEmote('rbw'));
     gameKeys.set('4', () => toggleEmote('spn'));
-    gameKeys.set('ArrowLeft', () => move(-1, 0));
-    gameKeys.set('ArrowRight', () => move(1, 0));
-    gameKeys.set('ArrowDown', () => move(0, 1));
-    gameKeys.set('ArrowUp', () => move(0, -1));
+    gameKeys.set('ArrowLeft', () => move(...moveVector(2)));
+    gameKeys.set('ArrowRight', () => move(...moveVector(0)));
+    gameKeys.set('ArrowDown', () => move(...moveVector(3)));
+    gameKeys.set('ArrowUp', () => move(...moveVector(1)));
+
+    const rot = Math.PI / 4;
+
+    document.getElementById('rotate-l-button')?.addEventListener('click', () => (sceneRenderer.followCam.angle -= rot));
+    document.getElementById('rotate-r-button')?.addEventListener('click', () => (sceneRenderer.followCam.angle += rot));
+
+    gameKeys.set('[', () => (sceneRenderer.followCam.angle -= rot));
+    gameKeys.set(']', () => (sceneRenderer.followCam.angle += rot));
+    gameKeys.set('v', () => sceneRenderer.cycleCamera());
+
+    gameKeys.set('q', () => {
+        refreshQueue();
+        queuePanel.hidden = !queuePanel.hidden;
+    });
+    gameKeys.set('s', () => {
+        searchPanel.hidden = false;
+        searchInput.focus();
+    });
+    gameKeys.set('u', () => (userPanel.hidden = !userPanel.hidden));
 
     function sendChat() {
         const line = chatInput.value;
@@ -572,17 +724,32 @@ export async function load() {
         chatInput.value = '';
     }
 
-    document.addEventListener('keydown', (event) => {
-        const typing = document.activeElement!.tagName === 'INPUT';
+    function isInputElement(element: Element | null): element is HTMLInputElement {
+        return element?.tagName === 'INPUT';
+    }
 
-        if (typing) {
-            if (event.key === 'Tab' || event.key === 'Escape') {
-                chatInput.blur();
+    document.addEventListener('keydown', (event) => {
+        if (event.key === 'Escape') {
+            if (isInputElement(document.activeElement)) {
+                if (fullChat) {
+                    chatToggle.click();
+                } else {
+                    document.activeElement.blur();
+                }
+
+                event.preventDefault();
+            }
+            htmlui.hideAllWindows();
+        }
+
+        if (isInputElement(document.activeElement)) {
+            if (event.key === 'Tab' && document.activeElement === chatInput) {
+                chatToggle.click();
                 event.preventDefault();
             } else if (event.key === 'Enter') {
                 sendChat();
             }
-        } else if (!typing) {
+        } else {
             const func = gameKeys.get(event.key);
             if (func) {
                 func();
@@ -596,14 +763,20 @@ export async function load() {
     const chatContext = document.querySelector<HTMLCanvasElement>('#chat-canvas')!.getContext('2d')!;
     chatContext.imageSmoothingEnabled = false;
 
+    chatContext.canvas.addEventListener('click', (event) => {
+        if (fullChat) {
+            event.preventDefault();
+            event.stopPropagation();
+            chatToggle.click();
+        }
+    });
+
     function redraw() {
         refreshCurrentItem();
         playerStatus.innerHTML = player.status;
+        chatContext.clearRect(0, 0, 512, 512);
 
-        chatContext.fillStyle = 'rgb(0, 0, 0)';
-        chatContext.fillRect(0, 0, 512, 512);
-
-        chat.render();
+        chat.render(fullChat);
         chatContext.drawImage(chat.context.canvas, 0, 0, 512, 512);
 
         window.requestAnimationFrame(redraw);
@@ -622,6 +795,7 @@ export async function load() {
 
     const sceneRenderer = new ZoneSceneRenderer(
         document.getElementById('three-container')!,
+        client,
         client.zone,
         getTile,
         connecting,
@@ -630,7 +804,9 @@ export async function load() {
     function renderScene() {
         requestAnimationFrame(renderScene);
 
-        sceneRenderer.mediaElement = player.hasVideo ? video : zoneLogo;
+        sceneRenderer.building = !htmlui.idToWindowElement.get('blocks-panel')!.hidden;
+
+        sceneRenderer.mediaElement = popoutPanel.hidden && player.hasVideo ? video : zoneLogo;
         sceneRenderer.update();
         sceneRenderer.render();
     }
@@ -640,13 +816,34 @@ export async function load() {
     document.getElementById('camera-button')!.addEventListener('click', () => sceneRenderer.cycleCamera());
 
     const tooltip = document.getElementById('tooltip')!;
-    sceneRenderer.on('pointerdown', (point) => moveTo(point.x, point.y));
-    sceneRenderer.on('pointermove', (point) => {
-        if (point) {
-            const pos = [point.x, point.y];
-            const names = Array.from(client.zone.users.values())
-                .filter((user) => user.position?.join(',') === pos.join(','))
-                .map((user) => user.name);
+    sceneRenderer.on('pointerdown', (info) => {
+        const objectCoords = info.objectCoords?.join(',') || '';
+        const echoes = Array.from(client.zone.echoes)
+            .map(([, echo]) => echo)
+            .filter((echo) => echo.position!.join(',') === objectCoords);
+
+        if (echoes.length > 0) {
+            chat.log(`{clr=#808080}"${parseFakedown(echoes[0].text)}"`);
+        } else if (info.spaceCoords) {
+            const [x, y, z] = info.spaceCoords;
+            moveTo(x, y, z);
+        }
+    });
+    sceneRenderer.on('pointermove', (info) => {
+        const objectCoords = info.objectCoords?.join(',') || '';
+
+        if (objectCoords) {
+            const users = Array.from(client.zone.users.values()).filter(
+                (user) => user.position?.join(',') === objectCoords,
+            );
+            const echoes = Array.from(client.zone.echoes)
+                .map(([, echo]) => echo)
+                .filter((echo) => echo.position!.join(',') === objectCoords);
+
+            const names = [
+                ...users.map((user) => formatName(user)),
+                ...echoes.map((echo) => 'echo of ' + formatName(echo)),
+            ];
             tooltip.innerHTML = names.join(', ');
         } else {
             tooltip.innerHTML = '';

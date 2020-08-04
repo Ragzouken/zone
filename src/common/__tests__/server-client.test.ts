@@ -223,7 +223,7 @@ describe('user presence', () => {
     });
 
     test('client move', async () => {
-        const position = [6, 9];
+        const position = [6, 9, 0];
         await zoneServer({}, async (server) => {
             const client = await server.client();
             await client.join();
@@ -243,6 +243,105 @@ describe('user presence', () => {
             client.emotes(emotes);
             await waiter;
             expect(client.localUser?.emotes).toEqual(emotes);
+        });
+    });
+});
+
+describe('blocks', () => {
+    const blocks = new Set([
+        [-20, 0, 0],
+        [-19, 1, 2],
+        [-18, 5, 6],
+    ]);
+
+    it('can add a block', async () => {
+        const coords = [-99, -88, -77];
+        const value = 6;
+
+        await zoneServer({}, async (server) => {
+            const client = await server.client();
+            await client.join();
+
+            const waiter = client.expect('block');
+            client.setBlock(coords, value);
+
+            const added = await waiter;
+            expect(added.coords).toEqual(coords);
+            expect(added.value).toEqual(value);
+        });
+    });
+
+    it('can remove a block', async () => {
+        const coords = [-88, -77, -99];
+
+        await zoneServer({}, async (server) => {
+            const client = await server.client();
+            await client.join();
+
+            const waiter = client.expect('block');
+            client.setBlock(coords, 0);
+
+            const added = await waiter;
+            expect(added.coords).toEqual(coords);
+            expect(added.value).toEqual(0);
+        });
+    });
+
+    it('receives existing blocks', async () => {
+        await zoneServer({}, async (server) => {
+            const clien = await server.client();
+            const waiter = clien.expect('blocks');
+            await clien.join();
+
+            const received = await waiter;
+            expect(received.cells).toEqual([[[0, -4, 0], 1]]);
+        });
+    });
+});
+
+describe('echoes', () => {
+    const position = [6, 9, 0];
+    const message = 'hello';
+
+    it('can add an echo', async () => {
+        await zoneServer({}, async (server) => {
+            const client = await server.client();
+            const initial = client.expect('echoes');
+            await client.join();
+            await initial;
+
+            const waiter = client.expect('echoes');
+            client.echo(position, message);
+
+            const { added, removed } = await waiter;
+            expect(added).not.toBe(undefined);
+            expect(removed).toBe(undefined);
+
+            const first = added![0];
+            expect(first.position).toEqual(position);
+            expect(first.text).toEqual(message);
+        });
+    });
+
+    it('receives existing echoes', async () => {
+        await zoneServer({}, async (server) => {
+            const client1 = await server.client();
+            await client1.join();
+            client1.echo(position, message);
+
+            await sleep(100);
+
+            const client2 = await server.client();
+            const initial2 = client2.expect('echoes');
+            await client2.join();
+            const { added, removed } = await initial2;
+
+            expect(added).not.toBe(undefined);
+            expect(removed).toBe(undefined);
+
+            const first = added![0];
+            expect(first.position).toEqual(position);
+            expect(first.text).toEqual(message);
         });
     });
 });
