@@ -81,11 +81,6 @@ async function run() {
         }
     });
 
-    app.get(/^\/archive\/(.+)/, (req, res) => {
-        const url = `https://archive.org/download/${req.params[0]}`;
-        req.pipe(request(url)).pipe(res);
-    });
-
     process.on('SIGINT', () => {
         console.log('exiting due to SIGINT');
         save();
