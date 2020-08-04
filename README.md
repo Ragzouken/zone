@@ -29,3 +29,5 @@ export KEY_PATH=privkey.pem
 
 export AUTH_PASSWORD=scooter;
 ```
+
+zone looks for any .mp4 and .mp3 files in ./media/ and makes them available for local playback e.g `filename.mp4` can be played as `/local filename`. use `/admin refresh-videos` to refresh the list while zone is running.
