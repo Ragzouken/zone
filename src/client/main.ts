@@ -355,11 +355,18 @@ export async function load() {
         const user = item.info.userId ? client.zone.users.get(item.info.userId) : undefined;
         const username = user?.name || 'server';
         const time = secondsToTime(duration / 1000);
-        chat.log(`{clr=#00FFFF}+ ${title} (${time}) added by {clr=#FF0000}${username}`);
+        if (item.info.banger) {
+            chat.log(`{clr=#00FFFF}+ ${title} (${time}) rolled from {clr=#FF00FF}bangers{clr=#00FFFF} by {clr=#FF0000}${username}`);
+        } else {
+            chat.log(`{clr=#00FFFF}+ ${title} (${time}) added by {clr=#FF0000}${username}`);
+        }
 
         refreshQueue();
     });
-    client.on('unqueue', () => refreshQueue());
+    client.on('unqueue', ({ item }) => {
+        // chat.log(`{clr=#008888}- ${item.media.title} unqueued`);
+        refreshQueue();
+    });
 
     client.on('play', async ({ message: { item, time } }) => {
         if (!item) {
