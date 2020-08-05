@@ -11,6 +11,7 @@ import { host } from './server';
 import { exec } from 'child_process';
 import FileSync = require('lowdb/adapters/FileSync');
 import { Media } from '../common/zone';
+import path = require('path');
 
 process.on('uncaughtException', (err) => console.log('uncaught exception:', err, err.stack));
 process.on('unhandledRejection', (err) => console.log('uncaught reject:', err));
@@ -43,6 +44,7 @@ async function run() {
     server.on('error', (error) => console.log('server error', error));
 
     const dataPath = process.env.ZONE_DATA_PATH || '.data/db.json';
+    fs.mkdir(path.dirname(dataPath));
     const adapter = new FileSync(dataPath, { serialize: JSON.stringify, deserialize: JSON.parse });
 
     const { save, sendAll, authCommands, localLibrary, youtubeCache } = host(xws, adapter, {
