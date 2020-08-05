@@ -396,7 +396,7 @@ export function host(xws: expressWs.Instance, adapter: low.AdapterSync, options:
         }),
     );
 
-    function tryQueueMedia2(user: UserState, media: Media, userIp: unknown) {
+    function tryQueueMedia(user: UserState, media: Media, userIp: unknown, banger=false) {
         if (eventMode && !user.tags.includes('dj')) {
             status('zone is currently in event mode, only djs may queue', user);
             return;
@@ -411,7 +411,7 @@ export function host(xws: expressWs.Instance, adapter: low.AdapterSync, options:
         } else if (!dj && count >= opts.perUserQueueLimit) {
             status(`you already have ${count} videos in the queue`, user);
         } else {
-            playback.queueMedia(media, { userId: user.userId, ip: userIp });
+            playback.queueMedia(media, { userId: user.userId, ip: userIp, banger });
         }
     }
 
@@ -420,7 +420,7 @@ export function host(xws: expressWs.Instance, adapter: low.AdapterSync, options:
             sendOnly(type, message, user.userId);
         }
 
-        const tryQueueMedia = (media: Media) => tryQueueMedia2(user, media, userIp);
+        const tryUserQueueMedia = (media: Media, banger=false) => tryQueueMedia(user, media, userIp, banger);
 
         messaging.messages.on('heartbeat', () => sendUser('heartbeat'));
 
@@ -432,24 +432,20 @@ export function host(xws: expressWs.Instance, adapter: low.AdapterSync, options:
 
         async function tryQueueLocalByPath(path: string) {
             const media = localLibrary.get(path);
-            if (media) tryQueueMedia(media);
+            if (media) tryUserQueueMedia(media);
         }
 
         async function tryQueueYoutubeById(videoId: string) {
-            tryQueueMedia(await youtube.media(videoId));
-        }
-
-        async function tryQueueBanger() {
-            tryQueueMedia2(user, await youtube.banger(), userIp);
+            tryUserQueueMedia(await youtube.media(videoId));
         }
 
         messaging.messages.on('youtube', (message: any) => tryQueueYoutubeById(message.videoId));
         messaging.messages.on('local', (message: any) => tryQueueLocalByPath(message.path));
-        messaging.messages.on('banger', () => tryQueueBanger());
+        messaging.messages.on('banger', async () => tryUserQueueMedia(await youtube.banger(), true));
 
         messaging.messages.on('lucky', (message: any) => {
             youtube.search(message.query).then(async (results) => {
-                tryQueueMedia(await youtube.media(results[0].videoId));
+                tryUserQueueMedia(await youtube.media(results[0].videoId));
             });
         });
 
