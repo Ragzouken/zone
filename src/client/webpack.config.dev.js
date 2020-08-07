@@ -4,6 +4,7 @@ const webpack = require('webpack');
 module.exports = {
   watch: true,
   mode: 'development',
+  devtool: "inline-source-map",
   entry: './src/main.ts',
   output: {
     filename: 'script.js',

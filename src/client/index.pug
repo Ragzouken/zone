@@ -86,7 +86,6 @@ html
                 form#search-form
                     input#search-input(placeholder="search for a video" type="text" autocomplete="off")
                     input#search-submit(type="submit" value="search" disabled)
-                    button#play-banger(title="queue random song", type="button") random
                 .menu-body#search-results
                     #search-result-template.search-result
                         div title
@@ -108,6 +107,7 @@ html
                             .queue-item-time 00:00
                             button.queue-item-cancel(title="unqueue this")
                                 img(src="icons/cancel.png")
+                    button#play-banger(title="queue random song", type="button") queue random song
             #user-panel(data-window)
                 .menu-title(data-window-drag)
                     div user list
