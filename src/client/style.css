@@ -338,10 +338,6 @@ input[type="text"]:focus {
     align-items: center;
 }
 
-#avatar-panel > *:not(:first-child) {
-    margin-top: 8px;
-}
-
 #avatar-panel > .controls {
     display: flex;
     flex: 1;
