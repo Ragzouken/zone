@@ -396,7 +396,7 @@ export function host(xws: expressWs.Instance, adapter: low.AdapterSync, options:
         }),
     );
 
-    function tryQueueMedia(user: UserState, media: Media, userIp: unknown, banger=false) {
+    function tryQueueMedia(user: UserState, media: Media, userIp: unknown, banger = false) {
         if (eventMode && !user.tags.includes('dj')) {
             status('zone is currently in event mode, only djs may queue', user);
             return;
@@ -420,7 +420,7 @@ export function host(xws: expressWs.Instance, adapter: low.AdapterSync, options:
             sendOnly(type, message, user.userId);
         }
 
-        const tryUserQueueMedia = (media: Media, banger=false) => tryQueueMedia(user, media, userIp, banger);
+        const tryUserQueueMedia = (media: Media, banger = false) => tryQueueMedia(user, media, userIp, banger);
 
         messaging.messages.on('heartbeat', () => sendUser('heartbeat'));
 

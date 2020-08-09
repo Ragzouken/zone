@@ -212,11 +212,6 @@ export async function load() {
         authContent.hidden = !auth;
     }
 
-    document.getElementById('users-button')!.addEventListener('click', () => {
-        userPanel.hidden = false;
-        refreshUsers();
-    });
-
     document.getElementById('ban-ip-button')!.addEventListener('click', () => {
         client.command('ban', [userSelect.value]);
     });
@@ -356,7 +351,9 @@ export async function load() {
         const username = user?.name || 'server';
         const time = secondsToTime(duration / 1000);
         if (item.info.banger) {
-            chat.log(`{clr=#00FFFF}+ ${title} (${time}) rolled from {clr=#FF00FF}bangers{clr=#00FFFF} by {clr=#FF0000}${username}`);
+            chat.log(
+                `{clr=#00FFFF}+ ${title} (${time}) rolled from {clr=#FF00FF}bangers{clr=#00FFFF} by {clr=#FF0000}${username}`,
+            );
         } else {
             chat.log(`{clr=#00FFFF}+ ${title} (${time}) added by {clr=#FF0000}${username}`);
         }
@@ -480,7 +477,34 @@ export async function load() {
 
     document.getElementById('play-banger')?.addEventListener('click', () => client.messaging.send('banger', {}));
 
-    document.getElementById('blocks-button')!.addEventListener('click', () => htmlui.showWindowById('blocks-panel'));
+    const toggles: HTMLElement[] = [];
+
+    const deactivateToggles = () => {
+        toggles.forEach((toggle) => {
+            if (toggle.classList.contains('active')) toggle.click();
+        });
+    };
+
+    const addWindowToggle = (toggle: HTMLElement, windowId: string, prepare?: () => void) => {
+        toggles.push(toggle);
+        toggle.addEventListener('click', (event) => {
+            event.stopPropagation();
+
+            const open = !toggle.classList.contains('active');
+            deactivateToggles();
+
+            if (prepare) prepare();
+            if (open) htmlui.showWindowById(windowId);
+            else htmlui.hideWindowById(windowId);
+            toggle.classList.toggle('active', open);
+        });
+    };
+
+    addWindowToggle(document.getElementById('emotes-button')!, 'emotes-panel');
+    addWindowToggle(document.getElementById('users-button')!, 'user-panel');
+    addWindowToggle(document.getElementById('avatar-button')!, 'avatar-panel', openAvatarEditor);
+    addWindowToggle(document.getElementById('blocks-button')!, 'blocks-panel');
+
     const blockListContainer = document.getElementById('blocks-list') as HTMLElement;
 
     const blockButtons: HTMLElement[] = [];
@@ -576,7 +600,6 @@ export async function load() {
     let lastSearchResults: YoutubeVideo[] = [];
 
     const skipButton = document.getElementById('skip-button') as HTMLButtonElement;
-    document.getElementById('avatar-button')?.addEventListener('click', () => openAvatarEditor());
     skipButton.addEventListener('click', () => client.skip());
     document.getElementById('resync-button')?.addEventListener('click', () => player.forceRetry('reload button'));
 
@@ -661,6 +684,8 @@ export async function load() {
         fullChat = !fullChat;
         chatToggle.classList.toggle('active', fullChat);
         if (fullChat) {
+            deactivateToggles();
+
             chatInput.hidden = false;
             chatInput.focus();
             chatContext.canvas.classList.toggle('open', true);
@@ -746,6 +771,7 @@ export async function load() {
 
                 event.preventDefault();
             }
+            deactivateToggles();
             htmlui.hideAllWindows();
         }
 

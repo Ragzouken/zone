@@ -34,19 +34,12 @@ html
                         img(src="icons/chat.png")                    
                     button#avatar-button(title="change appearance")
                         img(src="icons/avatar.png")
-                    button#users-button(title="open user list")
+                    button#emotes-button(title="open emotes menu")
                         img(src="icons/users.png")
+                    button#users-button(title="open user list")
+                        img(src="icons/list.png")
                     button#blocks-button(title="open block menu")
                         img(src="icons/blocks.png")
-                    .spacer
-                    button(title="toggle float emote (1)", data-emote-toggle="wvy")
-                        img(src="icons/wvy.png")
-                    button(title="toggle shake emote (2)", data-emote-toggle="shk")
-                        img(src="icons/shk.png")
-                    button(title="toggle rave emote (3)", data-emote-toggle="rbw")
-                        img(src="icons/rbw.png")
-                    button(title="toggle spin emote (4)", data-emote-toggle="spn")
-                        img(src="icons/spn.png")
                 canvas#chat-canvas(width=512, height=512)
                 input#chat-input(hidden type="text" placeholder="chat message..." maxlength="160" autocomplete="off")
             #menu-panel.menu-panel(data-window)
@@ -109,28 +102,34 @@ html
                                 img(src="icons/cancel.png")
                     button#play-banger(title="queue random song", type="button") queue random song
             #user-panel(data-window)
-                .menu-title(data-window-drag)
+                .menu-title
                     div user list
-                    button(title="hide panel (esc)" data-window-close).icon-button-small
-                        img(src="icons/close.png")
                 .menu-body
                     #user-items
             #avatar-panel(data-window)
-                .menu-title(data-window-drag)
+                .menu-title
                     div update appearance
-                    button(title="hide panel (esc)" data-window-close).icon-button-small
-                        img(src="icons/close.png")
                 .menu-body
                     canvas#avatar-paint(width=8, height=8)
                     input#avatar-name(type="text")
                     button#avatar-update update
             #blocks-panel(data-window)
-                .menu-title(data-window-drag)
+                .menu-title
                     div select block
-                    button(title="hide panel (esc)" data-window-close).icon-button-small
-                        img(src="icons/close.png")
                 .menu-body
                     #blocks-list
+            #emotes-panel(data-window)
+                .menu-title
+                    div emotes
+                #emotes-list.menu-body
+                    button(title="toggle float emote (1)", data-emote-toggle="wvy")
+                        img(src="icons/wvy.png")
+                    button(title="toggle shake emote (2)", data-emote-toggle="shk")
+                        img(src="icons/shk.png")
+                    button(title="toggle rave emote (3)", data-emote-toggle="rbw")
+                        img(src="icons/rbw.png")
+                    button(title="toggle spin emote (4)", data-emote-toggle="spn")
+                        img(src="icons/spn.png")
         #entry-splash
             #entry-panel
                 img#entry-logo(src="./zone-logo.png")
