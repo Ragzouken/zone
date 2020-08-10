@@ -11,7 +11,6 @@ import { UserState } from '../common/zone';
 import { HTMLUI } from './html-ui';
 import { createContext2D } from 'blitsy';
 import { EventEmitter } from 'events';
-import { emit } from 'process';
 
 window.addEventListener('load', () => load());
 
@@ -508,7 +507,7 @@ export async function load() {
 
             toggle.classList.toggle('active', open);
         });
-    
+
         return emitter;
     };
 
