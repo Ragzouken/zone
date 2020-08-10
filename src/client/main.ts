@@ -10,6 +10,8 @@ import { Player } from './player';
 import { UserState } from '../common/zone';
 import { HTMLUI } from './html-ui';
 import { createContext2D } from 'blitsy';
+import { EventEmitter } from 'events';
+import { emit } from 'process';
 
 window.addEventListener('load', () => load());
 
@@ -485,7 +487,9 @@ export async function load() {
         });
     };
 
-    const addWindowToggle = (toggle: HTMLElement, windowId: string, prepare?: () => void) => {
+    const addWindowToggle = (toggle: HTMLElement, windowId: string) => {
+        const emitter = new EventEmitter();
+
         toggles.push(toggle);
         toggle.addEventListener('click', (event) => {
             event.stopPropagation();
@@ -493,19 +497,50 @@ export async function load() {
             const open = !toggle.classList.contains('active');
             deactivateToggles();
 
-            if (prepare) prepare();
-            if (open) htmlui.showWindowById(windowId);
-            else htmlui.hideWindowById(windowId);
+            emitter.emit('toggle', open);
+            if (open) {
+                emitter.emit('active');
+                htmlui.showWindowById(windowId);
+            } else {
+                emitter.emit('inactive');
+                htmlui.hideWindowById(windowId);
+            }
+
             toggle.classList.toggle('active', open);
         });
+    
+        return emitter;
     };
+
+    const chatToggle = document.getElementById('chat-toggle')!;
+
+    const avatarToggle = addWindowToggle(document.getElementById('avatar-button')!, 'avatar-panel');
+    const queueToggle = addWindowToggle(document.getElementById('queue-button')!, 'queue-panel');
+    const chatToggle2 = addWindowToggle(chatToggle, 'chat-canvas');
+
+    avatarToggle.on('active', openAvatarEditor);
+    queueToggle.on('active', refreshQueue);
+
+    let fullChat = false;
+
+    chatToggle2.on('active', () => {
+        fullChat = true;
+        chatInput.hidden = false;
+        chatInput.focus();
+        chatContext.canvas.classList.toggle('open', true);
+    });
+
+    chatToggle2.on('inactive', () => {
+        fullChat = false;
+        chatInput.hidden = true;
+        chatInput.blur();
+        chatContext.canvas.classList.toggle('open', false);
+    });
 
     addWindowToggle(document.getElementById('emotes-button')!, 'emotes-panel');
     addWindowToggle(document.getElementById('users-button')!, 'user-panel');
-    addWindowToggle(document.getElementById('avatar-button')!, 'avatar-panel', openAvatarEditor);
     addWindowToggle(document.getElementById('blocks-button')!, 'blocks-panel');
     addWindowToggle(document.getElementById('view-button')!, 'view-panel');
-    addWindowToggle(document.getElementById('queue-button')!, 'queue-panel', refreshQueue);
     addWindowToggle(document.getElementById('search-button')!, 'search-panel');
     addWindowToggle(document.getElementById('menu-button')!, 'menu-panel');
 
@@ -678,26 +713,6 @@ export async function load() {
         if (!emote) return;
         emoteToggles.set(emote, element);
         element.addEventListener('click', () => toggleEmote(emote));
-    });
-
-    let fullChat = false;
-    const chatToggle = document.getElementById('chat-toggle') as HTMLButtonElement;
-    chatToggle.addEventListener('click', (event) => {
-        event.stopPropagation();
-
-        fullChat = !fullChat;
-        chatToggle.classList.toggle('active', fullChat);
-        if (fullChat) {
-            deactivateToggles();
-
-            chatInput.hidden = false;
-            chatInput.focus();
-            chatContext.canvas.classList.toggle('open', true);
-        } else {
-            chatInput.hidden = true;
-            chatInput.blur();
-            chatContext.canvas.classList.toggle('open', false);
-        }
     });
 
     const directions: [number, number][] = [

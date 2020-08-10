@@ -13,16 +13,14 @@ html
             #three-container
                 #top-toolbar.toolbar
                     #player-status
-                    button#menu-button(title="show menu")
-                        img(src="icons/menu.png")
-                    button#search-button(title="search for videos (s)")
-                        img(src="icons/search.png")
-                    button#queue-button(title="show play queue (q)")
-                        img(src="icons/list.png")
                     #tooltip
                 #bottom-toolbar.toolbar
                     button#chat-toggle(title="chat (tab)")
-                        img(src="icons/chat.png")                    
+                        img(src="icons/chat.png")
+                    button#search-button(title="search for videos (s)")
+                        img(src="icons/search.png")
+                    button#queue-button(title="show play queue (q)")
+                        img(src="icons/list.png")                 
                     button#avatar-button(title="change appearance")
                         img(src="icons/avatar.png")
                     button#emotes-button(title="show emotes palette")
@@ -33,6 +31,8 @@ html
                         img(src="icons/look.png")
                     button#blocks-button(title="place blocks")
                         img(src="icons/blocks.png")
+                    button#menu-button(title="show menu")
+                        img(src="icons/menu.png")
                 canvas#chat-canvas(width=512, height=512)
                 input#chat-input(hidden type="text" placeholder="chat message..." maxlength="160" autocomplete="off")
             #menu-panel.menu-panel(data-window)

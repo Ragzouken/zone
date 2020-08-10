@@ -7,6 +7,10 @@ input[type="submit"], button { cursor: pointer; }
     --button-color: #0052cc;
     --disable-color: #888888;
     --ascii-small: 'ascii_small_simple', monospace;
+
+    --toolbar-gap: 8px;
+    --toolbar-icon-scale: 4;
+    --tab-bottom: calc(var(--toolbar-gap) * 2 + 10px * var(--toolbar-icon-scale));
 }
 
 canvas, img {
@@ -49,8 +53,10 @@ input[type="text"]:focus {
 
 #chat-input {
     position: absolute;
-    bottom: 16px; left: 72px;
-    width: 432px; height: 40px;
+    bottom: var(--tab-bottom); 
+    left: var(--toolbar-gap);
+    width: calc(512px - 2 * var(--toolbar-gap)); 
+    height: 40px;
 }
 
 #entry-panel {
@@ -83,10 +89,11 @@ input[type="text"]:focus {
 }
 
 .toolbar > button {
-    width: 40px; height: 40px;
+    width: calc(10px * var(--toolbar-icon-scale));
+    height: calc(10px * var(--toolbar-icon-scale));
     
     border: none;
-    padding: 4px;
+    padding: calc(1px * var(--toolbar-icon-scale));
     background-color: var(--button-color);
     border-color: var(--button-color);
 
@@ -102,7 +109,11 @@ button > img {
 }
 
 #top-toolbar > button {
-    margin-left: 16px; margin-top: 16px;
+    margin-left: var(--toolbar-gap); margin-top: var(--toolbar-gap);
+}
+
+#bottom-toolbar > button {
+    margin-left: var(--toolbar-gap); margin-bottom: var(--toolbar-gap);
 }
 
 #bottom-toolbar {
@@ -110,15 +121,7 @@ button > img {
     align-items: flex-end;
 }
 
-#bottom-toolbar > button {
-    margin-left: 16px; margin-bottom: 16px;
-}
-
 #player-status {
-    position: absolute;
-    left: 0; top: 100%;
-
-    flex: 1;
     margin: 16px;
 }
 
@@ -206,16 +209,6 @@ button.active {
     width: unset;
 }
 
-#emotes-panel, #user-panel, #avatar-panel, #blocks-panel, #view-panel {
-    left: 0;
-    bottom: 72px;
-}
-
-#queue-panel, #search-panel, #menu-panel {
-    left: 0;
-    top: 72px;
-}
-
 .icon-button-small {
     width: 24px;
     height: 24px;
@@ -300,6 +293,9 @@ button.active {
 
 [data-window] {
     position: absolute;
+    left: 0;
+    bottom: var(--tab-bottom);
+    
     width: 512px;
     display: flex;
     flex-direction: column;
@@ -385,7 +381,7 @@ html, body {
 
 #chat-canvas {
     position: absolute;
-    bottom: 0px; left: 0;
+    bottom: var(--tab-bottom);
     width: 512px;
     height: 512px;
 
@@ -395,6 +391,8 @@ html, body {
 #chat-canvas.open {
     pointer-events: initial;
     cursor: pointer;
+
+    bottom: calc(var(--tab-bottom) + 40px);
 }
 
 #user-list {
