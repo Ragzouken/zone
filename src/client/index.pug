@@ -13,46 +13,38 @@ html
             #three-container
                 #top-toolbar.toolbar
                     #player-status
-                    button#menu-button(title="open menu")
+                    button#menu-button(title="show menu")
                         img(src="icons/menu.png")
-                    button#search-button(title="search for video (s)")
+                    button#search-button(title="search for videos (s)")
                         img(src="icons/search.png")
-                    button#queue-button(title="view queue (q)")
+                    button#queue-button(title="show play queue (q)")
                         img(src="icons/list.png")
-                    button#resync-button(title="reload this")
-                        img(src="icons/resync.png")
                     #tooltip
-                    .spacer
-                    button#rotate-l-button(title="rotate view ([)")
-                        img(src="icons/rotate-l.png")
-                    button#camera-button(title="switch view (v)")
-                        img(src="icons/look.png")
-                    button#rotate-r-button(title="rotate view (])")
-                        img(src="icons/rotate-r.png")
                 #bottom-toolbar.toolbar
                     button#chat-toggle(title="chat (tab)")
                         img(src="icons/chat.png")                    
                     button#avatar-button(title="change appearance")
                         img(src="icons/avatar.png")
-                    button#emotes-button(title="open emotes menu")
+                    button#emotes-button(title="show emotes palette")
+                        img(src="icons/emotes.png")
+                    button#users-button(title="show user list")
                         img(src="icons/users.png")
-                    button#users-button(title="open user list")
-                        img(src="icons/list.png")
-                    button#blocks-button(title="open block menu")
+                    button#view-button(title="show view menu")
+                        img(src="icons/look.png")
+                    button#blocks-button(title="place blocks")
                         img(src="icons/blocks.png")
                 canvas#chat-canvas(width=512, height=512)
                 input#chat-input(hidden type="text" placeholder="chat message..." maxlength="160" autocomplete="off")
             #menu-panel.menu-panel(data-window)
-                .menu-title(data-window-drag)
+                .menu-title
                     div miscellanious options
-                    button(title="hide panel (esc)" data-window-close).icon-button-small
-                        img(src="icons/close.png")
                 .menu-body
                     div
                         label(for="volume-slider") volume
                         input#volume-slider(type="range", min="0", max="1", step=".01")
                     div
                         button#popout-button pop out video
+                        button#resync-button resync video
                         button#enable-notifications chat notifications
                     #auth-row
                         input(placeholder="admin password...")#auth-input
@@ -72,10 +64,8 @@ html
                     button(title="hide panel (esc)" data-window-close).icon-button-small
                         img(src="icons/close.png")
             #search-panel.menu-panel(data-window)
-                .menu-title(data-window-drag)
+                .menu-title
                     div youtube
-                    button(title="hide panel (esc)" data-window-close).icon-button-small
-                        img(src="icons/close.png")
                 form#search-form
                     input#search-input(placeholder="search for a video" type="text" autocomplete="off")
                     input#search-submit(type="submit" value="search" disabled)
@@ -84,10 +74,8 @@ html
                         div title
                         img
             #queue-panel.menu-panel(data-window)
-                .menu-title(data-window-drag)
+                .menu-title
                     #queue-title play queue
-                    button(title="hide panel (esc)" data-window-close).icon-button-small
-                        img(src="icons/close.png")
                 .menu-body
                     .queue-item#current-item
                         .queue-item-title#current-item-title title
@@ -130,6 +118,16 @@ html
                         img(src="icons/rbw.png")
                     button(title="toggle spin emote (4)", data-emote-toggle="spn")
                         img(src="icons/spn.png")
+            #view-panel(data-window)
+                .menu-title
+                    div view
+                .menu-body
+                    button#rotate-l-button(title="rotate view ([)")
+                        img(src="icons/rotate-l.png")
+                    button#camera-button(title="switch view (v)")
+                        img(src="icons/look.png")
+                    button#rotate-r-button(title="rotate view (])")
+                        img(src="icons/rotate-r.png")
         #entry-splash
             #entry-panel
                 img#entry-logo(src="./zone-logo.png")

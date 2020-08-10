@@ -504,6 +504,10 @@ export async function load() {
     addWindowToggle(document.getElementById('users-button')!, 'user-panel');
     addWindowToggle(document.getElementById('avatar-button')!, 'avatar-panel', openAvatarEditor);
     addWindowToggle(document.getElementById('blocks-button')!, 'blocks-panel');
+    addWindowToggle(document.getElementById('view-button')!, 'view-panel');
+    addWindowToggle(document.getElementById('queue-button')!, 'queue-panel', refreshQueue);
+    addWindowToggle(document.getElementById('search-button')!, 'search-panel');
+    addWindowToggle(document.getElementById('menu-button')!, 'menu-panel');
 
     const blockListContainer = document.getElementById('blocks-list') as HTMLElement;
 
@@ -727,14 +731,8 @@ export async function load() {
     gameKeys.set(']', () => (sceneRenderer.followCam.angle += rot));
     gameKeys.set('v', () => sceneRenderer.cycleCamera());
 
-    gameKeys.set('q', () => {
-        refreshQueue();
-        queuePanel.hidden = !queuePanel.hidden;
-    });
-    gameKeys.set('s', () => {
-        searchPanel.hidden = false;
-        searchInput.focus();
-    });
+    gameKeys.set('q', () => document.getElementById('queue-button')!.click());
+    gameKeys.set('s', () => document.getElementById('search-button')!.click());
     gameKeys.set('u', () => (userPanel.hidden = !userPanel.hidden));
 
     function sendChat() {

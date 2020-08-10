@@ -33,6 +33,7 @@ html {
 input, button, option, select {
     font-family: var(--ascii-small);
     font-size: 16px;
+    height: 32px;
 }
 
 input[type="text"], select {
@@ -132,7 +133,6 @@ button.active {
 }
 
 .menu-panel {
-    position: absolute;
     width: 100%;
     max-width: 512px;
     background: rgb(0 21 51);
@@ -202,13 +202,18 @@ button.active {
     background: rgb(0 21 51);
 }
 
-#emotes-panel, #blocks-panel {
+#emotes-panel, #blocks-panel, #view-panel {
     width: unset;
 }
 
-#emotes-panel, #user-panel, #avatar-panel, #blocks-panel {
+#emotes-panel, #user-panel, #avatar-panel, #blocks-panel, #view-panel {
     left: 0;
     bottom: 72px;
+}
+
+#queue-panel, #search-panel, #menu-panel {
+    left: 0;
+    top: 72px;
 }
 
 .icon-button-small {
@@ -301,7 +306,7 @@ button.active {
     background: black;
 }
 
-#emotes-panel > .menu-body > button {
+#emotes-panel > .menu-body > button, #view-panel > .menu-body > button {
     width: 64px; height: 64px;
     
     border: none;
@@ -320,6 +325,16 @@ button.active {
     gap: 16px 16px;
     grid-template-columns: repeat(2, 64px);
     grid-template-rows: repeat(2, 64px);
+}
+
+#view-panel > .menu-body {
+    display: grid;
+    align-items: center;
+    align-content: center;
+    padding: 8px;
+    gap: 16px 16px;
+    grid-template-columns: repeat(3, 64px);
+    grid-template-rows: repeat(1, 64px);
 }
 
 #blocks-panel {
