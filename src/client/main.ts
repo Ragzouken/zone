@@ -124,7 +124,7 @@ function listUsers() {
 }
 
 const help = [
-    'use the buttons on the top left to queue videos, and the buttons on the bottom right to change your appearance. press tab to switch between typing and moving',
+    'use the tabs on the bottom left to queue songs, chat to others, and change your appearance. click or arrow keys to move.',
 ].join('\n');
 
 function listHelp() {
