@@ -278,7 +278,11 @@ button.active {
 
     left: calc(50vw - 256px); top: 0;
     min-width: 512px;
-    max-width: max(50vw, 512px);
+    width: 50vw;
+    max-width: unset;
+
+    bottom: unset;
+    right: unset;
 
     display: flex;
     flex-direction: column;
