@@ -785,14 +785,10 @@ export async function load() {
                 event.preventDefault();
             }
             deactivateToggles();
-            htmlui.hideAllWindows();
         }
 
-        if (isInputElement(document.activeElement)) {
-            if (event.key === 'Tab' && document.activeElement === chatInput) {
-                chatToggle.click();
-                event.preventDefault();
-            } else if (event.key === 'Enter') {
+        if (isInputElement(document.activeElement) && event.key !== 'Tab') {
+            if (event.key === 'Enter') {
                 sendChat();
             }
         } else {
