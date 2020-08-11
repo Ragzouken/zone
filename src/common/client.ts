@@ -260,7 +260,7 @@ export class ZoneClient extends EventEmitter {
             message.users.forEach((user: UserState) => {
                 this.zone.users.set(user.userId, user);
             });
-            this.emit('users');
+            this.emit('users', {});
         });
         this.messaging.messages.on('blocks', (message: BlocksMessage) => {
             const coords: number[][] = [];
