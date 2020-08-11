@@ -51,9 +51,6 @@ function notify(title: string, body: string, tag: string) {
     }
 }
 
-const font = blitsy.decodeFont(blitsy.fonts['ascii-small']);
-const layout = { font, lineWidth: 240, lineCount: 9999 };
-
 function parseFakedown(text: string) {
     text = fakedownToTag(text, '##', 'shk');
     text = fakedownToTag(text, '~~', 'wvy');
@@ -747,7 +744,7 @@ export async function load() {
 
     gameKeys.set('q', () => document.getElementById('queue-button')!.click());
     gameKeys.set('s', () => document.getElementById('search-button')!.click());
-    gameKeys.set('u', () => (userPanel.hidden = !userPanel.hidden));
+    gameKeys.set('u', () => document.getElementById('users-button')!.click());
 
     function sendChat() {
         const line = chatInput.value;
