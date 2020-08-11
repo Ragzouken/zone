@@ -12,6 +12,7 @@ import { URL } from 'url';
 import { randomInt } from '../common/utility';
 import * as tmp from 'tmp';
 import { unlink } from 'fs';
+import { time } from 'console';
 
 tmp.setGracefulCleanup();
 
@@ -81,10 +82,17 @@ export async function search(query: string): Promise<YoutubeVideo[]> {
     });
 }
 
-export const BANGER_PLAYLIST_ID = 'PLUkMc2z58ECZFcxvdwncKK1qDYZzVHrbB';
+let BANGERS: ytpl.result | undefined;
+const BANGER_PLAYLIST_ID = 'PLUkMc2z58ECZFcxvdwncKK1qDYZzVHrbB';
+async function refreshBangers() {
+    BANGERS = await ytpl(BANGER_PLAYLIST_ID, { limit: Infinity });
+}
+
+refreshBangers();
+setInterval(refreshBangers, TIMEOUT);
+
 export async function banger(): Promise<Media> {
-    const result = await ytpl(BANGER_PLAYLIST_ID, { limit: Infinity });
-    const chosen = result.items[randomInt(0, result.items.length - 1)];
+    const chosen = BANGERS!.items[randomInt(0, BANGERS!.items.length - 1)];
     const videoId = new URL(chosen.url).searchParams.get('v')!;
     const duration = timeToSeconds(chosen.duration) * 1000;
     const source = 'youtube/' + videoId;
