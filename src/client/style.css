@@ -51,14 +51,6 @@ input[type="text"]:focus {
     border-bottom: solid red 3px;
 }
 
-#chat-input {
-    position: absolute;
-    bottom: var(--tab-bottom); 
-    left: var(--toolbar-gap);
-    width: calc(512px - 2 * var(--toolbar-gap)); 
-    height: 40px;
-}
-
 #entry-panel {
     width: 512px;
 }
@@ -75,13 +67,15 @@ input[type="text"]:focus {
 
 .toolbar {
     position: absolute;
-    width: 100%;
+    left: 0;
 
     display: flex;
     flex-direction: row;
     align-items: stretch;
 
     pointer-events: none;
+
+    background: black;
 }
 
 .toolbar > *:last-child {
@@ -105,19 +99,17 @@ button > img {
 }
 
 #top-toolbar {
-    top: 0; left: 0;
+    top: 0;
 }
 
-#top-toolbar > button {
-    margin-left: var(--toolbar-gap); margin-top: var(--toolbar-gap);
-}
-
-#bottom-toolbar > button {
-    margin-left: var(--toolbar-gap); margin-bottom: var(--toolbar-gap);
+.toolbar > button {
+    margin-left: var(--toolbar-gap); 
+    margin-top: var(--toolbar-gap);
+    margin-bottom: var(--toolbar-gap);
 }
 
 #bottom-toolbar {
-    bottom: 0; left: 0;
+    bottom: 0;
     align-items: flex-end;
 }
 
@@ -138,7 +130,6 @@ button.active {
 .menu-panel {
     width: 100%;
     max-width: 512px;
-    background: rgb(0 21 51);
 
     display: flex;
     flex-direction: column;
@@ -303,7 +294,6 @@ button.active {
     width: 512px;
     display: flex;
     flex-direction: column;
-    background: black;
 }
 
 #emotes-panel > .menu-body > button, #view-panel > .menu-body > button {
@@ -383,6 +373,21 @@ html, body {
     flex: 1;
 }
 
+#chat-panel > .menu-body {
+    padding: 0;
+    background: none;
+}
+
+#chat-panel > .menu-body > input {
+    margin-left: 8px;
+    margin-right: 8px;
+}
+
+#chat-canvas2 {
+    width: 512px;
+    height: 512px;
+}
+
 #chat-canvas {
     position: absolute;
     bottom: var(--tab-bottom);
@@ -397,6 +402,7 @@ html, body {
     cursor: pointer;
 
     bottom: calc(var(--tab-bottom) + 40px);
+    display: none;
 }
 
 #user-panel {

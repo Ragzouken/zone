@@ -518,11 +518,11 @@ export async function load() {
 
             emitter.emit('toggle', open);
             if (open) {
-                emitter.emit('active');
                 htmlui.showWindowById(windowId);
+                emitter.emit('active');
             } else {
-                emitter.emit('inactive');
                 htmlui.hideWindowById(windowId);
+                emitter.emit('inactive');
             }
 
             toggle.classList.toggle('active', open);
@@ -535,7 +535,7 @@ export async function load() {
 
     const avatarToggle = addWindowToggle(document.getElementById('avatar-button')!, 'avatar-panel');
     const queueToggle = addWindowToggle(document.getElementById('queue-button')!, 'queue-panel');
-    const chatToggle2 = addWindowToggle(chatToggle, 'chat-canvas');
+    const chatToggle2 = addWindowToggle(chatToggle, 'chat-panel');
 
     avatarToggle.on('active', openAvatarEditor);
     queueToggle.on('active', refreshQueue);
@@ -544,14 +544,12 @@ export async function load() {
 
     chatToggle2.on('active', () => {
         fullChat = true;
-        chatInput.hidden = false;
         chatInput.focus();
         chatContext.canvas.classList.toggle('open', true);
     });
 
     chatToggle2.on('inactive', () => {
         fullChat = false;
-        chatInput.hidden = true;
         chatInput.blur();
         chatContext.canvas.classList.toggle('open', false);
     });
@@ -822,7 +820,9 @@ export async function load() {
 
     const playerStatus = document.getElementById('player-status')!;
     const chatContext = document.querySelector<HTMLCanvasElement>('#chat-canvas')!.getContext('2d')!;
+    const chatContext2 = document.querySelector<HTMLCanvasElement>('#chat-canvas2')!.getContext('2d')!;
     chatContext.imageSmoothingEnabled = false;
+    chatContext2.imageSmoothingEnabled = false;
 
     chatContext.canvas.addEventListener('click', (event) => {
         if (fullChat) {
@@ -836,9 +836,11 @@ export async function load() {
         refreshCurrentItem();
         playerStatus.innerHTML = player.status;
         chatContext.clearRect(0, 0, 512, 512);
+        chatContext2.clearRect(0, 0, 512, 512);
 
         chat.render(fullChat);
         chatContext.drawImage(chat.context.canvas, 0, 0, 512, 512);
+        chatContext2.drawImage(chat.context.canvas, 0, 0, 512, 512);
 
         window.requestAnimationFrame(redraw);
     }

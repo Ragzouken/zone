@@ -34,7 +34,12 @@ html
                     button#menu-button(title="show menu")
                         img(src="icons/menu.png")
                     canvas#chat-canvas(width=512, height=512)
-                    input#chat-input(hidden type="text" placeholder="chat message..." maxlength="160" autocomplete="off")
+            #chat-panel.menu-panel(data-window)
+                .menu-title
+                    div chat
+                .menu-body
+                    canvas#chat-canvas2(width=512, height=512)
+                    input#chat-input(type="text" placeholder="chat message..." maxlength="160" autocomplete="off")
             #menu-panel.menu-panel(data-window)
                 .menu-title
                     div miscellanious options
