@@ -209,7 +209,7 @@ export async function load() {
             userAvatars.set(user, context);
         });
 
-        userItemContainer.innerHTML = "";
+        userItemContainer.innerHTML = '';
         userSelect.innerHTML = '';
         users.forEach((user) => {
             const option = document.createElement('option');

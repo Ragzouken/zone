@@ -29,8 +29,16 @@ export class Player extends EventEmitter {
         element.appendChild(this.source);
 
         this.subtrack = document.createElement('track');
-        this.subtrack.kind = "subtitles";
-        this.subtrack.label = "english";
+        this.subtrack.kind = 'subtitles';
+        this.subtrack.label = 'english';
+
+        this.subtrack.addEventListener('load', (event) => {
+            this.element.textTracks[0].mode = 'showing';
+        });
+        this.subtrack.addEventListener('cuechange', (event) => {
+            const cues = Array.from(this.subtrack.track.activeCues || []) as VTTCue[];
+            console.log(cues.map((cue) => cue.text));
+        });
 
         let lastUnstall = performance.now();
         setInterval(() => {
@@ -135,7 +143,7 @@ export class Player extends EventEmitter {
 
         const path = this.item.media.source;
         if (path.endsWith('.mp3') || path.endsWith('.mp4')) {
-            this.subtrack.src = path.substr(0, path.lastIndexOf(".")) + ".vtt";
+            this.subtrack.src = path.substr(0, path.lastIndexOf('.')) + '.vtt';
             this.element.appendChild(this.subtrack);
         } else if (this.subtrack.parentElement) {
             this.element.removeChild(this.subtrack);
