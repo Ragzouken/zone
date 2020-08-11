@@ -38,7 +38,7 @@ export class Player extends EventEmitter {
 
         this.subtrack.addEventListener('cuechange', (event) => {
             const cues = Array.from(this.subtrack.track.activeCues || []) as VTTCue[];
-            const lines = cues.map((cue) => cue.text);
+            const lines = [cues.map((cue) => cue.text.replace('\n', ' ')).join(' ')];
             this.emit('subtitles', lines);
         });
 
