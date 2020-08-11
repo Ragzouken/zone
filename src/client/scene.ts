@@ -182,6 +182,8 @@ export class ZoneSceneRenderer extends EventEmitter {
     public building = false;
     public buildBlock = 1;
 
+    private readonly chunks = new Grid<THREE.Group>();
+
     private get camera() {
         return this.cameras[this.cameraIndex][0];
     }
@@ -284,8 +286,6 @@ export class ZoneSceneRenderer extends EventEmitter {
 
         this.scene.fog = new THREE.Fog(0, 0.0025, 10);
 
-        this.rebuild();
-
         this.renderer.setSize(container.clientWidth, container.clientHeight);
         container.appendChild(this.renderer.domElement);
 
@@ -327,35 +327,44 @@ export class ZoneSceneRenderer extends EventEmitter {
         this.cameraIndex = (this.cameraIndex + 1) % this.cameras.length;
     }
 
-    rebuild() {
-        while (this.blockGroup.children.length) {
-            this.blockGroup.remove(this.blockGroup.children[0]);
-        }
+    getChunkCoord([x, y, z]: number[]) {
+        return [Math.floor(x / 32), 0, Math.floor(z / 32)];
+    }
 
-        this.coordsToCube.clear();
-        this.zone.grid.forEach((block, [x, y, z]) => {
-            const cube = new THREE.Mesh(blockGeometries[block].geometry, blockMaterial);
-            this.blockGroup.add(cube);
-            cube.position.set(x / 16, y / 16, z / 16);
-            this.cubeToCoords.set(cube, [x, y, z]);
-            this.coordsToCube.set([x, y, z], cube);
+    setVisibility(origin: number[], radius: number) {
+        const [ox, oy, oz] = this.getChunkCoord(origin);
+
+        this.chunks.forEach((chunk, [cx, cy, cz]) => {
+            const dx = Math.abs(cx - ox);
+            const dy = Math.abs(cy - oy);
+            const dz = Math.abs(cz - oz);
+
+            chunk.visible = (Math.max(dx, dy, dz) <= radius);
         });
+    }
+
+    getChunkGroup(coords: number[]): THREE.Group {
+        const group = this.chunks.get(coords) || new THREE.Group();
+        this.blockGroup.add(group);
+        this.chunks.set(coords, group);
+        return group;
     }
 
     rebuildAtCoords(coords: number[][]) {
         coords.forEach((coord) => {
             const block = this.zone.grid.get(coord);
+            const chunk = this.getChunkGroup(this.getChunkCoord(coord));
 
             if (block && !this.coordsToCube.has(coord)) {
-                const [x, y, z] = coord;
                 const cube = new THREE.Mesh(blockGeometries[block].geometry, blockMaterial);
-                this.blockGroup.add(cube);
+                chunk.add(cube);
+                const [x, y, z] = coord;
                 cube.position.set(x / 16, y / 16, z / 16);
-                this.cubeToCoords.set(cube, [x, y, z]);
-                this.coordsToCube.set([x, y, z], cube);
+                this.cubeToCoords.set(cube, coord);
+                this.coordsToCube.set(coord, cube);
             } else if (!block && this.coordsToCube.has(coord)) {
                 const mesh = this.coordsToCube.get(coord)!;
-                this.blockGroup.remove(mesh);
+                chunk.remove(mesh);
                 this.cubeToCoords.delete(mesh);
                 this.coordsToCube.delete(coord);
             }
@@ -364,6 +373,9 @@ export class ZoneSceneRenderer extends EventEmitter {
 
     update() {
         const localCoords = this.client.localUser?.position;
+        if (localCoords) {
+            this.setVisibility(localCoords, 2);
+        }
         if (localCoords && this.follow) {
             const [x, y, z] = localCoords;
             this.followCam.focus.set(x / 16, y / 16, z / 16);
