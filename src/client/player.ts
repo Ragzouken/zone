@@ -13,6 +13,10 @@ export async function expectMetadata(element: HTMLMediaElement) {
     });
 }
 
+export interface Player {
+    on(type: 'subtitles', callback: (lines: string[]) => void): this;
+}
+
 export class Player extends EventEmitter {
     private item?: QueueItem;
     private itemPlayStart = 0;
@@ -34,7 +38,8 @@ export class Player extends EventEmitter {
 
         this.subtrack.addEventListener('cuechange', (event) => {
             const cues = Array.from(this.subtrack.track.activeCues || []) as VTTCue[];
-            console.log(cues.map((cue) => cue.text));
+            const lines = cues.map((cue) => cue.text);
+            this.emit('subtitles', lines);
         });
 
         let lastUnstall = performance.now();

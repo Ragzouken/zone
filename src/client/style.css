@@ -430,7 +430,7 @@ html, body {
 #user-items > div > canvas {
     width: 24px;
     height: 24px;
-    margin-right: 3px;
+    margin-right: 9px;
 }
 
 #user-items > div > div {

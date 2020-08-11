@@ -327,6 +327,8 @@ export async function load() {
     const searchResultTemplate = document.getElementById('search-result-template')!;
     searchResultTemplate.parentElement?.removeChild(searchResultTemplate);
 
+    player.on('subtitles', (lines) => lines.forEach((line) => chat.log(`{clr=#888888}{line}`)));
+
     document.getElementById('search-form')?.addEventListener('submit', (event) => {
         event.preventDefault();
         event.stopPropagation();
