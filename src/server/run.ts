@@ -6,7 +6,7 @@ import * as request from 'request';
 import * as youtube from './youtube';
 import * as glob from 'glob';
 import { promises as fs } from 'fs';
-import { basename, extname } from 'path';
+import { basename, extname, dirname } from 'path';
 import { host } from './server';
 import { exec } from 'child_process';
 import FileSync = require('lowdb/adapters/FileSync');

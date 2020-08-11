@@ -15,6 +15,7 @@ export type Media = {
     title: string;
     duration: number;
     source: string;
+    subtitle?: string;
     thumbnail?: string;
 };
 
