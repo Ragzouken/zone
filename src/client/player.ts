@@ -32,9 +32,6 @@ export class Player extends EventEmitter {
         this.subtrack.kind = 'subtitles';
         this.subtrack.label = 'english';
 
-        this.subtrack.addEventListener('load', (event) => {
-            this.element.textTracks[0].mode = 'showing';
-        });
         this.subtrack.addEventListener('cuechange', (event) => {
             const cues = Array.from(this.subtrack.track.activeCues || []) as VTTCue[];
             console.log(cues.map((cue) => cue.text));
@@ -145,6 +142,7 @@ export class Player extends EventEmitter {
         if (path.endsWith('.mp3') || path.endsWith('.mp4')) {
             this.subtrack.src = path.substr(0, path.lastIndexOf('.')) + '.vtt';
             this.element.appendChild(this.subtrack);
+            this.element.textTracks[0].mode = 'showing';
         } else if (this.subtrack.parentElement) {
             this.element.removeChild(this.subtrack);
         }
