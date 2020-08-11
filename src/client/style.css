@@ -399,13 +399,37 @@ html, body {
     bottom: calc(var(--tab-bottom) + 40px);
 }
 
-#user-list {
-    overflow-y: auto;
-    flex: 1;
+#user-panel {
+    max-height: 480px;
+}
 
-    margin: 2px;
-    padding: 2px;
-    border: 2px solid black;
+#user-panel > .menu-body {
+    overflow-y: auto;
+}
+
+#user-items {
+    display: grid;
+    grid-template-columns: repeat(2, 50%);
+
+    align-items: center;
+    align-content: center;
+    gap: 8px 8px;
+}
+
+#user-items > div {
+    display: flex;
+    flex-direction: row;
+}
+
+#user-items > div > canvas {
+    width: 24px;
+    height: 24px;
+    margin-right: 3px;
+}
+
+#user-items > div > div {
+    white-space: nowrap;
+    overflow-x: hidden;
 }
 
 .user-dj {

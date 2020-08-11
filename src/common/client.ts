@@ -68,6 +68,7 @@ export interface ClientEventMap {
     leave: (event: { user: UserState }) => void;
     rename: (event: { user: UserState; previous: string; local: boolean }) => void;
     status: (event: { text: string }) => void;
+    users: (event: {}) => void;
 
     play: (event: { message: PlayMessage }) => void;
     queue: (event: { item: QueueItem }) => void;
@@ -259,6 +260,7 @@ export class ZoneClient extends EventEmitter {
             message.users.forEach((user: UserState) => {
                 this.zone.users.set(user.userId, user);
             });
+            this.emit('users');
         });
         this.messaging.messages.on('blocks', (message: BlocksMessage) => {
             const coords: number[][] = [];

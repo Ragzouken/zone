@@ -9,7 +9,7 @@ import { ZoneSceneRenderer, avatarImage, tilemapContext, blockTexture } from './
 import { Player } from './player';
 import { UserState } from '../common/zone';
 import { HTMLUI } from './html-ui';
-import { createContext2D } from 'blitsy';
+import { createContext2D, drawSprite } from 'blitsy';
 import { EventEmitter } from 'events';
 
 window.addEventListener('load', () => load());
@@ -194,17 +194,38 @@ export async function load() {
         }
     }
 
+    const iconTest = createContext2D(8, 8);
+    iconTest.fillStyle = '#ff00ff';
+    iconTest.fillRect(0, 0, 8, 8);
+
+    const userAvatars = new Map<UserState, CanvasRenderingContext2D>();
+
     function refreshUsers() {
         const users = Array.from(client.zone.users.values()).filter((user) => !!user.name);
         const names = users.map((user) => formatName(user));
-        userItemContainer.innerHTML = `${names.length} people are zoning: ` + names.join(', ');
+        userItemContainer.innerHTML = `${names.length} people are zoning: ` + names.join(', <br>');
 
+        userAvatars.clear();
+        users.forEach((user) => {
+            const context = createContext2D(8, 8);
+            context.drawImage(getTile(user.avatar).canvas, 0, 0);
+            userAvatars.set(user, context);
+        });
+
+        userItemContainer.innerHTML = "";
         userSelect.innerHTML = '';
         users.forEach((user) => {
             const option = document.createElement('option');
             option.value = user.name || '';
             option.innerHTML = formatName(user);
             userSelect.appendChild(option);
+
+            const element = document.createElement('div');
+            const label = document.createElement('div');
+            label.innerHTML = formatName(user);
+            element.appendChild((userAvatars.get(user) || iconTest).canvas);
+            element.appendChild(label);
+            userItemContainer.appendChild(element);
         });
         userSelect.value = '';
 
@@ -344,6 +365,8 @@ export async function load() {
     client.on('leave', refreshUsers);
     client.on('rename', refreshUsers);
     client.on('tags', refreshUsers);
+    client.on('avatar', refreshUsers);
+    client.on('users', refreshUsers);
     refreshUsers();
 
     client.on('queue', ({ item }) => {
