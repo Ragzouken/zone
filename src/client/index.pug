@@ -17,6 +17,8 @@ html
                 #bottom-toolbar.toolbar
                     button#chat-toggle(title="chat (tab)")
                         img(src="icons/chat.png")
+                    button#users-button(title="show user list")
+                        img(src="icons/users.png")
                     button#search-button(title="search for videos (s)")
                         img(src="icons/search.png")
                     button#queue-button(title="show play queue (q)")
@@ -25,16 +27,14 @@ html
                         img(src="icons/avatar.png")
                     button#emotes-button(title="show emotes palette")
                         img(src="icons/emotes.png")
-                    button#users-button(title="show user list")
-                        img(src="icons/users.png")
                     button#view-button(title="show view menu")
                         img(src="icons/look.png")
                     button#blocks-button(title="place blocks")
                         img(src="icons/blocks.png")
                     button#menu-button(title="show menu")
                         img(src="icons/menu.png")
-                canvas#chat-canvas(width=512, height=512)
-                input#chat-input(hidden type="text" placeholder="chat message..." maxlength="160" autocomplete="off")
+                    canvas#chat-canvas(width=512, height=512)
+                    input#chat-input(hidden type="text" placeholder="chat message..." maxlength="160" autocomplete="off")
             #menu-panel.menu-panel(data-window)
                 .menu-title
                     div miscellanious options
@@ -99,7 +99,7 @@ html
                     div update appearance
                 .menu-body
                     canvas#avatar-paint(width=8, height=8)
-                    input#avatar-name(type="text")
+                    input#avatar-name(type="text", maxlength="16")
                     button#avatar-update update
             #blocks-panel(data-window)
                 .menu-body
