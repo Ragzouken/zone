@@ -99,7 +99,7 @@ type CachedVideo = {
 };
 
 export class YoutubeCache {
-    private downloads = new Map<string, Promise<string>>();
+    private downloading = new Set<string>();
     private cached = new Map<string, CachedVideo>();
 
     getPath(videoId: string) {
@@ -111,10 +111,12 @@ export class YoutubeCache {
     }
 
     isPending(videoId: string) {
-        return this.downloads.has(videoId);
+        return this.downloading.has(videoId);
     }
 
     async renewCachedVideo(videoId: string) {
+        this.downloading.add(videoId);
+
         const videoInfo = await info(videoId);
         const duration = parseFloat(videoInfo.length_seconds) * 1000;
         const timeout = Math.max(duration * 2, 15 * 60 * 60 * 1000);
@@ -122,13 +124,13 @@ export class YoutubeCache {
         const existing = this.cached.get(videoId);
         if (existing) {
             existing.expires = performance.now() + timeout;
-        } else if (!this.downloads.has(videoId)) {
+            this.downloading.delete(videoId);
+        } else if (!this.downloading.has(videoId)) {
             const download = this.downloadToCache(videoId);
-            this.downloads.set(videoId, download);
             download.then((path) => {
                 const expires = performance.now() + timeout;
                 this.cached.set(videoId, { videoId, path, expires });
-                this.downloads.delete(videoId);
+                this.downloading.delete(videoId);
             });
         }
 
