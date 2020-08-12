@@ -419,7 +419,6 @@ html, body {
 
     align-items: center;
     align-content: center;
-    align-self: center;
     justify-content: space-evenly;
     gap: 16px 32px;
 }
