@@ -339,8 +339,8 @@ export async function load() {
             results.forEach(({ title, duration, videoId, thumbnail }) => {
                 const row = searchResultTemplate.cloneNode(true) as HTMLElement;
                 row.addEventListener('click', () => {
-                    searchPanel.hidden = true;
                     client.youtube(videoId);
+                    document.getElementById('search-button')!.click();
                 });
 
                 const div = row.querySelector('div')!;
