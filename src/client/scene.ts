@@ -331,7 +331,22 @@ export class ZoneSceneRenderer extends EventEmitter {
         return [Math.floor(x / 32), 0, Math.floor(z / 32)];
     }
 
+    areCoordsVisible(coords: number[]) {
+        const [ox, oy, oz] = this.getChunkCoord(this.cullOrigin);
+        const [cx, cy, cz] = this.getChunkCoord(coords);
+
+        const dx = Math.abs(cx - ox);
+        const dy = Math.abs(cy - oy);
+        const dz = Math.abs(cz - oz);
+
+        return (Math.max(dx, dy, dz) <= this.cullRange);
+    }
+
+    private cullOrigin = [0, 0, 0];
+    private cullRange = 1;
     setVisibility(origin: number[], radius: number) {
+        this.cullOrigin = origin;
+        this.cullRange = radius;
         const [ox, oy, oz] = this.getChunkCoord(origin);
 
         this.chunks.forEach((chunk, [cx, cy, cz]) => {
@@ -339,7 +354,7 @@ export class ZoneSceneRenderer extends EventEmitter {
             const dy = Math.abs(cy - oy);
             const dz = Math.abs(cz - oz);
 
-            chunk.visible = (Math.max(dx, dy, dz) <= radius);
+            chunk.visible = (Math.max(dx, dy, dz) <= this.cullRange);
         });
     }
 
@@ -420,7 +435,7 @@ export class ZoneSceneRenderer extends EventEmitter {
         let i = 0;
 
         const showAvatar = (user: UserState, echo = false) => {
-            if (!user.position) return;
+            if (!user.position || !this.areCoordsVisible(user.position)) return;
             const [x, y, z] = user.position;
             const mesh = avatarMeshes[i++];
 
