@@ -73,14 +73,15 @@ async function run() {
 
         if (path) {
             res.sendFile(path);
-        } else if (youtubeCache.isPending(videoId)) {
+        } else {
             youtube.direct(videoId).then(
                 (url) => req.pipe(request(url)).pipe(res),
                 () => res.status(503).send('Youtube Failure'),
             );
-        } else {
-            res.status(403).send('Video Not Active');
         }
+        /* else {
+            res.status(403).send('Video Not Active');
+        } */
     });
 
     process.on('SIGINT', () => {
