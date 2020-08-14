@@ -92,6 +92,8 @@ refreshBangers();
 setInterval(refreshBangers, TIMEOUT);
 
 export async function banger(): Promise<Media> {
+    if (!BANGERS) await refreshBangers();
+
     const chosen = BANGERS!.items[randomInt(0, BANGERS!.items.length - 1)];
     const videoId = new URL(chosen.url).searchParams.get('v')!;
     const duration = timeToSeconds(chosen.duration) * 1000;
