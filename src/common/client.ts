@@ -55,7 +55,7 @@ export interface ClientOptions {
 
 export const DEFAULT_OPTIONS: ClientOptions = {
     urlRoot: '.',
-    quickResponseTimeout: 1000,
+    quickResponseTimeout: 3000,
     slowResponseTimeout: 5000,
 };
 
