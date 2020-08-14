@@ -83,7 +83,7 @@ export function host(xws: expressWs.Instance, adapter: low.AdapterSync, options:
 
     xws.app.get('/users', (req, res) => {
         const users = Array.from(zone.users.values());
-        const names = users.map((user) => user.name).filter((name) => !!name);
+        const names = users.map(({ name, avatar }) => ({ name, avatar }));
         res.json(names);
     });
 

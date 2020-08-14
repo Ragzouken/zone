@@ -9,7 +9,7 @@ import { ZoneSceneRenderer, avatarImage, tilemapContext, blockTexture } from './
 import { Player } from './player';
 import { UserState } from '../common/zone';
 import { HTMLUI } from './html-ui';
-import { createContext2D, drawSprite } from 'blitsy';
+import { createContext2D } from 'blitsy';
 import { EventEmitter } from 'events';
 
 window.addEventListener('load', () => load());
@@ -177,7 +177,6 @@ export async function load() {
         chat.status(`notifications ${permission}`);
     });
 
-    const userPanel = document.getElementById('user-panel')!;
     const userItemContainer = document.getElementById('user-items')!;
     const userSelect = document.getElementById('user-select') as HTMLSelectElement;
 
@@ -916,6 +915,12 @@ export async function load() {
     });
 }
 
+function createAvatarElement(avatar: string) {
+    const context = createContext2D(8, 8);
+    context.drawImage(getTile(avatar).canvas, 0, 0);
+    return context.canvas;
+};
+
 function setupEntrySplash() {
     const nameInput = document.querySelector('#join-name') as HTMLInputElement;
     const entrySplash = document.getElementById('entry-splash') as HTMLElement;
@@ -923,14 +928,28 @@ function setupEntrySplash() {
     const entryButton = document.getElementById('entry-button') as HTMLInputElement;
     const entryForm = document.getElementById('entry') as HTMLFormElement;
 
+    function refreshUsers(users: { name?: string, avatar?: string }[]) {
+        entryUsers.innerHTML = '';
+        users.forEach(({ name, avatar }) => {
+            const element = document.createElement('div');
+            const label = document.createElement('div');
+            label.innerHTML = name || 'anonymous';
+            element.appendChild(createAvatarElement(avatar || "GBgYPH69JCQ="));
+            element.appendChild(label);
+            entryUsers.appendChild(element);
+        });
+    }
+
     function updateEntryUsers() {
+        if (entrySplash.hidden) return;
+
         fetch('./users')
             .then((res) => res.json())
-            .then((names: string[]) => {
-                if (names.length === 0) {
+            .then((users: { name?: string, avatar?: string }[]) => {
+                if (users.length === 0) {
                     entryUsers.innerHTML = 'zone is currenty empty';
                 } else {
-                    entryUsers.innerHTML = `${names.length} people are zoning: ` + names.join(', ');
+                    refreshUsers(users);
                 }
             });
     }
