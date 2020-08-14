@@ -20,6 +20,10 @@ export class ChatPanel {
 
     constructor(public previewTime = 5000) {}
 
+    public error(text: string) {
+        this.log('clr=#FF0000}ERROR: ' + text);
+    }
+
     public status(text: string) {
         this.log('{clr=#FF00FF}! ' + text);
     }

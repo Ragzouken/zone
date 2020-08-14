@@ -62,10 +62,7 @@ const chat = new ChatPanel();
 
 function getLocalUser() {
     if (!client.localUserId) {
-        chat.log("{clr=#FF0000}ERROR: no localUserId");
-        throw new Error("FUCK");
-    } else if (!client.zone.getUser(client.localUserId)) {
-        chat.log("{clr=#FF0000}ERROR: no local user");
+        // chat.log("{clr=#FF0000}ERROR: no localUserId");
     } else {
         return client.zone.getUser(client.localUserId!);
     }
@@ -106,7 +103,8 @@ async function connect(): Promise<void> {
         const data = localStorage.getItem('avatar');
         if (data) client.avatar(data);
     } catch (e) {
-        chat.status(e.text);
+        chat.error(`assignment failed (${e.text})`);
+        console.log('assignment exception:', e);
         return;
     }
 
@@ -233,11 +231,9 @@ export async function load() {
         });
         userSelect.value = '';
 
-        /*
         const auth = !!getLocalUser()?.tags.includes('admin');
         authRow.hidden = auth;
         authContent.hidden = !auth;
-        */
     }
 
     document.getElementById('ban-ip-button')!.addEventListener('click', () => {
