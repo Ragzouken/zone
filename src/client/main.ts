@@ -61,7 +61,14 @@ function parseFakedown(text: string) {
 const chat = new ChatPanel();
 
 function getLocalUser() {
-    return client.localUserId ? client.zone.getUser(client.localUserId) : undefined;
+    if (!client.localUserId) {
+        chat.log("{clr=#FF0000}ERROR: no localUserId");
+        throw new Error("FUCK");
+    } else if (!client.zone.getUser(client.localUserId)) {
+        chat.log("{clr=#FF0000}ERROR: no local user");
+    } else {
+        return client.zone.getUser(client.localUserId!);
+    }
 }
 
 let localName = localStorage.getItem('name') || '';
@@ -94,7 +101,8 @@ async function connect(): Promise<void> {
     }
 
     try {
-        await client.join({ name: localName, password: joinPassword });
+        const assign = await client.join({ name: localName, password: joinPassword });
+        chat.log(`{clr=#FF0000}DEBUG: ASSIGNED ${assign.userId} (${client.localUserId})`);
         const data = localStorage.getItem('avatar');
         if (data) client.avatar(data);
     } catch (e) {
@@ -225,9 +233,11 @@ export async function load() {
         });
         userSelect.value = '';
 
+        /*
         const auth = !!getLocalUser()?.tags.includes('admin');
         authRow.hidden = auth;
         authContent.hidden = !auth;
+        */
     }
 
     document.getElementById('ban-ip-button')!.addEventListener('click', () => {
