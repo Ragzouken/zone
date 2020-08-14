@@ -65,15 +65,28 @@ input[type="text"]:focus {
     margin-bottom: -64px;
 }
 
-.toolbar {
+#menu-container {
     position: absolute;
-    left: 0;
+    left: 0; top: 0;
+    width: 100%;
+    height: 100%;
 
+    display: flex;
+    flex-direction: column-reverse;
+
+    pointer-events: none;
+}
+
+#panel-container {
+    max-width: 512px;
+
+    pointer-events: all;
+}
+
+.toolbar {
     display: flex;
     flex-direction: row;
     align-items: stretch;
-
-    pointer-events: none;
 
     background: black;
 }
@@ -108,11 +121,6 @@ button > img {
     margin-bottom: var(--toolbar-gap);
 }
 
-#bottom-toolbar {
-    bottom: 0;
-    align-items: flex-end;
-}
-
 #player-status {
     margin: 16px;
 }
@@ -128,9 +136,6 @@ button.active {
 }
 
 .menu-panel {
-    width: 100%;
-    max-width: 512px;
-
     display: flex;
     flex-direction: column;
 }
@@ -287,10 +292,6 @@ button.active {
 }
 
 [data-window] {
-    position: absolute;
-    left: 0;
-    bottom: var(--tab-bottom);
-    
     width: 512px;
     display: flex;
     flex-direction: column;
@@ -389,8 +390,6 @@ html, body {
 }
 
 #chat-canvas {
-    position: absolute;
-    bottom: var(--tab-bottom);
     width: 512px;
     height: 512px;
 

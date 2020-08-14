@@ -14,7 +14,8 @@ html
                 #top-toolbar.toolbar
                     #player-status
                     #tooltip
-                #bottom-toolbar.toolbar
+            #menu-container
+                #menu-tabs.toolbar
                     button#chat-toggle(title="chat (tab)")
                         img(src="icons/chat.png")
                     button#users-button(title="show user list")
@@ -33,104 +34,105 @@ html
                         img(src="icons/blocks.png")
                     button#menu-button(title="show menu")
                         img(src="icons/menu.png")
-                    canvas#chat-canvas(width=512, height=512)
-            #chat-panel.menu-panel(data-window)
-                .menu-title
-                    div chat
-                .menu-body
-                    canvas#chat-canvas2(width=512, height=512)
-                    input#chat-input(type="text" placeholder="chat message..." maxlength="160" autocomplete="off")
-            #menu-panel.menu-panel(data-window)
-                .menu-title
-                    div miscellanious options
-                .menu-body
-                    div
-                        label(for="volume-slider") volume
-                        input#volume-slider(type="range", min="0", max="1", step=".01")
-                    div
-                        button#popout-button pop out video
-                        button#resync-button resync video
-                        button#enable-notifications chat notifications
-                    #auth-row
-                        input(placeholder="admin password...")#auth-input
-                        button#auth-button authorise
-                    #auth-content
-                        div
-                            select#user-select
-                            button#add-dj-button add dj
-                            button#del-dj-button del dj
-                            button#ban-ip-button ban ip
-                        div
-                            button#event-mode-on event mode on
-                            button#event-mode-off event mode off
-            #popout-panel.menu-panel(data-window)
-                .menu-title(data-window-drag)
-                    div video pop-out
-                    button(title="hide panel (esc)" data-window-close).icon-button-small
-                        img(src="icons/close.png")
-            #search-panel.menu-panel(data-window)
-                .menu-title
-                    div youtube
-                form#search-form
-                    input#search-input(placeholder="search for a video" type="text" autocomplete="off")
-                    input#search-submit(type="submit" value="search" disabled)
-                .menu-body#search-results
-                    #search-result-template.search-result
-                        div title
-                        img
-            #queue-panel.menu-panel(data-window)
-                .menu-title
-                    #queue-title play queue
-                .menu-body
-                    .queue-item#current-item
-                        .queue-item-title#current-item-title title
-                        .queue-item-time#current-item-time 00:00
-                        button.queue-item-cancel#skip-button(title="vote to skip this")
-                            img(src="icons/skip.png")
-                    #queue-items
-                        .queue-item#queue-item-template
-                            .queue-item-title title
-                            .queue-item-time 00:00
-                            button.queue-item-cancel(title="unqueue this")
-                                img(src="icons/cancel.png")
-                    button#play-banger(title="queue random song", type="button") queue random song
-            #user-panel(data-window)
-                .menu-title
-                    div zonies
-                .menu-body
-                    #user-items.user-container
-            #avatar-panel(data-window)
-                .menu-title
-                    div update appearance
-                .menu-body
-                    canvas#avatar-paint(width=8, height=8)
-                    input#avatar-name(type="text", maxlength="16")
-                    button#avatar-update update
-            #blocks-panel(data-window)
-                .menu-body
-                    #blocks-list
-            #emotes-panel(data-window)
-                .menu-title
-                    div emotes
-                #emotes-list.menu-body
-                    button(title="toggle float emote (1)", data-emote-toggle="wvy")
-                        img(src="icons/wvy.png")
-                    button(title="toggle shake emote (2)", data-emote-toggle="shk")
-                        img(src="icons/shk.png")
-                    button(title="toggle rave emote (3)", data-emote-toggle="rbw")
-                        img(src="icons/rbw.png")
-                    button(title="toggle spin emote (4)", data-emote-toggle="spn")
-                        img(src="icons/spn.png")
-            #view-panel(data-window)
-                .menu-title
-                    div view
-                .menu-body
-                    button#rotate-l-button(title="rotate view ([)")
-                        img(src="icons/rotate-l.png")
-                    button#camera-button(title="switch view (v)")
-                        img(src="icons/look.png")
-                    button#rotate-r-button(title="rotate view (])")
-                        img(src="icons/rotate-r.png")
+                #panel-container
+                    #chat-panel.menu-panel(data-window)
+                        .menu-title
+                            div chat
+                        .menu-body
+                            canvas#chat-canvas2(width=512, height=512)
+                            input#chat-input(type="text" placeholder="chat message..." maxlength="160" autocomplete="off")
+                    #menu-panel.menu-panel(data-window)
+                        .menu-title
+                            div miscellanious options
+                        .menu-body
+                            div
+                                label(for="volume-slider") volume
+                                input#volume-slider(type="range", min="0", max="1", step=".01")
+                            div
+                                button#popout-button pop out video
+                                button#resync-button resync video
+                                button#enable-notifications chat notifications
+                            #auth-row
+                                input(placeholder="admin password...")#auth-input
+                                button#auth-button authorise
+                            #auth-content
+                                div
+                                    select#user-select
+                                    button#add-dj-button add dj
+                                    button#del-dj-button del dj
+                                    button#ban-ip-button ban ip
+                                div
+                                    button#event-mode-on event mode on
+                                    button#event-mode-off event mode off
+                    #search-panel.menu-panel(data-window)
+                        .menu-title
+                            div youtube
+                        form#search-form
+                            input#search-input(placeholder="search for a video" type="text" autocomplete="off")
+                            input#search-submit(type="submit" value="search" disabled)
+                        .menu-body#search-results
+                            #search-result-template.search-result
+                                div title
+                                img
+                    #queue-panel.menu-panel(data-window)
+                        .menu-title
+                            #queue-title play queue
+                        .menu-body
+                            .queue-item#current-item
+                                .queue-item-title#current-item-title title
+                                .queue-item-time#current-item-time 00:00
+                                button.queue-item-cancel#skip-button(title="vote to skip this")
+                                    img(src="icons/skip.png")
+                            #queue-items
+                                .queue-item#queue-item-template
+                                    .queue-item-title title
+                                    .queue-item-time 00:00
+                                    button.queue-item-cancel(title="unqueue this")
+                                        img(src="icons/cancel.png")
+                            button#play-banger(title="queue random song", type="button") queue random song
+                    #user-panel(data-window)
+                        .menu-title
+                            div zonies
+                        .menu-body
+                            #user-items.user-container
+                    #avatar-panel(data-window)
+                        .menu-title
+                            div update appearance
+                        .menu-body
+                            canvas#avatar-paint(width=8, height=8)
+                            input#avatar-name(type="text", maxlength="16")
+                            button#avatar-update update
+                    #blocks-panel(data-window)
+                        .menu-body
+                            #blocks-list
+                    #emotes-panel(data-window)
+                        .menu-title
+                            div emotes
+                        #emotes-list.menu-body
+                            button(title="toggle float emote (1)", data-emote-toggle="wvy")
+                                img(src="icons/wvy.png")
+                            button(title="toggle shake emote (2)", data-emote-toggle="shk")
+                                img(src="icons/shk.png")
+                            button(title="toggle rave emote (3)", data-emote-toggle="rbw")
+                                img(src="icons/rbw.png")
+                            button(title="toggle spin emote (4)", data-emote-toggle="spn")
+                                img(src="icons/spn.png")
+                    #view-panel(data-window)
+                        .menu-title
+                            div view
+                        .menu-body
+                            button#rotate-l-button(title="rotate view ([)")
+                                img(src="icons/rotate-l.png")
+                            button#camera-button(title="switch view (v)")
+                                img(src="icons/look.png")
+                            button#rotate-r-button(title="rotate view (])")
+                                img(src="icons/rotate-r.png")
+                canvas#chat-canvas(width=512, height=512)
+        #popout-panel.menu-panel(data-window)
+            .menu-title(data-window-drag)
+                div video pop-out
+                button(title="hide panel (esc)" data-window-close).icon-button-small
+                    img(src="icons/close.png")
         #entry-splash
             #entry-panel
                 img#entry-logo(src="./zone-logo.png")
