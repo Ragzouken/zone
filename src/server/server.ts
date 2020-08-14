@@ -304,9 +304,10 @@ export function host(xws: expressWs.Instance, adapter: low.AdapterSync, options:
                 }
             });
 
-            sendAllState(user);
+            sendCoreState(user);
             sendOnly('assign', { userId: user.userId, token }, user.userId);
             if (!resume) sendAll('user', user);
+            sendOtherState(user);
         });
     }
 
@@ -318,16 +319,18 @@ export function host(xws: expressWs.Instance, adapter: low.AdapterSync, options:
         }
     }
 
-    function sendAllState(user: UserState) {
-        const cells: [number[], number][] = [];
-        zone.grid.forEach((block, coord) => cells.push([coord, block]));
-
+    function sendCoreState(user: UserState) {
         const users = Array.from(zone.users.values());
         sendOnly('users', { users }, user.userId);
         sendOnly('queue', { items: playback.queue }, user.userId);
+        sendCurrent(user);
+    }
+
+    function sendOtherState(user: UserState) {
+        const cells: [number[], number][] = [];
+        zone.grid.forEach((block, coord) => cells.push([coord, block]));
         sendOnly('blocks', { cells }, user.userId);
         sendOnly('echoes', { added: Array.from(zone.echoes).map(([, echo]) => echo) }, user.userId);
-        sendCurrent(user);
     }
 
     function ifUser(name: string, action: (user: UserState) => void) {

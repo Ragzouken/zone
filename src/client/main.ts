@@ -99,11 +99,10 @@ async function connect(): Promise<void> {
 
     try {
         const assign = await client.join({ name: localName, password: joinPassword });
-        chat.log(`{clr=#FF0000}DEBUG: ASSIGNED ${assign.userId} (${client.localUserId})`);
         const data = localStorage.getItem('avatar');
         if (data) client.avatar(data);
     } catch (e) {
-        chat.error(`assignment failed (${e.text})`);
+        chat.error(`assignment failed (${e})`);
         console.log('assignment exception:', e);
         return;
     }
