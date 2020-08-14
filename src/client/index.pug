@@ -11,9 +11,6 @@ html
     body
         #scene
             #three-container
-                #top-toolbar.toolbar
-                    #player-status
-                    #tooltip
             #menu-container
                 #menu-tabs.toolbar
                     button#chat-toggle(title="chat (tab)")
@@ -128,6 +125,10 @@ html
                             button#rotate-r-button(title="rotate view (])")
                                 img(src="icons/rotate-r.png")
                 canvas#chat-canvas(width=512, height=512)
+                .spacer
+                #top-toolbar.toolbar
+                    #player-status
+                    #tooltip
         #popout-panel.menu-panel(data-window)
             .menu-title(data-window-drag)
                 div video pop-out

@@ -84,6 +84,8 @@ input[type="text"]:focus {
 }
 
 .toolbar {
+    max-width: 512px;
+
     display: flex;
     flex-direction: row;
     align-items: stretch;
