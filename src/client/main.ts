@@ -75,8 +75,8 @@ function rename(name: string) {
 function socket(): Promise<WebSocket> {
     return new Promise((resolve, reject) => {
         const secure = window.location.protocol.startsWith('https');
-        const protocol = secure ? 'wss://' : 'ws://';
-        const socket = new WebSocket(protocol + zoneURL);
+        const protocol = secure ? 'wss' : 'ws';
+        const socket = new WebSocket(`${protocol}://${window.location.host}/zone`);
         socket.addEventListener('open', () => resolve(socket));
         socket.addEventListener('error', reject);
     });
@@ -917,6 +917,7 @@ export async function load() {
 }
 
 function setupEntrySplash() {
+    const nameInput = document.querySelector('#join-name') as HTMLInputElement;
     const entrySplash = document.getElementById('entry-splash') as HTMLElement;
     const entryUsers = document.getElementById('entry-users') as HTMLParagraphElement;
     const entryButton = document.getElementById('entry-button') as HTMLInputElement;
@@ -936,19 +937,14 @@ function setupEntrySplash() {
     updateEntryUsers();
     setInterval(updateEntryUsers, 5000);
 
-    entryButton.disabled = false;
-    entryForm.addEventListener('submit', (e) => {
-        e.preventDefault();
-        entrySplash.hidden = true;
-        enter();
-    });
-}
+    entryButton.disabled = !entryForm.checkValidity();
+    nameInput.addEventListener('input', () => entryButton.disabled = !entryForm.checkValidity());
 
-let zoneURL = '';
-async function enter() {
-    localName = (document.querySelector('#join-name') as HTMLInputElement).value;
-    localStorage.setItem('name', localName);
-    const urlparams = new URLSearchParams(window.location.search);
-    zoneURL = urlparams.get('zone') || `${window.location.host}/zone`;
-    await connect();
+    entryForm.addEventListener('submit', async (event) => {
+        event.preventDefault();
+        entrySplash.hidden = true;
+        localName = nameInput.value;
+        localStorage.setItem('name', localName);
+        await connect();
+    });
 }
