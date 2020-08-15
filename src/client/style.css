@@ -10,7 +10,6 @@ input[type="submit"], button { cursor: pointer; }
 
     --toolbar-gap: 8px;
     --toolbar-icon-scale: 4;
-    --tab-bottom: calc(var(--toolbar-gap) * 2 + 10px * var(--toolbar-icon-scale));
 }
 
 canvas, img {
@@ -84,8 +83,6 @@ input[type="text"]:focus {
 }
 
 .toolbar {
-    max-width: 512px;
-
     display: flex;
     flex-direction: row;
     align-items: stretch;
@@ -142,46 +139,6 @@ button.active {
     flex-direction: column;
 }
 
-#search-form {
-    width: 100%;
-    display: flex;
-    padding: 16px;
-    padding-bottom: 0;
-}
-
-#search-input {
-    flex: 1;
-    min-width: 0;
-}
-
-#search-form > button, #search-form > input[type="submit"] {
-    flex: 0;
-    margin-left: 8px;
-}
-
-.search-result {
-    cursor: pointer;
-    display: flex;
-    flex-direction: row;
-    align-items: stretch;
-}
-
-.search-result:hover {
-    background: orange;
-}
-
-.search-result > div {
-    flex: 1;
-    padding: 8px;
-}
-
-.search-result > img {
-    flex: 0;
-    width: 128px;
-    min-height: 64px;
-    object-fit: cover;
-}
-
 .menu-title {
     width: 100%;
     display: flex;
@@ -189,6 +146,7 @@ button.active {
     align-items: stretch;
     padding: 8px;
     background: rgb(32 40 64);
+    flex: 0;
 }
 
 .menu-title > * {
@@ -197,6 +155,7 @@ button.active {
 
 .menu-body {
     width: 100%;
+    flex: 1;
     display: flex;
     flex-direction: column;
     padding: 8px;
@@ -219,54 +178,6 @@ button.active {
 }
 
 .icon-button-small > img {
-    width: 16px; height: 16px;
-}
-
-#queue-items {
-    display: flex;
-    flex-direction: column;
-}
-
-.queue-item {
-    display: flex;
-    flex-direction: row;
-    align-items: stretch;
-
-    margin-bottom: 8px;
-}
-
-.queue-item > *:not(:first-child) {
-    margin-left: 8px;
-}
-
-.queue-item-title {
-    flex: 1;
-}
-
-.queue-item-time {
-    width: 128px;
-    flex: 0;
-    
-    color: #00ffff;
-}
-
-.queue-item-cancel {
-    width: 24px;
-    height: 24px;
-
-    border: none;
-    padding: 4px;
-    background-color: var(--button-color);
-    border-color: var(--button-color);
-}
-
-.queue-item-cancel:disabled {
-    background-color: var(--disable-color);
-    border-color: var(--disable-color);
-    cursor: not-allowed;
-}
-
-.queue-item-cancel > img {
     width: 16px; height: 16px;
 }
 
@@ -401,8 +312,6 @@ html, body {
 #chat-canvas.open {
     pointer-events: initial;
     cursor: pointer;
-
-    bottom: calc(var(--tab-bottom) + 40px);
     display: none;
 }
 

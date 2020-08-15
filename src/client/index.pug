@@ -7,6 +7,7 @@ html
         link(rel="icon", type="image/png", href="icon.png")
         link(rel="stylesheet", href="ascii_small_simple/ascii_small_simple.css", type="text/css", charset="utf-8")
         link(rel="stylesheet", href="style.css")
+        link(rel="stylesheet", href="menus.css")
         script(src="script.js")
     body
         #scene
@@ -17,10 +18,8 @@ html
                         img(src="icons/chat.png")
                     button#users-button(title="show user list")
                         img(src="icons/users.png")
-                    button#search-button(title="search for videos (s)")
-                        img(src="icons/search.png")
-                    button#queue-button(title="show play queue (q)")
-                        img(src="icons/list.png")                 
+                    button#playback-button(title="show playback panel (p)")
+                        img(src="icons/music.png")                 
                     button#avatar-button(title="change appearance")
                         img(src="icons/avatar.png")
                     button#emotes-button(title="show emotes palette")
@@ -31,6 +30,8 @@ html
                         img(src="icons/blocks.png")
                     button#menu-button(title="show menu")
                         img(src="icons/menu.png")
+                    #player-status
+                    #tooltip
                 #panel-container
                     #chat-panel.menu-panel(data-window)
                         .menu-title
@@ -61,32 +62,33 @@ html
                                 div
                                     button#event-mode-on event mode on
                                     button#event-mode-off event mode off
-                    #search-panel.menu-panel(data-window)
-                        .menu-title
-                            div youtube
-                        form#search-form
-                            input#search-input(placeholder="search for a video" type="text" autocomplete="off")
-                            input#search-submit(type="submit" value="search" disabled)
-                        .menu-body#search-results
-                            #search-result-template.search-result
-                                div title
-                                img
-                    #queue-panel.menu-panel(data-window)
-                        .menu-title
-                            #queue-title play queue
-                        .menu-body
-                            .queue-item#current-item
-                                .queue-item-title#current-item-title title
-                                .queue-item-time#current-item-time 00:00
-                                button.queue-item-cancel#skip-button(title="vote to skip this")
-                                    img(src="icons/skip.png")
-                            #queue-items
-                                .queue-item#queue-item-template
-                                    .queue-item-title title
-                                    .queue-item-time 00:00
-                                    button.queue-item-cancel(title="unqueue this")
-                                        img(src="icons/cancel.png")
-                            button#play-banger(title="queue random song", type="button") queue random song
+                    #playback-panel.menu-panel(data-window)
+                        .menu-panel-tab-toggle-container
+                            .menu-panel-tab-toggle.active(data-tab-toggle="playback/search") search
+                            .menu-panel-tab-toggle(data-tab-toggle="playback/playlist") playlist
+                        .menu-panel-tab-body-container
+                            .menu-panel-tab-body(data-tab-body="playback/search")
+                                form#search-form
+                                    input#search-input(placeholder="search for a video" type="text" autocomplete="off")
+                                    input#search-submit(type="submit" value="search" disabled)
+                                #search-results
+                                    #search-result-template.search-result
+                                        div title
+                                        img 
+                            .menu-panel-tab-body(data-tab-body="playback/playlist" hidden)
+                                #queue-title
+                                .queue-item#current-item
+                                    .queue-item-title#current-item-title title
+                                    .queue-item-time#current-item-time 00:00
+                                    button.queue-item-cancel#skip-button(title="vote to skip this")
+                                        img(src="icons/skip.png")
+                                #queue-items
+                                    .queue-item#queue-item-template
+                                        .queue-item-title title
+                                        .queue-item-time 00:00
+                                        button.queue-item-cancel(title="unqueue this")
+                                            img(src="icons/cancel.png")
+                                button#play-banger(title="queue random song", type="button") queue random song
                     #user-panel(data-window)
                         .menu-title
                             div zonies
@@ -125,10 +127,6 @@ html
                             button#rotate-r-button(title="rotate view (])")
                                 img(src="icons/rotate-r.png")
                 canvas#chat-canvas(width=512, height=512)
-                .spacer
-                #top-toolbar.toolbar
-                    #player-status
-                    #tooltip
         #popout-panel.menu-panel(data-window)
             .menu-title(data-window-drag)
                 div video pop-out

@@ -11,6 +11,7 @@ import { UserState } from '../common/zone';
 import { HTMLUI } from './html-ui';
 import { createContext2D } from 'blitsy';
 import { EventEmitter } from 'events';
+import { menusFromDataAttributes } from './menus';
 
 window.addEventListener('load', () => load());
 
@@ -247,7 +248,6 @@ export async function load() {
     document.getElementById('event-mode-on')!.addEventListener('click', () => client.command('mode', ['event']));
     document.getElementById('event-mode-off')!.addEventListener('click', () => client.command('mode', ['']));
 
-    const queuePanel = document.getElementById('queue-panel')!;
     const queueItemContainer = document.getElementById('queue-items')!;
     const queueItemTemplate = document.getElementById('queue-item-template')!;
     queueItemTemplate.parentElement!.removeChild(queueItemTemplate);
@@ -303,11 +303,6 @@ export async function load() {
 
         refreshCurrentItem();
     }
-
-    document.getElementById('queue-button')!.addEventListener('click', () => {
-        refreshQueue();
-        queuePanel.hidden = false;
-    });
 
     document.getElementById('auth-button')!.addEventListener('click', () => {
         const input = document.getElementById('auth-input') as HTMLInputElement;
@@ -540,11 +535,10 @@ export async function load() {
     const chatToggle = document.getElementById('chat-toggle')!;
 
     const avatarToggle = addWindowToggle(document.getElementById('avatar-button')!, 'avatar-panel');
-    const queueToggle = addWindowToggle(document.getElementById('queue-button')!, 'queue-panel');
     const chatToggle2 = addWindowToggle(chatToggle, 'chat-panel');
 
     avatarToggle.on('active', openAvatarEditor);
-    queueToggle.on('active', refreshQueue);
+    // queueToggle.on('active', refreshQueue);
 
     let fullChat = false;
 
@@ -564,8 +558,10 @@ export async function load() {
     addWindowToggle(document.getElementById('users-button')!, 'user-panel');
     addWindowToggle(document.getElementById('blocks-button')!, 'blocks-panel');
     addWindowToggle(document.getElementById('view-button')!, 'view-panel');
-    addWindowToggle(document.getElementById('search-button')!, 'search-panel');
     addWindowToggle(document.getElementById('menu-button')!, 'menu-panel');
+    addWindowToggle(document.getElementById('playback-button')!, 'playback-panel');
+
+    menusFromDataAttributes(document.documentElement);
 
     const blockListContainer = document.getElementById('blocks-list') as HTMLElement;
 
@@ -769,8 +765,6 @@ export async function load() {
     gameKeys.set(']', () => (sceneRenderer.followCam.angle += rot));
     gameKeys.set('v', () => sceneRenderer.cycleCamera());
 
-    gameKeys.set('q', () => document.getElementById('queue-button')!.click());
-    gameKeys.set('s', () => document.getElementById('search-button')!.click());
     gameKeys.set('u', () => document.getElementById('users-button')!.click());
 
     function sendChat() {
