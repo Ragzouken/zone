@@ -20,6 +20,11 @@ export class Menu extends EventEmitter {
         this.emit(`${shown ? 'show' : 'hide'}:${path}`);
     }
 
+    isVisible(path: string): boolean {
+        const ancestors = !path.includes('/') || this.isVisible(getPathParent(path));
+        return ancestors && !this.tabBodies.get(path)?.hidden;
+    }
+
     open(path: string) {
         if (path.includes('/'))
             this.open(getPathParent(path));

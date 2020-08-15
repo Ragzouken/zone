@@ -718,9 +718,16 @@ export async function load() {
     gameKeys.set(']', () => (sceneRenderer.followCam.angle += rot));
     gameKeys.set('v', () => sceneRenderer.cycleCamera());
 
-    gameKeys.set('u', () => menu.open('social/users'));
-    gameKeys.set('s', () => menu.open('playback/search'));
-    gameKeys.set('q', () => menu.open('playback/playlist'));
+    function toggleMenuPath(path: string) {
+        if (!menu.isVisible(path))
+            menu.open(path);
+        else
+            menu.closeChildren("");
+    }
+
+    gameKeys.set('u', () => toggleMenuPath('social/users'));
+    gameKeys.set('s', () => toggleMenuPath('playback/search'));
+    gameKeys.set('q', () => toggleMenuPath('playback/playlist'));
 
     function sendChat() {
         const line = chatInput.value;
