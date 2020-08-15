@@ -72,9 +72,16 @@
     gap: 8px;
 }
 
-#auth-users, #auth-modes {
+.button-row {
     display: flex;
     align-content: stretch;
+    gap: 8px;
+}
+
+.button-rows {
+    display: flex;
+    flex-direction: column;
+    padding: 8px;
     gap: 8px;
 }
 

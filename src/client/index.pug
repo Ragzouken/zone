@@ -43,12 +43,12 @@ html
                                     input(type="text" placeholder="admin password...")#auth-input
                                     button#auth-button authorise
                                 #auth-content
-                                    div#auth-users
+                                    .button-row
                                         select#user-select
                                         button#add-dj-button add dj
                                         button#del-dj-button del dj
                                         button#ban-ip-button ban ip
-                                    div#auth-modes
+                                    .button-row
                                         button#event-mode-on event mode on
                                         button#event-mode-off event mode off
                     #playback-panel.menu-panel(data-window data-tab-body="playback")
@@ -78,12 +78,14 @@ html
                                         .queue-item-time 00:00
                                         button.queue-item-cancel(title="unqueue this")
                                             img(src="icons/cancel.png")
-                                button#play-banger(title="queue random song", type="button") queue random song
-                            .menu-panel-tab-body(data-tab-body="playback/player" hidden)
-                                div
+                                .button-rows
+                                    .button-row
+                                        button#play-banger(title="queue random song", type="button") queue random song
+                            .menu-panel-tab-body.button-rows(data-tab-body="playback/player" hidden)
+                                .button-row
                                     label(for="volume-slider") volume
                                     input#volume-slider(type="range", min="0", max="1", step=".01")
-                                div
+                                .button-row
                                     button#popout-button pop out video
                                     button#resync-button resync video
                     #avatar-panel(data-window data-tab-body="avatar")
