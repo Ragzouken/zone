@@ -44,7 +44,9 @@ async function getCachedInfo(videoId: string) {
         return entry.info;
     } else {
         infoCache.delete(videoId);
+        console.log("GET INFO");
         const info = await ytdl.getInfo(videoId);
+        console.log("GOT INFO");
         const expires = performance.now() + TIMEOUT;
         infoCache.set(videoId, { info, expires });
         return info;
