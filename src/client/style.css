@@ -41,6 +41,7 @@ input, button, option, select {
 
 input[type="text"], select {
     color: white;
+    flex: 1;
 
     background: black;
     border: solid black 3px;

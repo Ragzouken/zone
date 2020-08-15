@@ -210,7 +210,7 @@ export async function load() {
 
         userItemContainer.innerHTML = '';
         userSelect.innerHTML = '';
-        users.forEach((user) => {
+        users.forEach((user, index) => {
             const option = document.createElement('option');
             option.value = user.name || '';
             option.innerHTML = formatName(user);
@@ -222,6 +222,11 @@ export async function load() {
             element.appendChild((userAvatars.get(user) || iconTest).canvas);
             element.appendChild(label);
             userItemContainer.appendChild(element);
+
+            element.addEventListener('click', (event) => {
+                event.stopPropagation();
+                userSelect.selectedIndex = index;
+            })
         });
         userSelect.value = '';
 

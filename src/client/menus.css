@@ -59,6 +59,25 @@
     margin-right: 8px;
 }
 
+#auth-row {
+    display: flex;
+    padding: 8px;
+    gap: 8px;
+}
+
+#auth-content {
+    display: flex;
+    flex-direction: column;
+    padding: 8px;
+    gap: 8px;
+}
+
+#auth-users, #auth-modes {
+    display: flex;
+    align-content: stretch;
+    gap: 8px;
+}
+
 #queue-title {
     padding: 8px;
 }

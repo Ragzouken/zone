@@ -40,15 +40,15 @@ html
                             .menu-panel-tab-body(data-tab-body="social/users" hidden)
                                 #user-items.user-container
                                 #auth-row
-                                    input(placeholder="admin password...")#auth-input
+                                    input(type="text" placeholder="admin password...")#auth-input
                                     button#auth-button authorise
                                 #auth-content
-                                    div
+                                    div#auth-users
                                         select#user-select
                                         button#add-dj-button add dj
                                         button#del-dj-button del dj
                                         button#ban-ip-button ban ip
-                                    div
+                                    div#auth-modes
                                         button#event-mode-on event mode on
                                         button#event-mode-off event mode off
                     #playback-panel.menu-panel(data-window data-tab-body="playback")
