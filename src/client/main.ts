@@ -325,7 +325,7 @@ export async function load() {
                 const row = searchResultTemplate.cloneNode(true) as HTMLElement;
                 row.addEventListener('click', () => {
                     client.youtube(videoId);
-                    document.getElementById('search-button')!.click();
+                    menu.open('playback/playlist');
                 });
 
                 const div = row.querySelector('div')!;
@@ -486,7 +486,7 @@ export async function load() {
     document.getElementById('play-banger')?.addEventListener('click', () => client.messaging.send('banger', {}));
 
     let fullChat = false;
-    
+
     const menu = menusFromDataAttributes(document.documentElement);
     menu.on('show:avatar', openAvatarEditor);
     menu.on('show:playback/queue', refreshQueue);
