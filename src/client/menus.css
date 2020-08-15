@@ -39,12 +39,23 @@
 
 .menu-panel-tab-body {
     flex: 1;
+    display: flex;
+    flex-direction: column;
 
     background: var(--menu-background);
 }
 
 #playback-panel {
     min-height: 320px;
+}
+
+#social-panel {
+    min-height: 320px;
+}
+
+#chat-input {
+    margin-left: 8px;
+    margin-right: 8px;
 }
 
 #queue-title {

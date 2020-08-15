@@ -5,6 +5,6 @@ coverage
 media
 
 public/index.html
-public/style.css
+public/*.css
 public/script.js
 public/script.js.map

@@ -288,16 +288,6 @@ html, body {
     flex: 1;
 }
 
-#chat-panel > .menu-body {
-    padding: 0;
-    background: none;
-}
-
-#chat-panel > .menu-body > input {
-    margin-left: 8px;
-    margin-right: 8px;
-}
-
 #chat-canvas2 {
     width: 512px;
     height: 512px;

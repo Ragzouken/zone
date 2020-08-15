@@ -502,13 +502,13 @@ export async function load() {
         searchResults.innerHTML = '';
     });
 
-    menu.on('open:chat', () => {
+    menu.on('open:social', () => {
         fullChat = true;
         chatInput.focus();
         chatContext.canvas.classList.toggle('open', true);
     });
  
-    menu.on('close:chat', () => {
+    menu.on('close:social', () => {
         fullChat = false;
         chatInput.blur();
         chatContext.canvas.classList.toggle('open', false);
@@ -697,7 +697,15 @@ export async function load() {
     }
 
     const gameKeys = new Map<string, () => void>();
-    gameKeys.set('Tab', () => menu.tabToggles.get('chat')!.click());
+    gameKeys.set('Tab', () => {
+        const socialToggle = menu.tabToggles.get('social')!;
+        const chatToggle = menu.tabToggles.get('social/chat')!;
+
+        if (chatToggle.classList.contains('active') && socialToggle.classList.contains('active'))
+            menu.closeChildren("");
+        else
+            menu.open('social/chat');
+    });
     gameKeys.set('1', () => toggleEmote('wvy'));
     gameKeys.set('2', () => toggleEmote('shk'));
     gameKeys.set('3', () => toggleEmote('rbw'));
@@ -716,7 +724,7 @@ export async function load() {
     gameKeys.set(']', () => (sceneRenderer.followCam.angle += rot));
     gameKeys.set('v', () => sceneRenderer.cycleCamera());
 
-    gameKeys.set('u', () => document.getElementById('users-button')!.click());
+    gameKeys.set('u', () => menu.open('social/users'));
     gameKeys.set('s', () => menu.open('playback/search'));
     gameKeys.set('q', () => menu.open('playback/playlist'));
 
@@ -745,15 +753,10 @@ export async function load() {
 
     document.addEventListener('keydown', (event) => {
         if (event.key === 'Escape') {
-            if (isInputElement(document.activeElement)) {
-                if (fullChat) {
-                    menu.tabToggles.get('chat')!.click();
-                } else {
-                    document.activeElement.blur();
-                }
+            if (isInputElement(document.activeElement))
+                document.activeElement.blur();
 
-                event.preventDefault();
-            }
+            event.preventDefault();
             menu.closeChildren("");
         }
 
