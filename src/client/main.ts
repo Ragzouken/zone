@@ -178,11 +178,6 @@ export async function load() {
         volumeSlider.value = player.volume.toString();
     }
 
-    document.getElementById('enable-notifications')?.addEventListener('click', async () => {
-        const permission = await Notification.requestPermission();
-        chat.status(`notifications ${permission}`);
-    });
-
     const userItemContainer = document.getElementById('user-items')!;
     const userSelect = document.getElementById('user-select') as HTMLSelectElement;
 

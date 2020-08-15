@@ -321,6 +321,7 @@ html, body {
 .user-container {
     display: flex;
     flex-wrap: wrap;
+    flex: 1;
 
     align-items: center;
     align-content: center;

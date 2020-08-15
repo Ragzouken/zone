@@ -26,8 +26,6 @@ html
                         img(src="icons/look.png")
                     button#blocks-button(title="place blocks" data-tab-toggle="blocks")
                         img(src="icons/blocks.png")
-                    button#menu-button(title="show menu" data-tab-toggle="menu")
-                        img(src="icons/menu.png")
                     #player-status
                     #tooltip
                 #panel-container
@@ -41,33 +39,23 @@ html
                                 input#chat-input(type="text" placeholder="chat message..." maxlength="160" autocomplete="off")
                             .menu-panel-tab-body(data-tab-body="social/users" hidden)
                                 #user-items.user-container
-                    #menu-panel.menu-panel(data-window data-tab-body="menu")
-                        .menu-title
-                            div miscellanious options
-                        .menu-body
-                            div
-                                label(for="volume-slider") volume
-                                input#volume-slider(type="range", min="0", max="1", step=".01")
-                            div
-                                button#popout-button pop out video
-                                button#resync-button resync video
-                                button#enable-notifications chat notifications
-                            #auth-row
-                                input(placeholder="admin password...")#auth-input
-                                button#auth-button authorise
-                            #auth-content
-                                div
-                                    select#user-select
-                                    button#add-dj-button add dj
-                                    button#del-dj-button del dj
-                                    button#ban-ip-button ban ip
-                                div
-                                    button#event-mode-on event mode on
-                                    button#event-mode-off event mode off
+                                #auth-row
+                                    input(placeholder="admin password...")#auth-input
+                                    button#auth-button authorise
+                                #auth-content
+                                    div
+                                        select#user-select
+                                        button#add-dj-button add dj
+                                        button#del-dj-button del dj
+                                        button#ban-ip-button ban ip
+                                    div
+                                        button#event-mode-on event mode on
+                                        button#event-mode-off event mode off
                     #playback-panel.menu-panel(data-window data-tab-body="playback")
                         .menu-panel-tab-toggle-container
                             .menu-panel-tab-toggle.active(data-tab-toggle="playback/search") search
                             .menu-panel-tab-toggle(data-tab-toggle="playback/playlist") playlist
+                            .menu-panel-tab-toggle(data-tab-toggle="playback/player") player
                         .menu-panel-tab-body-container
                             .menu-panel-tab-body(data-tab-body="playback/search")
                                 form#search-form
@@ -91,6 +79,13 @@ html
                                         button.queue-item-cancel(title="unqueue this")
                                             img(src="icons/cancel.png")
                                 button#play-banger(title="queue random song", type="button") queue random song
+                            .menu-panel-tab-body(data-tab-body="playback/player" hidden)
+                                div
+                                    label(for="volume-slider") volume
+                                    input#volume-slider(type="range", min="0", max="1", step=".01")
+                                div
+                                    button#popout-button pop out video
+                                    button#resync-button resync video
                     #avatar-panel(data-window data-tab-body="avatar")
                         .menu-title
                             div update appearance
