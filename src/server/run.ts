@@ -79,7 +79,7 @@ async function run() {
             console.log("PROXY");
             youtube.direct(videoId).then(
                 (url) => req.pipe(request(url)).pipe(res),
-                () => res.status(503).send('Youtube Failure'),
+                (error) => res.status(503).send(`youtube error: ${error}`),
             );
         }
         /* else {
