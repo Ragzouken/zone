@@ -14,32 +14,32 @@ html
             #three-container
             #menu-container
                 #menu-tabs.toolbar
-                    button#chat-toggle(title="chat (tab)")
+                    button#chat-toggle(title="chat (tab)" data-tab-toggle="chat")
                         img(src="icons/chat.png")
-                    button#users-button(title="show user list")
+                    button#users-button(title="show user list" data-tab-toggle="users")
                         img(src="icons/users.png")
-                    button#playback-button(title="show playback panel (p)")
+                    button#playback-button(title="show playback panel (p)" data-tab-toggle="playback")
                         img(src="icons/music.png")                 
-                    button#avatar-button(title="change appearance")
+                    button#avatar-button(title="change appearance" data-tab-toggle="avatar")
                         img(src="icons/avatar.png")
-                    button#emotes-button(title="show emotes palette")
+                    button#emotes-button(title="show emotes palette" data-tab-toggle="emotes")
                         img(src="icons/emotes.png")
-                    button#view-button(title="show view menu")
+                    button#view-button(title="show view menu" data-tab-toggle="view")
                         img(src="icons/look.png")
-                    button#blocks-button(title="place blocks")
+                    button#blocks-button(title="place blocks" data-tab-toggle="blocks")
                         img(src="icons/blocks.png")
-                    button#menu-button(title="show menu")
+                    button#menu-button(title="show menu" data-tab-toggle="menu")
                         img(src="icons/menu.png")
                     #player-status
                     #tooltip
                 #panel-container
-                    #chat-panel.menu-panel(data-window)
+                    #chat-panel.menu-panel(data-window data-tab-body="chat")
                         .menu-title
                             div chat
                         .menu-body
                             canvas#chat-canvas2(width=512, height=512)
                             input#chat-input(type="text" placeholder="chat message..." maxlength="160" autocomplete="off")
-                    #menu-panel.menu-panel(data-window)
+                    #menu-panel.menu-panel(data-window data-tab-body="menu")
                         .menu-title
                             div miscellanious options
                         .menu-body
@@ -62,7 +62,7 @@ html
                                 div
                                     button#event-mode-on event mode on
                                     button#event-mode-off event mode off
-                    #playback-panel.menu-panel(data-window)
+                    #playback-panel.menu-panel(data-window data-tab-body="playback")
                         .menu-panel-tab-toggle-container
                             .menu-panel-tab-toggle.active(data-tab-toggle="playback/search") search
                             .menu-panel-tab-toggle(data-tab-toggle="playback/playlist") playlist
@@ -89,22 +89,22 @@ html
                                         button.queue-item-cancel(title="unqueue this")
                                             img(src="icons/cancel.png")
                                 button#play-banger(title="queue random song", type="button") queue random song
-                    #user-panel(data-window)
+                    #user-panel(data-window data-tab-body="users")
                         .menu-title
                             div zonies
                         .menu-body
                             #user-items.user-container
-                    #avatar-panel(data-window)
+                    #avatar-panel(data-window data-tab-body="avatar")
                         .menu-title
                             div update appearance
                         .menu-body
                             canvas#avatar-paint(width=8, height=8)
                             input#avatar-name(type="text", maxlength="16")
                             button#avatar-update update
-                    #blocks-panel(data-window)
+                    #blocks-panel(data-window data-tab-body="blocks")
                         .menu-body
                             #blocks-list
-                    #emotes-panel(data-window)
+                    #emotes-panel(data-window data-tab-body="emotes")
                         .menu-title
                             div emotes
                         #emotes-list.menu-body
@@ -116,7 +116,7 @@ html
                                 img(src="icons/rbw.png")
                             button(title="toggle spin emote (4)", data-emote-toggle="spn")
                                 img(src="icons/spn.png")
-                    #view-panel(data-window)
+                    #view-panel(data-window data-tab-body="view")
                         .menu-title
                             div view
                         .menu-body

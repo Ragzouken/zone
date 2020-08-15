@@ -309,19 +309,11 @@ export async function load() {
         client.auth(input.value);
     });
 
-    const searchPanel = document.getElementById('search-panel')!;
     const searchInput = document.getElementById('search-input') as HTMLInputElement;
     const searchSubmit = document.getElementById('search-submit') as HTMLButtonElement;
     const searchResults = document.getElementById('search-results')!;
 
     searchInput.addEventListener('input', () => (searchSubmit.disabled = searchInput.value.length === 0));
-
-    document.getElementById('search-button')?.addEventListener('click', () => {
-        searchInput.value = '';
-        searchPanel.hidden = false;
-        searchInput.focus();
-        searchResults.innerHTML = '';
-    });
 
     const searchResultTemplate = document.getElementById('search-result-template')!;
     searchResultTemplate.parentElement?.removeChild(searchResultTemplate);
@@ -499,69 +491,28 @@ export async function load() {
 
     document.getElementById('play-banger')?.addEventListener('click', () => client.messaging.send('banger', {}));
 
-    const toggles: HTMLElement[] = [];
-
-    const deactivateToggles = () => {
-        toggles.forEach((toggle) => {
-            if (toggle.classList.contains('active')) toggle.click();
-        });
-    };
-
-    const addWindowToggle = (toggle: HTMLElement, windowId: string) => {
-        const emitter = new EventEmitter();
-
-        toggles.push(toggle);
-        toggle.addEventListener('click', (event) => {
-            event.stopPropagation();
-
-            const open = !toggle.classList.contains('active');
-            deactivateToggles();
-
-            emitter.emit('toggle', open);
-            if (open) {
-                htmlui.showWindowById(windowId);
-                emitter.emit('active');
-            } else {
-                htmlui.hideWindowById(windowId);
-                emitter.emit('inactive');
-            }
-
-            toggle.classList.toggle('active', open);
-        });
-
-        return emitter;
-    };
-
-    const chatToggle = document.getElementById('chat-toggle')!;
-
-    const avatarToggle = addWindowToggle(document.getElementById('avatar-button')!, 'avatar-panel');
-    const chatToggle2 = addWindowToggle(chatToggle, 'chat-panel');
-
-    avatarToggle.on('active', openAvatarEditor);
-    // queueToggle.on('active', refreshQueue);
-
     let fullChat = false;
+    
+    const menu = menusFromDataAttributes(document.documentElement);
+    menu.on('open:avatar', openAvatarEditor);
+    menu.on('open:playback/queue', refreshQueue);
+    menu.on('open:playback/search', () => {
+        searchInput.value = '';
+        searchInput.focus();
+        searchResults.innerHTML = '';
+    });
 
-    chatToggle2.on('active', () => {
+    menu.on('open:chat', () => {
         fullChat = true;
         chatInput.focus();
         chatContext.canvas.classList.toggle('open', true);
     });
-
-    chatToggle2.on('inactive', () => {
+ 
+    menu.on('close:chat', () => {
         fullChat = false;
         chatInput.blur();
         chatContext.canvas.classList.toggle('open', false);
     });
-
-    addWindowToggle(document.getElementById('emotes-button')!, 'emotes-panel');
-    addWindowToggle(document.getElementById('users-button')!, 'user-panel');
-    addWindowToggle(document.getElementById('blocks-button')!, 'blocks-panel');
-    addWindowToggle(document.getElementById('view-button')!, 'view-panel');
-    addWindowToggle(document.getElementById('menu-button')!, 'menu-panel');
-    addWindowToggle(document.getElementById('playback-button')!, 'playback-panel');
-
-    menusFromDataAttributes(document.documentElement);
 
     const blockListContainer = document.getElementById('blocks-list') as HTMLElement;
 
@@ -746,7 +697,7 @@ export async function load() {
     }
 
     const gameKeys = new Map<string, () => void>();
-    gameKeys.set('Tab', () => chatToggle.click());
+    gameKeys.set('Tab', () => menu.tabToggles.get('chat')!.click());
     gameKeys.set('1', () => toggleEmote('wvy'));
     gameKeys.set('2', () => toggleEmote('shk'));
     gameKeys.set('3', () => toggleEmote('rbw'));
@@ -766,6 +717,8 @@ export async function load() {
     gameKeys.set('v', () => sceneRenderer.cycleCamera());
 
     gameKeys.set('u', () => document.getElementById('users-button')!.click());
+    gameKeys.set('s', () => menu.open('playback/search'));
+    gameKeys.set('q', () => menu.open('playback/playlist'));
 
     function sendChat() {
         const line = chatInput.value;
@@ -794,14 +747,14 @@ export async function load() {
         if (event.key === 'Escape') {
             if (isInputElement(document.activeElement)) {
                 if (fullChat) {
-                    chatToggle.click();
+                    menu.tabToggles.get('chat')!.click();
                 } else {
                     document.activeElement.blur();
                 }
 
                 event.preventDefault();
             }
-            deactivateToggles();
+            menu.closeChildren("");
         }
 
         if (isInputElement(document.activeElement) && event.key !== 'Tab') {
@@ -823,14 +776,6 @@ export async function load() {
     const chatContext2 = document.querySelector<HTMLCanvasElement>('#chat-canvas2')!.getContext('2d')!;
     chatContext.imageSmoothingEnabled = false;
     chatContext2.imageSmoothingEnabled = false;
-
-    chatContext.canvas.addEventListener('click', (event) => {
-        if (fullChat) {
-            event.preventDefault();
-            event.stopPropagation();
-            chatToggle.click();
-        }
-    });
 
     function redraw() {
         refreshCurrentItem();
