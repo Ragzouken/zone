@@ -2,6 +2,7 @@ import { EventEmitter } from "events";
 import { timeStamp } from "console";
 
 export class Menu extends EventEmitter {
+    paths = new Set<string>();
     tabToggles = new Map<string, HTMLElement>();
     tabBodies = new Map<string, HTMLElement>();
 
@@ -9,17 +10,23 @@ export class Menu extends EventEmitter {
         super();
     }
 
+    private setShown(path: string, shown: boolean) {
+        const tab = this.tabToggles.get(path);
+        const body = this.tabBodies.get(path);
+
+        if (tab) tab.classList.toggle('active', shown);
+        if (body) body.hidden = !shown;
+
+        this.emit(`${shown ? 'show' : 'hide'}:${path}`);
+    }
+
     open(path: string) {
         if (path.includes('/'))
             this.open(getPathParent(path));
 
-        this.tabToggles.forEach((toggle, toggleId) => {
-            if (arePathsSiblings(path, toggleId))
-                toggle.classList.toggle('active', toggleId === path);
-        });
-        this.tabBodies.forEach((body, bodyId) => {
-            if (arePathsSiblings(path, bodyId))
-                body.hidden = (bodyId !== path);
+        this.paths.forEach((other) => {
+            if (arePathsSiblings(path, other))
+                this.setShown(other, other === path);
         });
 
         this.emit(`open:${path}`);
@@ -47,6 +54,8 @@ export function menusFromDataAttributes(root: HTMLElement) {
     const menu = new Menu();
     menu.tabToggles = indexByDataAttribute(root, 'data-tab-toggle');
     menu.tabBodies = indexByDataAttribute(root, 'data-tab-body');
+    menu.tabToggles.forEach((_, path) => menu.paths.add(path));
+    menu.tabBodies.forEach((_, path) => menu.paths.add(path));
 
     menu.tabToggles.forEach((toggle, path) => {
         toggle.addEventListener('click', (event) => {

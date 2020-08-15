@@ -10,7 +10,6 @@ import { Player } from './player';
 import { UserState } from '../common/zone';
 import { HTMLUI } from './html-ui';
 import { createContext2D } from 'blitsy';
-import { EventEmitter } from 'events';
 import { menusFromDataAttributes } from './menus';
 
 window.addEventListener('load', () => load());
@@ -489,21 +488,21 @@ export async function load() {
     let fullChat = false;
     
     const menu = menusFromDataAttributes(document.documentElement);
-    menu.on('open:avatar', openAvatarEditor);
-    menu.on('open:playback/queue', refreshQueue);
-    menu.on('open:playback/search', () => {
+    menu.on('show:avatar', openAvatarEditor);
+    menu.on('show:playback/queue', refreshQueue);
+    menu.on('show:playback/search', () => {
         searchInput.value = '';
         searchInput.focus();
         searchResults.innerHTML = '';
     });
 
-    menu.on('open:social', () => {
+    menu.on('show:social/chat', () => {
         fullChat = true;
         chatInput.focus();
         chatContext.canvas.classList.toggle('open', true);
     });
  
-    menu.on('close:social', () => {
+    menu.on('hide:social/chat', () => {
         fullChat = false;
         chatInput.blur();
         chatContext.canvas.classList.toggle('open', false);
