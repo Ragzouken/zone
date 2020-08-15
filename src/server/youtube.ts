@@ -12,7 +12,6 @@ import { URL } from 'url';
 import { randomInt } from '../common/utility';
 import * as tmp from 'tmp';
 import { unlink } from 'fs';
-import { time } from 'console';
 
 tmp.setGracefulCleanup();
 
