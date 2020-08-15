@@ -56,8 +56,11 @@ export async function info(videoID: string) {
 }
 
 export async function direct(videoId: string): Promise<string> {
+    console.log("BEGIN");
     const info = await getCachedInfo(videoId);
+    console.log("INFO");
     const format = ytdl.chooseFormat(info.formats, { quality: '18' });
+    console.log("URL", format.url);
     return format.url;
 }
 
