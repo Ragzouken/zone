@@ -129,6 +129,9 @@ export class YoutubeCache {
     }
 
     async renewCachedVideo(videoId: string) {
+        console.log("YOUTUBE DISABLED");
+        
+        /*
         const videoInfo = await info(videoId);
         const duration = parseFloat(videoInfo.length_seconds) * 1000;
         const timeout = Math.max(duration * 2, 15 * 60 * 60 * 1000);
@@ -145,6 +148,7 @@ export class YoutubeCache {
                 this.downloads.delete(videoId);
             });
         }
+        */
 
         this.deleteExpiredCachedVideos();
     }
@@ -162,9 +166,6 @@ export class YoutubeCache {
     }
 
     private async downloadToCache(videoId: string) {
-        console.log('YOUTUBE DISABLED');
-        return;
-
         const videoInfo = await info(videoId);
         const format = ytdl.chooseFormat(videoInfo.formats, { quality: '18' });
         const path = await getCacheFile(`youtube-${videoId}`, '.mp4');
