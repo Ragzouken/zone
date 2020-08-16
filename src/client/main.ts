@@ -226,7 +226,7 @@ export async function load() {
             element.addEventListener('click', (event) => {
                 event.stopPropagation();
                 userSelect.selectedIndex = index;
-            })
+            });
         });
         userSelect.value = '';
 
@@ -506,7 +506,7 @@ export async function load() {
         chatInput.focus();
         chatContext.canvas.classList.toggle('open', true);
     });
- 
+
     menu.on('hide:social/chat', () => {
         fullChat = false;
         chatInput.blur();
@@ -701,9 +701,8 @@ export async function load() {
         const chatToggle = menu.tabToggles.get('social/chat')!;
 
         if (chatToggle.classList.contains('active') && socialToggle.classList.contains('active'))
-            menu.closeChildren("");
-        else
-            menu.open('social/chat');
+            menu.closeChildren('');
+        else menu.open('social/chat');
     });
     gameKeys.set('1', () => toggleEmote('wvy'));
     gameKeys.set('2', () => toggleEmote('shk'));
@@ -724,10 +723,8 @@ export async function load() {
     gameKeys.set('v', () => sceneRenderer.cycleCamera());
 
     function toggleMenuPath(path: string) {
-        if (!menu.isVisible(path))
-            menu.open(path);
-        else
-            menu.closeChildren("");
+        if (!menu.isVisible(path)) menu.open(path);
+        else menu.closeChildren('');
     }
 
     gameKeys.set('u', () => toggleMenuPath('social/users'));
@@ -759,11 +756,10 @@ export async function load() {
 
     document.addEventListener('keydown', (event) => {
         if (event.key === 'Escape') {
-            if (isInputElement(document.activeElement))
-                document.activeElement.blur();
+            if (isInputElement(document.activeElement)) document.activeElement.blur();
 
             event.preventDefault();
-            menu.closeChildren("");
+            menu.closeChildren('');
         }
 
         if (isInputElement(document.activeElement) && event.key !== 'Tab') {
@@ -872,7 +868,7 @@ function createAvatarElement(avatar: string) {
     const context = createContext2D(8, 8);
     context.drawImage(getTile(avatar).canvas, 0, 0);
     return context.canvas;
-};
+}
 
 function setupEntrySplash() {
     const nameInput = document.querySelector('#join-name') as HTMLInputElement;
@@ -881,13 +877,13 @@ function setupEntrySplash() {
     const entryButton = document.getElementById('entry-button') as HTMLInputElement;
     const entryForm = document.getElementById('entry') as HTMLFormElement;
 
-    function refreshUsers(users: { name?: string, avatar?: string }[]) {
+    function refreshUsers(users: { name?: string; avatar?: string }[]) {
         entryUsers.innerHTML = '';
         users.forEach(({ name, avatar }) => {
             const element = document.createElement('div');
             const label = document.createElement('div');
             label.innerHTML = name || 'anonymous';
-            element.appendChild(createAvatarElement(avatar || "GBgYPH69JCQ="));
+            element.appendChild(createAvatarElement(avatar || 'GBgYPH69JCQ='));
             element.appendChild(label);
             entryUsers.appendChild(element);
         });
@@ -898,7 +894,7 @@ function setupEntrySplash() {
 
         fetch('./users')
             .then((res) => res.json())
-            .then((users: { name?: string, avatar?: string }[]) => {
+            .then((users: { name?: string; avatar?: string }[]) => {
                 if (users.length === 0) {
                     entryUsers.innerHTML = 'zone is currenty empty';
                 } else {
@@ -910,7 +906,7 @@ function setupEntrySplash() {
     setInterval(updateEntryUsers, 5000);
 
     entryButton.disabled = !entryForm.checkValidity();
-    nameInput.addEventListener('input', () => entryButton.disabled = !entryForm.checkValidity());
+    nameInput.addEventListener('input', () => (entryButton.disabled = !entryForm.checkValidity()));
 
     entryForm.addEventListener('submit', async (event) => {
         event.preventDefault();

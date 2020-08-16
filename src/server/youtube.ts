@@ -125,10 +125,10 @@ export class YoutubeCache {
 
     async renewCachedVideo(videoId: string) {
         if (process.env.YOUTUBE_BROKE) {
-            console.log("YOUTUBE DISABLED");
+            console.log('YOUTUBE DISABLED');
             return;
         }
-        
+
         const videoInfo = await info(videoId);
         const duration = parseFloat(videoInfo.videoDetails.lengthSeconds) * 1000;
         const timeout = Math.max(duration * 2, 15 * 60 * 60 * 1000);

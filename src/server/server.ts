@@ -439,24 +439,19 @@ export function host(xws: expressWs.Instance, adapter: low.AdapterSync, options:
         }
 
         async function tryQueueYoutubeById(videoId: string) {
-            if (process.env.YOUTUBE_BROKE)
-                status('sorry, youtube machine broke :(');
-            else
-                tryUserQueueMedia(await youtube.media(videoId));
+            if (process.env.YOUTUBE_BROKE) status('sorry, youtube machine broke :(');
+            else tryUserQueueMedia(await youtube.media(videoId));
         }
 
         messaging.messages.on('youtube', (message: any) => tryQueueYoutubeById(message.videoId));
         messaging.messages.on('local', (message: any) => tryQueueLocalByPath(message.path));
         messaging.messages.on('banger', async () => {
-            if (process.env.YOUTUBE_BROKE)
-                status('sorry, youtube machine broke :(');
-            else
-                tryUserQueueMedia(await youtube.banger(), true);
+            if (process.env.YOUTUBE_BROKE) status('sorry, youtube machine broke :(');
+            else tryUserQueueMedia(await youtube.banger(), true);
         });
 
         messaging.messages.on('lucky', (message: any) => {
-            if (process.env.YOUTUBE_BROKE)
-                status('sorry, youtube machine broke :(');
+            if (process.env.YOUTUBE_BROKE) status('sorry, youtube machine broke :(');
             else
                 youtube.search(message.query).then(async (results) => {
                     tryUserQueueMedia(await youtube.media(results[0].videoId));

@@ -339,7 +339,7 @@ export class ZoneSceneRenderer extends EventEmitter {
         const dy = Math.abs(cy - oy);
         const dz = Math.abs(cz - oz);
 
-        return (Math.max(dx, dy, dz) <= this.cullRange);
+        return Math.max(dx, dy, dz) <= this.cullRange;
     }
 
     private cullOrigin = [0, 0, 0];
@@ -354,7 +354,7 @@ export class ZoneSceneRenderer extends EventEmitter {
             const dy = Math.abs(cy - oy);
             const dz = Math.abs(cz - oz);
 
-            chunk.visible = (Math.max(dx, dy, dz) <= this.cullRange);
+            chunk.visible = Math.max(dx, dy, dz) <= this.cullRange;
         });
     }
 

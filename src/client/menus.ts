@@ -1,5 +1,5 @@
-import { EventEmitter } from "events";
-import { timeStamp } from "console";
+import { EventEmitter } from 'events';
+import { timeStamp } from 'console';
 
 export class Menu extends EventEmitter {
     paths = new Set<string>();
@@ -26,12 +26,10 @@ export class Menu extends EventEmitter {
     }
 
     open(path: string) {
-        if (path.includes('/'))
-            this.open(getPathParent(path));
+        if (path.includes('/')) this.open(getPathParent(path));
 
         this.paths.forEach((other) => {
-            if (arePathsSiblings(path, other))
-                this.setShown(other, other === path);
+            if (arePathsSiblings(path, other)) this.setShown(other, other === path);
         });
 
         this.refresh();
@@ -51,8 +49,7 @@ export class Menu extends EventEmitter {
 
     closeChildren(path: string) {
         this.tabToggles.forEach((toggle, togglePath) => {
-            if (getPathParent(togglePath) === path)
-                this.close(togglePath);
+            if (getPathParent(togglePath) === path) this.close(togglePath);
         });
     }
 
@@ -61,8 +58,7 @@ export class Menu extends EventEmitter {
             const prev = this.visible.get(path) === true;
             const next = this.isVisible(path);
 
-            if (prev != next)
-                this.emit(`${next ? 'show' : 'hide'}:${path}`);
+            if (prev !== next) this.emit(`${next ? 'show' : 'hide'}:${path}`);
 
             this.visible.set(path, next);
         });
@@ -104,7 +100,7 @@ function indexByDataAttribute(root: HTMLElement, attribute: string) {
     const index = new Map<string, HTMLElement>();
     root.querySelectorAll(`[${attribute}]`).forEach((element) => {
         const value = element.getAttribute(attribute);
-        if (value !== null) index.set(value, element as HTMLElement); 
+        if (value !== null) index.set(value, element as HTMLElement);
     });
     return index;
 }
