@@ -93,7 +93,7 @@ async function refreshBangers() {
 }
 
 refreshBangers();
-setInterval(refreshBangers, TIMEOUT);
+setInterval(refreshBangers, 24 * 60 * 60 * 1000);
 
 export async function banger(): Promise<Media> {
     if (!BANGERS) await refreshBangers();
@@ -162,6 +162,9 @@ export class YoutubeCache {
     }
 
     private async downloadToCache(videoId: string) {
+        console.log('YOUTUBE DISABLED');
+        return;
+
         const videoInfo = await info(videoId);
         const format = ytdl.chooseFormat(videoInfo.formats, { quality: '18' });
         const path = await getCacheFile(`youtube-${videoId}`, '.mp4');
