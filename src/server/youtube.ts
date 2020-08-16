@@ -61,16 +61,16 @@ export async function direct(videoId: string): Promise<string> {
 }
 
 export async function media(videoId: string): Promise<Media> {
-    const { title, length_seconds, thumbnail_url } = await getCachedInfo(videoId);
-    const duration = parseInt(length_seconds, 10) * 1000;
+    const { title, videoDetails, thumbnail_url } = await getCachedInfo(videoId);
+    const duration = parseInt(videoDetails.lengthSeconds, 10) * 1000;
     const source = 'youtube/' + videoId;
 
     return { title, duration, source, thumbnail: thumbnail_url };
 }
 
 export async function search(query: string): Promise<YoutubeVideo[]> {
-    const results = await ytsr(query, { limit: 5 });
-    const videos = results.items.filter((item) => item.type === 'video' && !(item as any).live);
+    const results = await ytsr(query, { limit: 15 });
+    const videos = results.items.filter((item) => item.type === 'video' && !(item as any).live).slice(0, 5);
     return videos.map((item) => {
         const videoId = new URL(item.link).searchParams.get('v')!;
         const duration = timeToSeconds(item.duration) * 1000;
@@ -81,10 +81,19 @@ export async function search(query: string): Promise<YoutubeVideo[]> {
     });
 }
 
-export const BANGER_PLAYLIST_ID = 'PLUkMc2z58ECZFcxvdwncKK1qDYZzVHrbB';
+let BANGERS: ytpl.result | undefined;
+const BANGER_PLAYLIST_ID = 'PLUkMc2z58ECZFcxvdwncKK1qDYZzVHrbB';
+async function refreshBangers() {
+    BANGERS = await ytpl(BANGER_PLAYLIST_ID, { limit: Infinity });
+}
+
+refreshBangers();
+setInterval(refreshBangers, 24 * 60 * 60 * 1000);
+
 export async function banger(): Promise<Media> {
-    const result = await ytpl(BANGER_PLAYLIST_ID, { limit: Infinity });
-    const chosen = result.items[randomInt(0, result.items.length - 1)];
+    if (!BANGERS) await refreshBangers();
+
+    const chosen = BANGERS!.items[randomInt(0, BANGERS!.items.length - 1)];
     const videoId = new URL(chosen.url).searchParams.get('v')!;
     const duration = timeToSeconds(chosen.duration) * 1000;
     const source = 'youtube/' + videoId;
@@ -115,8 +124,13 @@ export class YoutubeCache {
     }
 
     async renewCachedVideo(videoId: string) {
+        if (process.env.YOUTUBE_BROKE) {
+            console.log('YOUTUBE DISABLED');
+            return;
+        }
+
         const videoInfo = await info(videoId);
-        const duration = parseFloat(videoInfo.length_seconds) * 1000;
+        const duration = parseFloat(videoInfo.videoDetails.lengthSeconds) * 1000;
         const timeout = Math.max(duration * 2, 15 * 60 * 60 * 1000);
 
         const existing = this.cached.get(videoId);

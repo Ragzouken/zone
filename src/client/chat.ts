@@ -20,6 +20,10 @@ export class ChatPanel {
 
     constructor(public previewTime = 5000) {}
 
+    public error(text: string) {
+        this.log('{clr=#FF0000}ERROR: ' + text);
+    }
+
     public status(text: string) {
         this.log('{clr=#FF00FF}! ' + text);
     }
@@ -38,16 +42,18 @@ export class ChatPanel {
         this.context.clearRect(0, 0, 256, 256);
 
         if (full) {
+            /*
             this.context.globalAlpha = 0.65;
             this.context.fillStyle = 'rgb(0 0 0)';
             this.context.fillRect(0, 0, 256, 256);
+            */
             this.context.globalAlpha = 1;
         } else {
             this.context.globalAlpha = 0.65;
         }
 
         const now = performance.now();
-        let bottom = 256 - 28;
+        let bottom = 256;
         for (let i = this.chatPages.length - 1; i >= 0 && bottom >= 0; --i) {
             const page = this.chatPages[i];
             const messageHeight = getPageHeight(page, font);
@@ -61,7 +67,7 @@ export class ChatPanel {
             let render = this.cached.get(page);
             if (!render) {
                 const animated = animatePage(page);
-                this.pageRenderer.renderPage(page, 8, 8);
+                this.pageRenderer.renderPage(page, 4, 8);
                 render = this.pageRenderer.pageImage;
                 if (!animated) this.cached.set(page, imageToContext(render as any).canvas);
             }

@@ -15,6 +15,7 @@ export type Media = {
     title: string;
     duration: number;
     source: string;
+    subtitle?: string;
     thumbnail?: string;
 };
 
@@ -22,7 +23,7 @@ export type UserEcho = UserState & {
     text: string;
 };
 
-export type QueueInfo = { userId?: UserId; ip?: unknown, banger?: boolean };
+export type QueueInfo = { userId?: UserId; ip?: unknown; banger?: boolean };
 export type QueueItem = { media: Media; info: QueueInfo; itemId: number };
 
 export type MediaMeta = Omit<Media, 'source'>;

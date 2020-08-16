@@ -13,14 +13,34 @@ export async function expectMetadata(element: HTMLMediaElement) {
     });
 }
 
+export interface Player {
+    on(type: 'subtitles', callback: (lines: string[]) => void): this;
+}
+
 export class Player extends EventEmitter {
     private item?: QueueItem;
     private itemPlayStart = 0;
     private reloading?: object;
     private startedPlaying = false;
 
+    private source: HTMLSourceElement;
+    private subtrack: HTMLTrackElement;
+
     constructor(private readonly element: HTMLVideoElement) {
         super();
+
+        this.source = document.createElement('source');
+        element.appendChild(this.source);
+
+        this.subtrack = document.createElement('track');
+        this.subtrack.kind = 'subtitles';
+        this.subtrack.label = 'english';
+
+        this.subtrack.addEventListener('cuechange', (event) => {
+            const cues = Array.from(this.subtrack.track.activeCues || []) as VTTCue[];
+            const lines = cues.map((cue) => cue.text);
+            this.emit('subtitles', lines);
+        });
 
         let lastUnstall = performance.now();
         setInterval(() => {
@@ -123,9 +143,18 @@ export class Player extends EventEmitter {
             if (this.reloading === token) this.reloading = undefined;
         };
 
+        const path = this.item.media.source;
+        if (path.endsWith('.mp3') || path.endsWith('.mp4')) {
+            this.subtrack.src = path.substr(0, path.lastIndexOf('.')) + '.vtt';
+            this.element.appendChild(this.subtrack);
+            this.element.textTracks[0].mode = 'showing';
+        } else if (this.subtrack.parentElement) {
+            this.element.removeChild(this.subtrack);
+        }
+
         this.element.pause();
         const waiter = expectMetadata(this.element);
-        this.element.src = this.item.media.source;
+        this.source.src = this.item.media.source;
         this.element.load();
 
         try {
@@ -150,7 +179,7 @@ export class Player extends EventEmitter {
         this.reloading = undefined;
         this.startedPlaying = false;
         this.element.pause();
-        this.element.removeAttribute('src');
+        this.source.removeAttribute('src');
         this.element.load();
     }
 }

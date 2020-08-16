@@ -10,6 +10,7 @@ import { Player } from './player';
 import { UserState } from '../common/zone';
 import { HTMLUI } from './html-ui';
 import { createContext2D } from 'blitsy';
+import { menusFromDataAttributes } from './menus';
 
 window.addEventListener('load', () => load());
 
@@ -50,9 +51,6 @@ function notify(title: string, body: string, tag: string) {
     }
 }
 
-const font = blitsy.decodeFont(blitsy.fonts['ascii-small']);
-const layout = { font, lineWidth: 240, lineCount: 9999 };
-
 function parseFakedown(text: string) {
     text = fakedownToTag(text, '##', 'shk');
     text = fakedownToTag(text, '~~', 'wvy');
@@ -63,7 +61,11 @@ function parseFakedown(text: string) {
 const chat = new ChatPanel();
 
 function getLocalUser() {
-    return client.localUserId ? client.zone.getUser(client.localUserId) : undefined;
+    if (!client.localUserId) {
+        // chat.log("{clr=#FF0000}ERROR: no localUserId");
+    } else {
+        return client.zone.getUser(client.localUserId!);
+    }
 }
 
 let localName = localStorage.getItem('name') || '';
@@ -77,8 +79,8 @@ function rename(name: string) {
 function socket(): Promise<WebSocket> {
     return new Promise((resolve, reject) => {
         const secure = window.location.protocol.startsWith('https');
-        const protocol = secure ? 'wss://' : 'ws://';
-        const socket = new WebSocket(protocol + zoneURL);
+        const protocol = secure ? 'wss' : 'ws';
+        const socket = new WebSocket(`${protocol}://${window.location.host}/zone`);
         socket.addEventListener('open', () => resolve(socket));
         socket.addEventListener('error', reject);
     });
@@ -96,11 +98,12 @@ async function connect(): Promise<void> {
     }
 
     try {
-        await client.join({ name: localName, password: joinPassword });
+        const assign = await client.join({ name: localName, password: joinPassword });
         const data = localStorage.getItem('avatar');
         if (data) client.avatar(data);
     } catch (e) {
-        chat.status(e.text);
+        chat.error(`assignment failed (${e})`);
+        console.log('assignment exception:', e);
         return;
     }
 
@@ -122,7 +125,7 @@ function listUsers() {
 }
 
 const help = [
-    'use the buttons on the top left to queue videos, and the buttons on the bottom right to change your appearance. press tab to switch between typing and moving',
+    'use the tabs on the bottom left to queue songs, chat to others, and change your appearance. click or arrow keys to move.',
 ].join('\n');
 
 function listHelp() {
@@ -174,12 +177,6 @@ export async function load() {
         volumeSlider.value = player.volume.toString();
     }
 
-    document.getElementById('enable-notifications')?.addEventListener('click', async () => {
-        const permission = await Notification.requestPermission();
-        chat.status(`notifications ${permission}`);
-    });
-
-    const userPanel = document.getElementById('user-panel')!;
     const userItemContainer = document.getElementById('user-items')!;
     const userSelect = document.getElementById('user-select') as HTMLSelectElement;
 
@@ -193,17 +190,43 @@ export async function load() {
         }
     }
 
+    const iconTest = createContext2D(8, 8);
+    iconTest.fillStyle = '#ff00ff';
+    iconTest.fillRect(0, 0, 8, 8);
+
+    const userAvatars = new Map<UserState, CanvasRenderingContext2D>();
+
     function refreshUsers() {
         const users = Array.from(client.zone.users.values()).filter((user) => !!user.name);
         const names = users.map((user) => formatName(user));
-        userItemContainer.innerHTML = `${names.length} people are zoning: ` + names.join(', ');
+        userItemContainer.innerHTML = `${names.length} people are zoning: ` + names.join(', <br>');
 
-        userSelect.innerHTML = '';
+        userAvatars.clear();
         users.forEach((user) => {
+            const context = createContext2D(8, 8);
+            context.drawImage(getTile(user.avatar).canvas, 0, 0);
+            userAvatars.set(user, context);
+        });
+
+        userItemContainer.innerHTML = '';
+        userSelect.innerHTML = '';
+        users.forEach((user, index) => {
             const option = document.createElement('option');
             option.value = user.name || '';
             option.innerHTML = formatName(user);
             userSelect.appendChild(option);
+
+            const element = document.createElement('div');
+            const label = document.createElement('div');
+            label.innerHTML = formatName(user);
+            element.appendChild((userAvatars.get(user) || iconTest).canvas);
+            element.appendChild(label);
+            userItemContainer.appendChild(element);
+
+            element.addEventListener('click', (event) => {
+                event.stopPropagation();
+                userSelect.selectedIndex = index;
+            });
         });
         userSelect.value = '';
 
@@ -211,11 +234,6 @@ export async function load() {
         authRow.hidden = auth;
         authContent.hidden = !auth;
     }
-
-    document.getElementById('users-button')!.addEventListener('click', () => {
-        userPanel.hidden = false;
-        refreshUsers();
-    });
 
     document.getElementById('ban-ip-button')!.addEventListener('click', () => {
         client.command('ban', [userSelect.value]);
@@ -229,7 +247,6 @@ export async function load() {
     document.getElementById('event-mode-on')!.addEventListener('click', () => client.command('mode', ['event']));
     document.getElementById('event-mode-off')!.addEventListener('click', () => client.command('mode', ['']));
 
-    const queuePanel = document.getElementById('queue-panel')!;
     const queueItemContainer = document.getElementById('queue-items')!;
     const queueItemTemplate = document.getElementById('queue-item-template')!;
     queueItemTemplate.parentElement!.removeChild(queueItemTemplate);
@@ -286,32 +303,21 @@ export async function load() {
         refreshCurrentItem();
     }
 
-    document.getElementById('queue-button')!.addEventListener('click', () => {
-        refreshQueue();
-        queuePanel.hidden = false;
-    });
-
     document.getElementById('auth-button')!.addEventListener('click', () => {
         const input = document.getElementById('auth-input') as HTMLInputElement;
         client.auth(input.value);
     });
 
-    const searchPanel = document.getElementById('search-panel')!;
     const searchInput = document.getElementById('search-input') as HTMLInputElement;
     const searchSubmit = document.getElementById('search-submit') as HTMLButtonElement;
     const searchResults = document.getElementById('search-results')!;
 
     searchInput.addEventListener('input', () => (searchSubmit.disabled = searchInput.value.length === 0));
 
-    document.getElementById('search-button')?.addEventListener('click', () => {
-        searchInput.value = '';
-        searchPanel.hidden = false;
-        searchInput.focus();
-        searchResults.innerHTML = '';
-    });
-
     const searchResultTemplate = document.getElementById('search-result-template')!;
     searchResultTemplate.parentElement?.removeChild(searchResultTemplate);
+
+    // player.on('subtitles', (lines) => lines.forEach((line) => chat.log(`{clr=#888888}${line}`)));
 
     document.getElementById('search-form')?.addEventListener('submit', (event) => {
         event.preventDefault();
@@ -323,8 +329,8 @@ export async function load() {
             results.forEach(({ title, duration, videoId, thumbnail }) => {
                 const row = searchResultTemplate.cloneNode(true) as HTMLElement;
                 row.addEventListener('click', () => {
-                    searchPanel.hidden = true;
                     client.youtube(videoId);
+                    menu.open('playback/playlist');
                 });
 
                 const div = row.querySelector('div')!;
@@ -348,6 +354,8 @@ export async function load() {
     client.on('leave', refreshUsers);
     client.on('rename', refreshUsers);
     client.on('tags', refreshUsers);
+    client.on('avatar', refreshUsers);
+    client.on('users', refreshUsers);
     refreshUsers();
 
     client.on('queue', ({ item }) => {
@@ -356,7 +364,9 @@ export async function load() {
         const username = user?.name || 'server';
         const time = secondsToTime(duration / 1000);
         if (item.info.banger) {
-            chat.log(`{clr=#00FFFF}+ ${title} (${time}) rolled from {clr=#FF00FF}bangers{clr=#00FFFF} by {clr=#FF0000}${username}`);
+            chat.log(
+                `{clr=#00FFFF}+ ${title} (${time}) rolled from {clr=#FF00FF}bangers{clr=#00FFFF} by {clr=#FF0000}${username}`,
+            );
         } else {
             chat.log(`{clr=#00FFFF}+ ${title} (${time}) added by {clr=#FF0000}${username}`);
         }
@@ -480,7 +490,29 @@ export async function load() {
 
     document.getElementById('play-banger')?.addEventListener('click', () => client.messaging.send('banger', {}));
 
-    document.getElementById('blocks-button')!.addEventListener('click', () => htmlui.showWindowById('blocks-panel'));
+    let fullChat = false;
+
+    const menu = menusFromDataAttributes(document.documentElement);
+    menu.on('show:avatar', openAvatarEditor);
+    menu.on('show:playback/queue', refreshQueue);
+    menu.on('show:playback/search', () => {
+        searchInput.value = '';
+        searchInput.focus();
+        searchResults.innerHTML = '';
+    });
+
+    menu.on('show:social/chat', () => {
+        fullChat = true;
+        chatInput.focus();
+        chatContext.canvas.classList.toggle('open', true);
+    });
+
+    menu.on('hide:social/chat', () => {
+        fullChat = false;
+        chatInput.blur();
+        chatContext.canvas.classList.toggle('open', false);
+    });
+
     const blockListContainer = document.getElementById('blocks-list') as HTMLElement;
 
     const blockButtons: HTMLElement[] = [];
@@ -576,7 +608,6 @@ export async function load() {
     let lastSearchResults: YoutubeVideo[] = [];
 
     const skipButton = document.getElementById('skip-button') as HTMLButtonElement;
-    document.getElementById('avatar-button')?.addEventListener('click', () => openAvatarEditor());
     skipButton.addEventListener('click', () => client.skip());
     document.getElementById('resync-button')?.addEventListener('click', () => player.forceRetry('reload button'));
 
@@ -653,24 +684,6 @@ export async function load() {
         element.addEventListener('click', () => toggleEmote(emote));
     });
 
-    let fullChat = false;
-    const chatToggle = document.getElementById('chat-toggle') as HTMLButtonElement;
-    chatToggle.addEventListener('click', (event) => {
-        event.stopPropagation();
-
-        fullChat = !fullChat;
-        chatToggle.classList.toggle('active', fullChat);
-        if (fullChat) {
-            chatInput.hidden = false;
-            chatInput.focus();
-            chatContext.canvas.classList.toggle('open', true);
-        } else {
-            chatInput.hidden = true;
-            chatInput.blur();
-            chatContext.canvas.classList.toggle('open', false);
-        }
-    });
-
     const directions: [number, number][] = [
         [1, 0],
         [0, -1],
@@ -683,7 +696,14 @@ export async function load() {
     }
 
     const gameKeys = new Map<string, () => void>();
-    gameKeys.set('Tab', () => chatToggle.click());
+    gameKeys.set('Tab', () => {
+        const socialToggle = menu.tabToggles.get('social')!;
+        const chatToggle = menu.tabToggles.get('social/chat')!;
+
+        if (chatToggle.classList.contains('active') && socialToggle.classList.contains('active'))
+            menu.closeChildren('');
+        else menu.open('social/chat');
+    });
     gameKeys.set('1', () => toggleEmote('wvy'));
     gameKeys.set('2', () => toggleEmote('shk'));
     gameKeys.set('3', () => toggleEmote('rbw'));
@@ -702,15 +722,14 @@ export async function load() {
     gameKeys.set(']', () => (sceneRenderer.followCam.angle += rot));
     gameKeys.set('v', () => sceneRenderer.cycleCamera());
 
-    gameKeys.set('q', () => {
-        refreshQueue();
-        queuePanel.hidden = !queuePanel.hidden;
-    });
-    gameKeys.set('s', () => {
-        searchPanel.hidden = false;
-        searchInput.focus();
-    });
-    gameKeys.set('u', () => (userPanel.hidden = !userPanel.hidden));
+    function toggleMenuPath(path: string) {
+        if (!menu.isVisible(path)) menu.open(path);
+        else menu.closeChildren('');
+    }
+
+    gameKeys.set('u', () => toggleMenuPath('social/users'));
+    gameKeys.set('s', () => toggleMenuPath('playback/search'));
+    gameKeys.set('q', () => toggleMenuPath('playback/playlist'));
 
     function sendChat() {
         const line = chatInput.value;
@@ -737,23 +756,14 @@ export async function load() {
 
     document.addEventListener('keydown', (event) => {
         if (event.key === 'Escape') {
-            if (isInputElement(document.activeElement)) {
-                if (fullChat) {
-                    chatToggle.click();
-                } else {
-                    document.activeElement.blur();
-                }
+            if (isInputElement(document.activeElement)) document.activeElement.blur();
 
-                event.preventDefault();
-            }
-            htmlui.hideAllWindows();
+            event.preventDefault();
+            menu.closeChildren('');
         }
 
-        if (isInputElement(document.activeElement)) {
-            if (event.key === 'Tab' && document.activeElement === chatInput) {
-                chatToggle.click();
-                event.preventDefault();
-            } else if (event.key === 'Enter') {
+        if (isInputElement(document.activeElement) && event.key !== 'Tab') {
+            if (event.key === 'Enter') {
                 sendChat();
             }
         } else {
@@ -768,23 +778,19 @@ export async function load() {
 
     const playerStatus = document.getElementById('player-status')!;
     const chatContext = document.querySelector<HTMLCanvasElement>('#chat-canvas')!.getContext('2d')!;
+    const chatContext2 = document.querySelector<HTMLCanvasElement>('#chat-canvas2')!.getContext('2d')!;
     chatContext.imageSmoothingEnabled = false;
-
-    chatContext.canvas.addEventListener('click', (event) => {
-        if (fullChat) {
-            event.preventDefault();
-            event.stopPropagation();
-            chatToggle.click();
-        }
-    });
+    chatContext2.imageSmoothingEnabled = false;
 
     function redraw() {
         refreshCurrentItem();
         playerStatus.innerHTML = player.status;
         chatContext.clearRect(0, 0, 512, 512);
+        chatContext2.clearRect(0, 0, 512, 512);
 
         chat.render(fullChat);
         chatContext.drawImage(chat.context.canvas, 0, 0, 512, 512);
+        chatContext2.drawImage(chat.context.canvas, 0, 0, 512, 512);
 
         window.requestAnimationFrame(redraw);
     }
@@ -858,39 +864,55 @@ export async function load() {
     });
 }
 
+function createAvatarElement(avatar: string) {
+    const context = createContext2D(8, 8);
+    context.drawImage(getTile(avatar).canvas, 0, 0);
+    return context.canvas;
+}
+
 function setupEntrySplash() {
+    const nameInput = document.querySelector('#join-name') as HTMLInputElement;
     const entrySplash = document.getElementById('entry-splash') as HTMLElement;
     const entryUsers = document.getElementById('entry-users') as HTMLParagraphElement;
     const entryButton = document.getElementById('entry-button') as HTMLInputElement;
     const entryForm = document.getElementById('entry') as HTMLFormElement;
 
+    function refreshUsers(users: { name?: string; avatar?: string }[]) {
+        entryUsers.innerHTML = '';
+        users.forEach(({ name, avatar }) => {
+            const element = document.createElement('div');
+            const label = document.createElement('div');
+            label.innerHTML = name || 'anonymous';
+            element.appendChild(createAvatarElement(avatar || 'GBgYPH69JCQ='));
+            element.appendChild(label);
+            entryUsers.appendChild(element);
+        });
+    }
+
     function updateEntryUsers() {
+        if (entrySplash.hidden) return;
+
         fetch('./users')
             .then((res) => res.json())
-            .then((names: string[]) => {
-                if (names.length === 0) {
+            .then((users: { name?: string; avatar?: string }[]) => {
+                if (users.length === 0) {
                     entryUsers.innerHTML = 'zone is currenty empty';
                 } else {
-                    entryUsers.innerHTML = `${names.length} people are zoning: ` + names.join(', ');
+                    refreshUsers(users);
                 }
             });
     }
     updateEntryUsers();
     setInterval(updateEntryUsers, 5000);
 
-    entryButton.disabled = false;
-    entryForm.addEventListener('submit', (e) => {
-        e.preventDefault();
-        entrySplash.hidden = true;
-        enter();
-    });
-}
+    entryButton.disabled = !entryForm.checkValidity();
+    nameInput.addEventListener('input', () => (entryButton.disabled = !entryForm.checkValidity()));
 
-let zoneURL = '';
-async function enter() {
-    localName = (document.querySelector('#join-name') as HTMLInputElement).value;
-    localStorage.setItem('name', localName);
-    const urlparams = new URLSearchParams(window.location.search);
-    zoneURL = urlparams.get('zone') || `${window.location.host}/zone`;
-    await connect();
+    entryForm.addEventListener('submit', async (event) => {
+        event.preventDefault();
+        entrySplash.hidden = true;
+        localName = nameInput.value;
+        localStorage.setItem('name', localName);
+        await connect();
+    });
 }

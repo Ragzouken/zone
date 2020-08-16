@@ -83,7 +83,7 @@ export function host(xws: expressWs.Instance, adapter: low.AdapterSync, options:
 
     xws.app.get('/users', (req, res) => {
         const users = Array.from(zone.users.values());
-        const names = users.map((user) => user.name).filter((name) => !!name);
+        const names = users.map(({ name, avatar }) => ({ name, avatar }));
         res.json(names);
     });
 
@@ -304,9 +304,10 @@ export function host(xws: expressWs.Instance, adapter: low.AdapterSync, options:
                 }
             });
 
-            sendAllState(user);
+            sendCoreState(user);
             sendOnly('assign', { userId: user.userId, token }, user.userId);
             if (!resume) sendAll('user', user);
+            sendOtherState(user);
         });
     }
 
@@ -318,16 +319,18 @@ export function host(xws: expressWs.Instance, adapter: low.AdapterSync, options:
         }
     }
 
-    function sendAllState(user: UserState) {
-        const cells: [number[], number][] = [];
-        zone.grid.forEach((block, coord) => cells.push([coord, block]));
-
+    function sendCoreState(user: UserState) {
         const users = Array.from(zone.users.values());
         sendOnly('users', { users }, user.userId);
         sendOnly('queue', { items: playback.queue }, user.userId);
+        sendCurrent(user);
+    }
+
+    function sendOtherState(user: UserState) {
+        const cells: [number[], number][] = [];
+        zone.grid.forEach((block, coord) => cells.push([coord, block]));
         sendOnly('blocks', { cells }, user.userId);
         sendOnly('echoes', { added: Array.from(zone.echoes).map(([, echo]) => echo) }, user.userId);
-        sendCurrent(user);
     }
 
     function ifUser(name: string, action: (user: UserState) => void) {
@@ -396,7 +399,7 @@ export function host(xws: expressWs.Instance, adapter: low.AdapterSync, options:
         }),
     );
 
-    function tryQueueMedia(user: UserState, media: Media, userIp: unknown, banger=false) {
+    function tryQueueMedia(user: UserState, media: Media, userIp: unknown, banger = false) {
         if (eventMode && !user.tags.includes('dj')) {
             status('zone is currently in event mode, only djs may queue', user);
             return;
@@ -420,7 +423,7 @@ export function host(xws: expressWs.Instance, adapter: low.AdapterSync, options:
             sendOnly(type, message, user.userId);
         }
 
-        const tryUserQueueMedia = (media: Media, banger=false) => tryQueueMedia(user, media, userIp, banger);
+        const tryUserQueueMedia = (media: Media, banger = false) => tryQueueMedia(user, media, userIp, banger);
 
         messaging.messages.on('heartbeat', () => sendUser('heartbeat'));
 
@@ -436,17 +439,23 @@ export function host(xws: expressWs.Instance, adapter: low.AdapterSync, options:
         }
 
         async function tryQueueYoutubeById(videoId: string) {
-            tryUserQueueMedia(await youtube.media(videoId));
+            if (process.env.YOUTUBE_BROKE) status('sorry, youtube machine broke :(');
+            else tryUserQueueMedia(await youtube.media(videoId));
         }
 
         messaging.messages.on('youtube', (message: any) => tryQueueYoutubeById(message.videoId));
         messaging.messages.on('local', (message: any) => tryQueueLocalByPath(message.path));
-        messaging.messages.on('banger', async () => tryUserQueueMedia(await youtube.banger(), true));
+        messaging.messages.on('banger', async () => {
+            if (process.env.YOUTUBE_BROKE) status('sorry, youtube machine broke :(');
+            else tryUserQueueMedia(await youtube.banger(), true);
+        });
 
         messaging.messages.on('lucky', (message: any) => {
-            youtube.search(message.query).then(async (results) => {
-                tryUserQueueMedia(await youtube.media(results[0].videoId));
-            });
+            if (process.env.YOUTUBE_BROKE) status('sorry, youtube machine broke :(');
+            else
+                youtube.search(message.query).then(async (results) => {
+                    tryUserQueueMedia(await youtube.media(results[0].videoId));
+                });
         });
 
         messaging.messages.on('skip', (message: any) => {

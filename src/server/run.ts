@@ -6,7 +6,7 @@ import * as request from 'request';
 import * as youtube from './youtube';
 import * as glob from 'glob';
 import { promises as fs } from 'fs';
-import { basename, extname } from 'path';
+import { basename, extname, dirname } from 'path';
 import { host } from './server';
 import { exec } from 'child_process';
 import FileSync = require('lowdb/adapters/FileSync');
@@ -68,19 +68,26 @@ async function run() {
     app.use('/', express.static('public'));
     app.use('/media', express.static('media'));
     app.get('/youtube/:videoId', (req, res) => {
+        if (process.env.YOUTUBE_BROKE) {
+            res.status(503).send('Youtube machine broke.');
+            return;
+        }
+
         const videoId = req.params.videoId;
         const path = youtubeCache.getPath(videoId);
 
         if (path) {
             res.sendFile(path);
-        } else if (youtubeCache.isPending(videoId)) {
+        } else {
             youtube.direct(videoId).then(
                 (url) => req.pipe(request(url)).pipe(res),
-                () => res.status(503).send('Youtube Failure'),
+                (error) => res.status(503).send(`youtube error: ${error}`),
             );
-        } else {
-            res.status(403).send('Video Not Active');
         }
+
+        /* else {
+            res.status(403).send('Video Not Active');
+        } */
     });
 
     process.on('SIGINT', () => {

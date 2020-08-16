@@ -5,7 +5,8 @@
       "lib": ["ES2017", "DOM"],
       "declaration": true,
       "outDir": "../../lib/client",
-      "strict": true
+      "strict": true,
+      "sourceMap": true
     },
     "include": [".", "../common/*"]
 }

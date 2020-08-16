@@ -2,6 +2,7 @@ const path = require('path');
 
 module.exports = {
   mode: 'production',
+  devtool: "source-map",
   entry: './src/main.ts',
   output: {
     filename: 'script.js',

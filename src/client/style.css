@@ -7,6 +7,9 @@ input[type="submit"], button { cursor: pointer; }
     --button-color: #0052cc;
     --disable-color: #888888;
     --ascii-small: 'ascii_small_simple', monospace;
+
+    --toolbar-gap: 8px;
+    --toolbar-icon-scale: 4;
 }
 
 canvas, img {
@@ -33,10 +36,12 @@ html {
 input, button, option, select {
     font-family: var(--ascii-small);
     font-size: 16px;
+    height: 32px;
 }
 
 input[type="text"], select {
     color: white;
+    flex: 1;
 
     background: black;
     border: solid black 3px;
@@ -44,12 +49,6 @@ input[type="text"], select {
 
 input[type="text"]:focus {
     border-bottom: solid red 3px;
-}
-
-#chat-input {
-    position: absolute;
-    bottom: 16px; left: 64px;
-    width: 432px; height: 32px;
 }
 
 #entry-panel {
@@ -66,15 +65,31 @@ input[type="text"]:focus {
     margin-bottom: -64px;
 }
 
-.toolbar {
+#menu-container {
     position: absolute;
+    left: 0; top: 0;
     width: 100%;
+    height: 100%;
 
+    display: flex;
+    flex-direction: column-reverse;
+    align-items: start;
+
+    pointer-events: none;
+}
+
+#panel-container {
+    max-width: 512px;
+
+    pointer-events: all;
+}
+
+.toolbar {
     display: flex;
     flex-direction: row;
     align-items: stretch;
 
-    pointer-events: none;
+    background: black;
 }
 
 .toolbar > *:last-child {
@@ -82,42 +97,32 @@ input[type="text"]:focus {
 }
 
 .toolbar > button {
-    width: 32px; height: 32px;
+    width: calc(10px * var(--toolbar-icon-scale));
+    height: calc(10px * var(--toolbar-icon-scale));
     
     border: none;
-    padding: 4px;
+    padding: calc(1px * var(--toolbar-icon-scale));
     background-color: var(--button-color);
     border-color: var(--button-color);
 
     pointer-events: initial;
 }
 
-.toolbar > button > img {
+button > img {
     width: 100%; height: 100%;
 }
 
 #top-toolbar {
-    top: 0; left: 0;
+    top: 0;
 }
 
-#top-toolbar > button {
-    margin-left: 16px; margin-top: 16px;
-}
-
-#bottom-toolbar {
-    bottom: 0; left: 0;
-    align-items: flex-end;
-}
-
-#bottom-toolbar > button {
-    margin-left: 16px; margin-bottom: 16px;
+.toolbar > button {
+    margin-left: var(--toolbar-gap); 
+    margin-top: var(--toolbar-gap);
+    margin-bottom: var(--toolbar-gap);
 }
 
 #player-status {
-    position: absolute;
-    left: 0; top: 100%;
-
-    flex: 1;
     margin: 16px;
 }
 
@@ -127,58 +132,13 @@ input[type="text"]:focus {
     margin-bottom: 0px;
 }
 
-.toolbar > button.active {
+button.active {
     filter: invert();
 }
 
 .menu-panel {
-    position: absolute;
-    width: 100%;
-    max-width: 512px;
-    background: rgb(0 21 51);
-
     display: flex;
     flex-direction: column;
-}
-
-#search-form {
-    width: 100%;
-    display: flex;
-    padding: 16px;
-    padding-bottom: 0;
-}
-
-#search-input {
-    flex: 1;
-    min-width: 0;
-}
-
-#search-form > button, #search-form > input[type="submit"] {
-    flex: 0;
-    margin-left: 8px;
-}
-
-.search-result {
-    cursor: pointer;
-    display: flex;
-    flex-direction: row;
-    align-items: stretch;
-}
-
-.search-result:hover {
-    background: orange;
-}
-
-.search-result > div {
-    flex: 1;
-    padding: 8px;
-}
-
-.search-result > img {
-    flex: 0;
-    width: 128px;
-    min-height: 64px;
-    object-fit: cover;
 }
 
 .menu-title {
@@ -188,6 +148,7 @@ input[type="text"]:focus {
     align-items: stretch;
     padding: 8px;
     background: rgb(32 40 64);
+    flex: 0;
 }
 
 .menu-title > * {
@@ -196,10 +157,15 @@ input[type="text"]:focus {
 
 .menu-body {
     width: 100%;
+    flex: 1;
     display: flex;
     flex-direction: column;
     padding: 8px;
     background: rgb(0 21 51);
+}
+
+#emotes-panel, #blocks-panel, #view-panel, #avatar-panel {
+    width: unset;
 }
 
 .icon-button-small {
@@ -217,63 +183,17 @@ input[type="text"]:focus {
     width: 16px; height: 16px;
 }
 
-#queue-items {
-    display: flex;
-    flex-direction: column;
-}
-
-.queue-item {
-    display: flex;
-    flex-direction: row;
-    align-items: stretch;
-}
-
-.queue-item:not(:last-child) {
-    margin-bottom: 8px;
-}
-
-.queue-item > *:not(:first-child) {
-    margin-left: 8px;
-}
-
-.queue-item-title {
-    flex: 1;
-}
-
-.queue-item-time {
-    width: 128px;
-    flex: 0;
-    
-    color: #00ffff;
-}
-
-.queue-item-cancel {
-    width: 24px;
-    height: 24px;
-
-    border: none;
-    padding: 4px;
-    background-color: var(--button-color);
-    border-color: var(--button-color);
-}
-
-.queue-item-cancel:disabled {
-    background-color: var(--disable-color);
-    border-color: var(--disable-color);
-    cursor: not-allowed;
-}
-
-.queue-item-cancel > img {
-    width: 16px; height: 16px;
-}
-
 #popout-panel {
     position: absolute;
     background: black;
 
     left: calc(50vw - 256px); top: 0;
     min-width: 512px;
-    max-width: max(50vw, 512px);
+    width: 50vw;
+    max-width: unset;
+
+    bottom: unset;
+    right: unset;
 
     display: flex;
     flex-direction: column;
@@ -286,22 +206,44 @@ input[type="text"]:focus {
     width: 100%;
 }
 
-#user-panel {
-    position: absolute;
-    left: calc(100vw - 256px); top: 0;
-
-    width: 256px;
-
+[data-window] {
+    width: 512px;
     display: flex;
     flex-direction: column;
+}
 
-    background: black;
+#emotes-panel > .menu-body > button, #view-panel > .menu-body > button {
+    width: 64px; height: 64px;
+    
+    border: none;
+    padding: 8px;
+    background-color: var(--button-color);
+    border-color: var(--button-color);
+
+    pointer-events: initial;
+}
+
+#emotes-list {
+    display: grid;
+    align-items: center;
+    align-content: center;
+    padding: 8px;
+    gap: 16px 16px;
+    grid-template-columns: repeat(4, 64px);
+    grid-template-rows: repeat(1, 64px);
+}
+
+#view-panel > .menu-body {
+    display: grid;
+    align-items: center;
+    align-content: center;
+    padding: 8px;
+    gap: 16px 16px;
+    grid-template-columns: repeat(3, 64px);
+    grid-template-rows: repeat(1, 64px);
 }
 
 #blocks-panel {
-    position: absolute;
-    left: 0; top: 0;
-
     display: flex;
     flex-direction: column;
 
@@ -314,8 +256,8 @@ input[type="text"]:focus {
     align-content: center;
     padding: 8px;
     gap: 16px 16px;
-    grid-template-columns: repeat(4, 48px);
-    grid-template-rows: repeat(2, 96px);
+    grid-template-columns: repeat(8, 32px);
+    grid-template-rows: repeat(1, 64px);
 }
 
 #blocks-list > * {
@@ -327,19 +269,7 @@ input[type="text"]:focus {
 }
 
 #avatar-panel {
-    position: absolute;
-    left: calc(100vw - 256px); top: 0;
-
-    width: 256px;
-
-    display: flex;
-    flex-direction: column;
-
     align-items: center;
-}
-
-#avatar-panel > *:not(:first-child) {
-    margin-top: 8px;
 }
 
 #avatar-panel > .controls {
@@ -359,9 +289,12 @@ html, body {
     flex: 1;
 }
 
+#chat-canvas2 {
+    width: 512px;
+    height: 512px;
+}
+
 #chat-canvas {
-    position: absolute;
-    bottom: 0px; left: 0;
     width: 512px;
     height: 512px;
 
@@ -371,15 +304,46 @@ html, body {
 #chat-canvas.open {
     pointer-events: initial;
     cursor: pointer;
+    display: none;
 }
 
-#user-list {
+#user-panel {
+    max-height: 480px;
+}
+
+#user-panel > .menu-body {
     overflow-y: auto;
+}
+
+#entry-users {
+    margin: 1em;
+}
+
+.user-container {
+    display: flex;
+    flex-wrap: wrap;
     flex: 1;
 
-    margin: 2px;
-    padding: 2px;
-    border: 2px solid black;
+    align-items: center;
+    align-content: center;
+    justify-content: space-evenly;
+    gap: 16px 32px;
+}
+
+.user-container > div {
+    display: flex;
+    flex-direction: row;
+}
+
+.user-container > div > canvas {
+    width: 24px;
+    height: 24px;
+    margin-right: 9px;
+}
+
+.user-container > div > div {
+    white-space: nowrap;
+    overflow-x: hidden;
 }
 
 .user-dj {
@@ -408,7 +372,7 @@ html, body {
 }
 
 #avatar-paint {
-    width: 200px; height: 200px;
+    width: 320px; height: 320px;
     background-color: var(--button-color);
     margin: auto;
 }
@@ -461,4 +425,8 @@ html, body {
     flex: 0;
     border-radius: 3px;
     padding: .4em .8em;
+}
+
+#play-banger {
+    max-width: 256px;
 }
