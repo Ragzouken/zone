@@ -43,9 +43,7 @@ async function getCachedInfo(videoId: string) {
         return entry.info;
     } else {
         infoCache.delete(videoId);
-        console.log("GET INFO");
         const info = await ytdl.getInfo(videoId);
-        console.log("GOT INFO");
         const expires = performance.now() + TIMEOUT;
         infoCache.set(videoId, { info, expires });
         return info;
@@ -57,11 +55,8 @@ export async function info(videoID: string) {
 }
 
 export async function direct(videoId: string): Promise<string> {
-    console.log("BEGIN");
     const info = await getCachedInfo(videoId);
-    console.log("INFO");
     const format = ytdl.chooseFormat(info.formats, { quality: '18' });
-    console.log("URL", format.url);
     return format.url;
 }
 
