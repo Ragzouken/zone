@@ -6,6 +6,8 @@ export class Menu extends EventEmitter {
     tabToggles = new Map<string, HTMLElement>();
     tabBodies = new Map<string, HTMLElement>();
 
+    readonly visible = new Map<string, boolean>();
+
     constructor() {
         super();
     }
@@ -16,8 +18,6 @@ export class Menu extends EventEmitter {
 
         if (tab) tab.classList.toggle('active', shown);
         if (body) body.hidden = !shown;
-
-        this.emit(`${shown ? 'show' : 'hide'}:${path}`);
     }
 
     isVisible(path: string): boolean {
@@ -34,6 +34,7 @@ export class Menu extends EventEmitter {
                 this.setShown(other, other === path);
         });
 
+        this.refresh();
         this.emit(`open:${path}`);
     }
 
@@ -44,6 +45,7 @@ export class Menu extends EventEmitter {
         if (tab) tab.classList.toggle('active', false);
         if (body) body.hidden = true;
 
+        this.refresh();
         this.emit(`close:${path}`);
     }
 
@@ -51,6 +53,18 @@ export class Menu extends EventEmitter {
         this.tabToggles.forEach((toggle, togglePath) => {
             if (getPathParent(togglePath) === path)
                 this.close(togglePath);
+        });
+    }
+
+    refresh() {
+        this.paths.forEach((path) => {
+            const prev = this.visible.get(path) === true;
+            const next = this.isVisible(path);
+
+            if (prev != next)
+                this.emit(`${next ? 'show' : 'hide'}:${path}`);
+
+            this.visible.set(path, next);
         });
     }
 }
