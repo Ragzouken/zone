@@ -68,6 +68,9 @@ async function run() {
     app.use('/', express.static('public'));
     app.use('/media', express.static('media'));
     app.get('/youtube/:videoId', (req, res) => {
+        res.status(503).send('Youtube machine broke.');
+        return;
+
         const videoId = req.params.videoId;
         console.log("YOUTUBE", videoId);
         const path = youtubeCache.getPath(videoId);
