@@ -56,7 +56,7 @@ export async function info(videoID: string) {
 
 export async function direct(videoId: string): Promise<string> {
     const info = await getCachedInfo(videoId);
-    const format = ytdl.chooseFormat(info.formats, { quality: '18' });
+    const format = getFormat(info);
     return format.url;
 }
 
@@ -106,6 +106,10 @@ type CachedVideo = {
     path: string;
     expires: number;
 };
+
+function getFormat(info: ytdl.videoInfo) {
+    return ytdl.chooseFormat(info.formats, { quality: 'lowest', filter: f => f.hasAudio && f.hasVideo && f.container === 'mp4' });
+}
 
 export class YoutubeCache {
     private downloads = new Map<string, Promise<string>>();
@@ -163,7 +167,7 @@ export class YoutubeCache {
 
     private async downloadToCache(videoId: string) {
         const videoInfo = await info(videoId);
-        const format = ytdl.chooseFormat(videoInfo.formats, { quality: '18' });
+        const format = getFormat(videoInfo);
         const path = await getCacheFile(`youtube-${videoId}`, '.mp4');
 
         const writable = createWriteStream(path);
