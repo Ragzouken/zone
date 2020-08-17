@@ -821,7 +821,7 @@ export async function load() {
 
         sceneRenderer.building = !htmlui.idToWindowElement.get('blocks-panel')!.hidden; 
         const logo = player.hasItem ? audioLogo : zoneLogo;
-        sceneRenderer.mediaElement = popoutPanel.hidden ? video : logo;
+        sceneRenderer.mediaElement = (popoutPanel.hidden && player.hasVideo) ? video : logo;
         sceneRenderer.update();
         sceneRenderer.render();
     }
