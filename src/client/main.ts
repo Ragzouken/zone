@@ -150,6 +150,8 @@ export async function load() {
     const player = new Player(video);
     const zoneLogo = document.createElement('img');
     zoneLogo.src = 'zone-logo.png';
+    const audioLogo = document.createElement('img');
+    audioLogo.src = 'audio-logo.png';
 
     const joinName = document.querySelector('#join-name') as HTMLInputElement;
     const chatInput = document.querySelector('#chat-input') as HTMLInputElement;
@@ -817,9 +819,9 @@ export async function load() {
     function renderScene() {
         requestAnimationFrame(renderScene);
 
-        sceneRenderer.building = !htmlui.idToWindowElement.get('blocks-panel')!.hidden;
-
-        sceneRenderer.mediaElement = popoutPanel.hidden && player.hasVideo ? video : zoneLogo;
+        sceneRenderer.building = !htmlui.idToWindowElement.get('blocks-panel')!.hidden; 
+        const logo = player.hasItem ? audioLogo : zoneLogo;
+        sceneRenderer.mediaElement = popoutPanel.hidden ? video : logo;
         sceneRenderer.update();
         sceneRenderer.render();
     }
