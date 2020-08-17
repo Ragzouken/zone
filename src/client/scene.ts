@@ -501,7 +501,14 @@ export class ZoneSceneRenderer extends EventEmitter {
 
     objectIntersectCameraPoint(point: THREE.Vector2): THREE.Intersection | undefined {
         this.raycaster.setFromCamera(point, this.camera);
-        return this.raycaster.intersectObject(this.avatarGroup, true)[0];
+        const objects = [this.blockGroup, this.avatarGroup];
+        const hits = this.raycaster.intersectObjects(objects, true);
+
+        if (hits.length === 0 || hits[0].object.parent !== this.avatarGroup) {
+            return;
+        } else {
+            return hits[0];
+        }
     }
 
     getAvatarCoordsUnderMouseEvent(event: MouseEvent) {
