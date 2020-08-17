@@ -12,6 +12,7 @@ import { URL } from 'url';
 import { randomInt } from '../common/utility';
 import * as tmp from 'tmp';
 import { unlink } from 'fs';
+import { BADNAME } from 'dns';
 
 tmp.setGracefulCleanup();
 
@@ -81,24 +82,27 @@ export async function search(query: string): Promise<YoutubeVideo[]> {
     });
 }
 
-let BANGERS: ytpl.result | undefined;
+let BANGERS: Media[] | undefined;
 const BANGER_PLAYLIST_ID = 'PLUkMc2z58ECZFcxvdwncKK1qDYZzVHrbB';
 async function refreshBangers() {
-    BANGERS = await ytpl(BANGER_PLAYLIST_ID, { limit: Infinity });
+    const results = await ytpl(BANGER_PLAYLIST_ID, { limit: Infinity });
+    BANGERS = results.items.map((chosen) => {
+        const videoId = new URL(chosen.url).searchParams.get('v')!;
+        const duration = timeToSeconds(chosen.duration) * 1000;
+        const source = 'youtube/' + videoId;
+
+        return { title: chosen.title, duration, source };
+    })
 }
 
 refreshBangers();
 setInterval(refreshBangers, 24 * 60 * 60 * 1000);
 
-export async function banger(): Promise<Media> {
+export async function banger(extra: Media[] = []): Promise<Media> {
     if (!BANGERS) await refreshBangers();
 
-    const chosen = BANGERS!.items[randomInt(0, BANGERS!.items.length - 1)];
-    const videoId = new URL(chosen.url).searchParams.get('v')!;
-    const duration = timeToSeconds(chosen.duration) * 1000;
-    const source = 'youtube/' + videoId;
-
-    return { title: chosen.title, duration, source };
+    const options = [...BANGERS!, ...extra];
+    return options[randomInt(0, options.length - 1)];
 }
 
 type CachedVideo = {

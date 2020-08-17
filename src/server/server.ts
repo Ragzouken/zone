@@ -456,7 +456,11 @@ export function host(xws: expressWs.Instance, adapter: low.AdapterSync, options:
         messaging.messages.on('local', (message: any) => tryQueueLocalByPath(message.path));
         messaging.messages.on('banger', async () => {
             if (process.env.YOUTUBE_BROKE) status('sorry, youtube machine broke :(');
-            else tryUserQueueMedia(await youtube.banger(), true);
+            else {
+                const EIGHT_MINUTES = 8 * 60 * 1000;
+                const extras = Array.from(localLibrary.values()).filter((media) => media.duration <= EIGHT_MINUTES)
+                tryUserQueueMedia(await youtube.banger(extras), true);
+            }
         });
 
         messaging.messages.on('lucky', (message: any) => {
