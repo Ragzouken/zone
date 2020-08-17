@@ -857,9 +857,14 @@ export async function load() {
                 ...users.map((user) => formatName(user)),
                 ...echoes.map((echo) => 'echo of ' + formatName(echo)),
             ];
+
+            tooltip.hidden = false;
             tooltip.innerHTML = names.join(', ');
+            const [tx, ty] = eventToElementPixel(info.event, tooltip.parentElement!);
+            tooltip.style.left = tx + 'px';
+            tooltip.style.top = ty + 'px';
         } else {
-            tooltip.innerHTML = '';
+            tooltip.hidden = true;
         }
     });
 }

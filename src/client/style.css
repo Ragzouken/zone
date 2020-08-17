@@ -127,9 +127,15 @@ button > img {
 }
 
 #tooltip {
+    position: absolute;
+    transform: translate(-50%, 24px);
     flex: 1;
-    margin: 16px;
-    margin-bottom: 0px;
+
+    background: black;
+    padding: 8px;
+
+    pointer-events: none;
+    z-index: 100;
 }
 
 button.active {

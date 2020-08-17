@@ -147,6 +147,7 @@ export interface ScenePointerInfo {
     spaceCoords?: number[];
     blockCoords?: number[];
     objectCoords?: number[];
+    event: MouseEvent;
 }
 
 export interface ZoneSceneRenderer {
@@ -305,7 +306,7 @@ export class ZoneSceneRenderer extends EventEmitter {
             event.stopPropagation();
         });
 
-        document.addEventListener('pointermove', (event) => {
+        document.addEventListener('mousemove', (event) => {
             const info = this.getInfoUnderMouseEvent(event);
 
             if (info?.blockCoords) {
@@ -484,7 +485,7 @@ export class ZoneSceneRenderer extends EventEmitter {
         this.renderer.render(this.scene, this.camera);
     }
 
-    cameraPointFromMouseEvent(event: PointerEvent) {
+    cameraPointFromMouseEvent(event: MouseEvent) {
         const [cx, cy] = eventToElementPixel(event, this.renderer.domElement);
 
         return new THREE.Vector2(
@@ -503,7 +504,7 @@ export class ZoneSceneRenderer extends EventEmitter {
         return this.raycaster.intersectObject(this.avatarGroup, true)[0];
     }
 
-    getAvatarCoordsUnderMouseEvent(event: PointerEvent) {
+    getAvatarCoordsUnderMouseEvent(event: MouseEvent) {
         const point = this.cameraPointFromMouseEvent(event);
         const intersection = this.objectIntersectCameraPoint(point);
 
@@ -512,12 +513,12 @@ export class ZoneSceneRenderer extends EventEmitter {
         return this.avatarToCoords.get(intersection.object)!;
     }
 
-    getInfoUnderMouseEvent(event: PointerEvent): ScenePointerInfo {
+    getInfoUnderMouseEvent(event: MouseEvent): ScenePointerInfo {
         const point = this.cameraPointFromMouseEvent(event);
         const intersection = this.blockIntersectCameraPoint(point);
         const objectCoords = this.getAvatarCoordsUnderMouseEvent(event);
 
-        const info: ScenePointerInfo = { objectCoords };
+        const info: ScenePointerInfo = { objectCoords, event };
 
         if (intersection) {
             info.blockCoords = this.cubeToCoords.get(intersection.object)!;
