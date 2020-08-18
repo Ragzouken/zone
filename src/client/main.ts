@@ -150,6 +150,8 @@ export async function load() {
     const player = new Player(video);
     const zoneLogo = document.createElement('img');
     zoneLogo.src = 'zone-logo.png';
+    const audioLogo = document.createElement('img');
+    audioLogo.src = 'audio-logo.png';
 
     const joinName = document.querySelector('#join-name') as HTMLInputElement;
     const chatInput = document.querySelector('#chat-input') as HTMLInputElement;
@@ -817,9 +819,9 @@ export async function load() {
     function renderScene() {
         requestAnimationFrame(renderScene);
 
-        sceneRenderer.building = !htmlui.idToWindowElement.get('blocks-panel')!.hidden;
-
-        sceneRenderer.mediaElement = popoutPanel.hidden && player.hasVideo ? video : zoneLogo;
+        sceneRenderer.building = !htmlui.idToWindowElement.get('blocks-panel')!.hidden; 
+        const logo = player.hasItem ? audioLogo : zoneLogo;
+        sceneRenderer.mediaElement = (popoutPanel.hidden && player.hasVideo) ? video : logo;
         sceneRenderer.update();
         sceneRenderer.render();
     }
@@ -857,9 +859,14 @@ export async function load() {
                 ...users.map((user) => formatName(user)),
                 ...echoes.map((echo) => 'echo of ' + formatName(echo)),
             ];
+
+            tooltip.hidden = false;
             tooltip.innerHTML = names.join(', ');
+            const [tx, ty] = eventToElementPixel(info.event, tooltip.parentElement!);
+            tooltip.style.left = tx + 'px';
+            tooltip.style.top = ty + 'px';
         } else {
-            tooltip.innerHTML = '';
+            tooltip.hidden = true;
         }
     });
 }

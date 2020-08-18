@@ -44,7 +44,7 @@ export const DEFAULT_OPTIONS: HostOptions = {
     playbackStartDelay: 3 * SECONDS,
 };
 
-const HALFHOUR = 30 * 60 * 60 * 1000;
+const HALFHOUR = 30 * 60 * 1000;
 
 const bans = new Map<unknown, Ban>();
 
@@ -440,14 +440,27 @@ export function host(xws: expressWs.Instance, adapter: low.AdapterSync, options:
 
         async function tryQueueYoutubeById(videoId: string) {
             if (process.env.YOUTUBE_BROKE) status('sorry, youtube machine broke :(');
-            else tryUserQueueMedia(await youtube.media(videoId));
+            else {
+                const media = await youtube.media(videoId);
+                const privileged = user.tags.includes('dj') || user.tags.includes('admin');
+
+                if (media.duration > HALFHOUR && !privileged) {
+                    status("video too long", user);
+                } else {
+                    tryUserQueueMedia(await youtube.media(videoId));
+                }
+            }
         }
 
         messaging.messages.on('youtube', (message: any) => tryQueueYoutubeById(message.videoId));
         messaging.messages.on('local', (message: any) => tryQueueLocalByPath(message.path));
         messaging.messages.on('banger', async () => {
             if (process.env.YOUTUBE_BROKE) status('sorry, youtube machine broke :(');
-            else tryUserQueueMedia(await youtube.banger(), true);
+            else {
+                const EIGHT_MINUTES = 8 * 60 * 1000;
+                const extras = Array.from(localLibrary.values()).filter((media) => media.duration <= EIGHT_MINUTES)
+                tryUserQueueMedia(await youtube.banger(extras), true);
+            }
         });
 
         messaging.messages.on('lucky', (message: any) => {

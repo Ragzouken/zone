@@ -12,6 +12,7 @@ import { URL } from 'url';
 import { randomInt } from '../common/utility';
 import * as tmp from 'tmp';
 import { unlink } from 'fs';
+import { BADNAME } from 'dns';
 
 tmp.setGracefulCleanup();
 
@@ -56,16 +57,16 @@ export async function info(videoID: string) {
 
 export async function direct(videoId: string): Promise<string> {
     const info = await getCachedInfo(videoId);
-    const format = ytdl.chooseFormat(info.formats, { quality: '18' });
+    const format = getFormat(info);
     return format.url;
 }
 
 export async function media(videoId: string): Promise<Media> {
-    const { title, videoDetails, thumbnail_url } = await getCachedInfo(videoId);
+    const { videoDetails } = await getCachedInfo(videoId);
     const duration = parseInt(videoDetails.lengthSeconds, 10) * 1000;
     const source = 'youtube/' + videoId;
 
-    return { title, duration, source, thumbnail: thumbnail_url };
+    return { title: videoDetails.title, duration, source };
 }
 
 export async function search(query: string): Promise<YoutubeVideo[]> {
@@ -81,24 +82,27 @@ export async function search(query: string): Promise<YoutubeVideo[]> {
     });
 }
 
-let BANGERS: ytpl.result | undefined;
+let BANGERS: Media[] | undefined;
 const BANGER_PLAYLIST_ID = 'PLUkMc2z58ECZFcxvdwncKK1qDYZzVHrbB';
 async function refreshBangers() {
-    BANGERS = await ytpl(BANGER_PLAYLIST_ID, { limit: Infinity });
+    const results = await ytpl(BANGER_PLAYLIST_ID, { limit: Infinity });
+    BANGERS = results.items.map((chosen) => {
+        const videoId = new URL(chosen.url).searchParams.get('v')!;
+        const duration = timeToSeconds(chosen.duration) * 1000;
+        const source = 'youtube/' + videoId;
+
+        return { title: chosen.title, duration, source };
+    })
 }
 
 refreshBangers();
 setInterval(refreshBangers, 24 * 60 * 60 * 1000);
 
-export async function banger(): Promise<Media> {
+export async function banger(extra: Media[] = []): Promise<Media> {
     if (!BANGERS) await refreshBangers();
 
-    const chosen = BANGERS!.items[randomInt(0, BANGERS!.items.length - 1)];
-    const videoId = new URL(chosen.url).searchParams.get('v')!;
-    const duration = timeToSeconds(chosen.duration) * 1000;
-    const source = 'youtube/' + videoId;
-
-    return { title: chosen.title, duration, source };
+    const options = [...BANGERS!, ...extra];
+    return options[randomInt(0, options.length - 1)];
 }
 
 type CachedVideo = {
@@ -106,6 +110,10 @@ type CachedVideo = {
     path: string;
     expires: number;
 };
+
+function getFormat(info: ytdl.videoInfo) {
+    return ytdl.chooseFormat(info.formats, { quality: 'lowest', filter: f => f.hasAudio && f.hasVideo && f.container === 'mp4' });
+}
 
 export class YoutubeCache {
     private downloads = new Map<string, Promise<string>>();
@@ -163,7 +171,7 @@ export class YoutubeCache {
 
     private async downloadToCache(videoId: string) {
         const videoInfo = await info(videoId);
-        const format = ytdl.chooseFormat(videoInfo.formats, { quality: '18' });
+        const format = getFormat(videoInfo);
         const path = await getCacheFile(`youtube-${videoId}`, '.mp4');
 
         const writable = createWriteStream(path);
