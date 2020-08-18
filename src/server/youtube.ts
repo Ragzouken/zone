@@ -66,7 +66,7 @@ export async function media(videoId: string): Promise<Media> {
     const duration = parseInt(videoDetails.lengthSeconds, 10) * 1000;
     const source = 'youtube/' + videoId;
 
-    return { title: videoDetails.title, duration, source, thumbnail: videoDetails.thumbnail.thumbnails[0].url };
+    return { title: videoDetails.title, duration, source };
 }
 
 export async function search(query: string): Promise<YoutubeVideo[]> {
