@@ -11,6 +11,7 @@ test('banger', async () => {
 
 test.each(YOUTUBE_MEDIA)('media', async ({ videoId, ...expected }) => {
     const media = await youtube.media(videoId);
+    media.thumbnail = undefined;
     expect(media).toEqual(expected);
 });
 
