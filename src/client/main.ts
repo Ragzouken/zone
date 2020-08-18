@@ -68,6 +68,15 @@ function getLocalUser() {
     }
 }
 
+function moveTo(x: number, y: number, z: number) {
+    const user = getLocalUser()!;
+    user.position = [x, y, z];
+    client.move(user.position);
+}
+
+const emoteToggles = new Map<string, Element>();
+const getEmote = (emote: string) => emoteToggles.get(emote)?.classList.contains('active');
+
 let localName = localStorage.getItem('name') || '';
 
 function rename(name: string) {
@@ -90,6 +99,7 @@ let joinPassword: string | undefined;
 
 async function connect(): Promise<void> {
     const joined = !!client.localUserId;
+    const existing = client.localUser;
 
     try {
         client.messaging.setSocket(await socket());
@@ -110,6 +120,11 @@ async function connect(): Promise<void> {
     chat.log('{clr=#00FF00}*** connected ***');
     if (!joined) listHelp();
     listUsers();
+
+    if (existing) {
+        if (existing.position) moveTo(existing.position[0], existing.position[1], existing.position[2]);
+        if (existing.emotes) client.emotes(['wvy', 'shk', 'rbw', 'spn'].filter(getEmote));
+    }
 }
 
 function listUsers() {
@@ -417,12 +432,6 @@ export async function load() {
 
     setInterval(() => client.heartbeat(), 30 * 1000);
 
-    function moveTo(x: number, y: number, z: number) {
-        const user = getLocalUser()!;
-        user.position = [x, y, z];
-        client.move(user.position);
-    }
-
     function move(dx: number, dz: number) {
         const user = getLocalUser()!;
 
@@ -671,9 +680,7 @@ export async function load() {
 
     chatCommands.set('echo', (message) => client.echo(getLocalUser()!.position!, message));
 
-    const emoteToggles = new Map<string, Element>();
     const toggleEmote = (emote: string) => setEmote(emote, !getEmote(emote));
-    const getEmote = (emote: string) => emoteToggles.get(emote)!.classList.contains('active');
     const setEmote = (emote: string, value: boolean) => {
         emoteToggles.get(emote)!.classList.toggle('active', value);
         client.emotes(['wvy', 'shk', 'rbw', 'spn'].filter(getEmote));
