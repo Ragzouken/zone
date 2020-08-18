@@ -132,7 +132,6 @@ export function checkValid(info: ytdl.videoInfo) {
 }
 
 function getFormat(info: ytdl.videoInfo) {
-    return ytdl.chooseFormat([], { quality: 'lowest', filter: f => f.hasAudio && f.hasVideo && f.container === 'mp4' });
     return ytdl.chooseFormat(info.formats, { quality: 'lowest', filter: f => f.hasAudio && f.hasVideo && f.container === 'mp4' });
 }
 
