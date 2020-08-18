@@ -35,7 +35,7 @@ async function getCacheFile(prefix: string, postfix: string): Promise<string> {
 export type YoutubeVideo = MediaMeta & { videoId: string };
 
 const TIMEOUT = 30 * 60 * 1000;
-const infoCache = new Map<string, { info: ytdl.videoInfo; expires: number }>();
+const infoCache = new Map<string, { info: ytdl.videoInfo; expires: number, valid: boolean }>();
 
 async function getCachedInfo(videoId: string) {
     const entry = infoCache.get(videoId);
@@ -45,8 +45,14 @@ async function getCachedInfo(videoId: string) {
     } else {
         infoCache.delete(videoId);
         const info = await ytdl.getInfo(videoId);
+        const valid = checkValid(info);
         const expires = performance.now() + TIMEOUT;
-        infoCache.set(videoId, { info, expires });
+        infoCache.set(videoId, { info, expires, valid });
+
+        if (!valid) {
+            console.log(`NO FORMAT: ${videoId}`);
+        }
+
         return info;
     }
 }
@@ -62,11 +68,15 @@ export async function direct(videoId: string): Promise<string> {
 }
 
 export async function media(videoId: string): Promise<Media> {
-    const { videoDetails } = await getCachedInfo(videoId);
-    const duration = parseInt(videoDetails.lengthSeconds, 10) * 1000;
+    const videoInfo = await getCachedInfo(videoId);
+    const duration = parseInt(videoInfo.videoDetails.lengthSeconds, 10) * 1000;
     const source = 'youtube/' + videoId;
 
-    return { title: videoDetails.title, duration, source };
+    if (!checkValid(videoInfo)) {
+        throw Error(`NO FORMAT FOR ${videoId}`);
+    }
+
+    return { title: videoInfo.videoDetails.title, duration, source };
 }
 
 export async function search(query: string): Promise<YoutubeVideo[]> {
@@ -111,7 +121,18 @@ type CachedVideo = {
     expires: number;
 };
 
+export function checkValid(info: ytdl.videoInfo) {
+    try {
+        getFormat(info);
+        return true;
+    } catch (e) {
+        console.log('no format from', info.formats.map((format) => format.itag));
+        return false; 
+    }
+}
+
 function getFormat(info: ytdl.videoInfo) {
+    return ytdl.chooseFormat([], { quality: 'lowest', filter: f => f.hasAudio && f.hasVideo && f.container === 'mp4' });
     return ytdl.chooseFormat(info.formats, { quality: 'lowest', filter: f => f.hasAudio && f.hasVideo && f.container === 'mp4' });
 }
 
@@ -144,7 +165,7 @@ export class YoutubeCache {
         const existing = this.cached.get(videoId);
         if (existing) {
             existing.expires = performance.now() + timeout;
-        } else if (!this.downloads.has(videoId)) {
+        } else if (!this.downloads.has(videoId) && !checkValid(videoInfo)) {
             const download = this.downloadToCache(videoId);
             this.downloads.set(videoId, download);
             download.then((path) => {

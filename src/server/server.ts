@@ -172,11 +172,18 @@ export function host(xws: expressWs.Instance, adapter: low.AdapterSync, options:
     }
 
     const skips = new Set<UserId>();
-    playback.on('play', (item) => {
+    playback.on('play', async (item) => {
         skips.clear();
 
         const videoId = sourceToVideoId(item.media.source);
-        if (videoId) youtubeCache.renewCachedVideo(videoId);
+        if (videoId) {
+            const info = await youtube.info(videoId);
+            if (!youtube.checkValid(info)) {
+                skip("skipping unplayable video :(");
+            } else {
+                youtubeCache.renewCachedVideo(videoId);
+            }
+        }
     });
 
     function load() {
@@ -441,13 +448,18 @@ export function host(xws: expressWs.Instance, adapter: low.AdapterSync, options:
         async function tryQueueYoutubeById(videoId: string) {
             if (process.env.YOUTUBE_BROKE) status('sorry, youtube machine broke :(');
             else {
-                const media = await youtube.media(videoId);
-                const privileged = user.tags.includes('dj') || user.tags.includes('admin');
+                try {
+                    const media = await youtube.media(videoId);
+                    const privileged = user.tags.includes('dj') || user.tags.includes('admin');
 
-                if (media.duration > HALFHOUR && !privileged) {
-                    status("video too long", user);
-                } else {
-                    tryUserQueueMedia(await youtube.media(videoId));
+                    if (media.duration > HALFHOUR && !privileged) {
+                        status("video too long", user);
+                    } else {
+                        tryUserQueueMedia(media);
+                    }
+                } catch (e) {
+                    console.log(e);
+                    status("video unloadable", user);
                 }
             }
         }
@@ -467,7 +479,12 @@ export function host(xws: expressWs.Instance, adapter: low.AdapterSync, options:
             if (process.env.YOUTUBE_BROKE) status('sorry, youtube machine broke :(');
             else
                 youtube.search(message.query).then(async (results) => {
-                    tryUserQueueMedia(await youtube.media(results[0].videoId));
+                    try {
+                        tryUserQueueMedia(await youtube.media(results[0].videoId));
+                    } catch (e) {
+                        console.log(e);
+                        status("video unloadable", user);
+                    }
                 });
         });
 
