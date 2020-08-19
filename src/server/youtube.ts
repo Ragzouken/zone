@@ -94,9 +94,11 @@ export async function search(query: string): Promise<YoutubeVideo[]> {
     });
 }
 
-let BANGERS: Media[] | undefined;
+let BANGERS: Media[] = [];
 const BANGER_PLAYLIST_ID = 'PLUkMc2z58ECZFcxvdwncKK1qDYZzVHrbB';
 async function refreshBangers() {
+    if (process.env.IGNORE_YOUTUBE_BANGERS) return;
+
     const results = await ytpl(BANGER_PLAYLIST_ID, { limit: Infinity });
     BANGERS = results.items.map((chosen) => {
         const videoId = new URL(chosen.url).searchParams.get('v')!;
@@ -110,11 +112,11 @@ async function refreshBangers() {
 if (!process.env.IGNORE_YOUTUBE_BANGERS) {
     refreshBangers();
     setInterval(refreshBangers, 24 * 60 * 60 * 1000);
+} else {
+    console.log("IGNORING YOUTUBE BANGERS");
 }
 
 export async function banger(extra: Media[] = []): Promise<Media> {
-    if (!BANGERS) await refreshBangers();
-
     const options = [...BANGERS!, ...extra];
     return options[randomInt(0, options.length - 1)];
 }
