@@ -73,20 +73,11 @@ async function run() {
         }
 
         const videoId = req.params.videoId;
-        const path = youtubeCache.getPath(videoId);
 
-        if (path) {
-            res.sendFile(path);
-        } else {
-            youtube.direct(videoId).then(
-                (url) => req.pipe(request(url)).pipe(res),
-                (error) => res.status(503).send(`youtube error: ${error}`),
-            );
-        }
-
-        /* else {
-            res.status(403).send('Video Not Active');
-        } */
+        youtube.direct(videoId).then(
+            (url) => req.pipe(request(url)).pipe(res),
+            (error) => res.status(503).send(`youtube error: ${error}`),
+        );
     });
 
     process.on('SIGINT', () => {

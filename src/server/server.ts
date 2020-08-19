@@ -136,9 +136,6 @@ export function host(xws: expressWs.Instance, adapter: low.AdapterSync, options:
 
     const localLibrary = new Map<string, Media>();
 
-    playback.on('play', cacheYoutubes);
-    playback.on('queue', cacheYoutubes);
-
     load();
 
     playback.on('queue', (item: QueueItem) => sendAll('queue', { items: [item] }));
@@ -154,23 +151,6 @@ export function host(xws: expressWs.Instance, adapter: low.AdapterSync, options:
         return source.startsWith('youtube/') ? source.slice(8) : undefined;
     }
 
-    setInterval(() => youtubeCache.deleteExpiredCachedVideos(), HALFHOUR);
-    function cacheYoutubes() {
-        const item = playback.currentItem;
-
-        if (item && item.media.duration < HALFHOUR) {
-            const videoId = sourceToVideoId(item.media.source);
-            if (videoId) youtubeCache.renewCachedVideo(videoId);
-        }
-
-        playback.queue.slice(0, 3).forEach((item) => {
-            if (item.media.duration < HALFHOUR) {
-                const videoId = sourceToVideoId(item.media.source);
-                if (videoId) youtubeCache.renewCachedVideo(videoId);
-            }
-        });
-    }
-
     const skips = new Set<UserId>();
     playback.on('play', async (item) => {
         skips.clear();
@@ -181,7 +161,7 @@ export function host(xws: expressWs.Instance, adapter: low.AdapterSync, options:
             if (!youtube.checkValid(info)) {
                 skip("skipping unplayable video :(");
             } else {
-                youtubeCache.renewCachedVideo(videoId);
+                //youtubeCache.renewCachedVideo(videoId);
             }
         }
     });
