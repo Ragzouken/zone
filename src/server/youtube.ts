@@ -13,6 +13,7 @@ import { randomInt } from '../common/utility';
 import * as tmp from 'tmp';
 import { unlink } from 'fs';
 import { BADNAME } from 'dns';
+import { env } from 'process';
 
 tmp.setGracefulCleanup();
 
@@ -105,8 +106,10 @@ async function refreshBangers() {
     })
 }
 
-refreshBangers();
-setInterval(refreshBangers, 24 * 60 * 60 * 1000);
+if (!process.env.IGNORE_YOUTUBE_BANGERS) {
+    refreshBangers();
+    setInterval(refreshBangers, 24 * 60 * 60 * 1000);
+}
 
 export async function banger(extra: Media[] = []): Promise<Media> {
     if (!BANGERS) await refreshBangers();
