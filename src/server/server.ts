@@ -44,7 +44,7 @@ export const DEFAULT_OPTIONS: HostOptions = {
     playbackStartDelay: 3 * SECONDS,
 };
 
-const HALFHOUR = 30 * 60 * 1000;
+const HALFHOUR = 30 * 60 * SECONDS;
 
 const bans = new Map<unknown, Ban>();
 
@@ -469,7 +469,7 @@ export function host(xws: expressWs.Instance, adapter: low.AdapterSync, options:
         messaging.messages.on('banger', async () => {
             if (process.env.YOUTUBE_BROKE) status('sorry, youtube machine broke :(');
             else {
-                const EIGHT_MINUTES = 8 * 60 * 1000;
+                const EIGHT_MINUTES = 8 * 60 * SECONDS;
                 const extras = Array.from(localLibrary.values()).filter((media) => media.duration <= EIGHT_MINUTES)
                 tryUserQueueMedia(await youtube.banger(extras), true);
             }
