@@ -68,8 +68,6 @@ interface Ban {
 export function host(xws: expressWs.Instance, adapter: low.AdapterSync, options: Partial<HostOptions> = {}) {
     const opts = Object.assign({}, DEFAULT_OPTIONS, options);
 
-    const youtubeCache = new youtube.YoutubeCache();
-
     const db = low(adapter);
     db.defaults({
         playback: { current: undefined, queue: [], time: 0 },
@@ -160,8 +158,6 @@ export function host(xws: expressWs.Instance, adapter: low.AdapterSync, options:
             const info = await youtube.info(videoId);
             if (!youtube.checkValid(info)) {
                 skip("skipping unplayable video :(");
-            } else {
-                //youtubeCache.renewCachedVideo(videoId);
             }
         }
     });
@@ -569,5 +565,5 @@ export function host(xws: expressWs.Instance, adapter: low.AdapterSync, options:
         connections.get(userId)!.send(type, message);
     }
 
-    return { zone, playback, save, sendAll, authCommands, localLibrary, youtubeCache };
+    return { zone, playback, save, sendAll, authCommands, localLibrary };
 }

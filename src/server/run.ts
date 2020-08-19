@@ -46,7 +46,7 @@ async function run() {
     fs.mkdir(path.dirname(dataPath)).catch(() => {});
     const adapter = new FileSync(dataPath, { serialize: JSON.stringify, deserialize: JSON.parse });
 
-    const { save, sendAll, authCommands, localLibrary, youtubeCache } = host(xws, adapter, {
+    const { save, sendAll, authCommands, localLibrary } = host(xws, adapter, {
         joinPassword: process.env.JOIN_PASSWORD,
         authPassword: process.env.AUTH_PASSWORD || 'riverdale',
     });
