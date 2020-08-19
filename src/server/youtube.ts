@@ -36,19 +36,20 @@ async function getCacheFile(prefix: string, postfix: string): Promise<string> {
 export type YoutubeVideo = MediaMeta & { videoId: string };
 
 const TIMEOUT = 30 * 60 * 1000;
-const infoCache = new Map<string, { info: ytdl.videoInfo; expires: number, valid: boolean }>();
+
+const infoCache = new Map<string, { info: Promise<ytdl.videoInfo>; expires: number }>();
 
 async function getCachedInfo(videoId: string) {
     const entry = infoCache.get(videoId);
 
     if (entry && entry.expires > performance.now()) {
-        return entry.info;
+        return await entry.info;
     } else {
-        infoCache.delete(videoId);
-        const info = await ytdl.getInfo(videoId);
+        const attempt = ytdl.getInfo(videoId);
+        infoCache.set(videoId, { info: attempt, expires: performance.now() + TIMEOUT });
+
+        const info = await attempt;
         const valid = checkValid(info);
-        const expires = performance.now() + TIMEOUT;
-        infoCache.set(videoId, { info, expires, valid });
 
         if (!valid) {
             console.log(`NO FORMAT: ${videoId}`);
