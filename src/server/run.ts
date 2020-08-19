@@ -99,24 +99,21 @@ async function run() {
         });
     }
 
+    async function addLocal(path: string) {
+        const title = basename(path, extname(path));
+        try {
+            const duration = await getDuration(path);
+            const media: Media = { title, duration, source: path };
+            localLibrary.set(title, media);
+        } catch (e) {
+            console.log(`LOCAL FAILED "${title}": ${e}`);
+        }
+    }
+
     function refreshLocalVideos() {
         localLibrary.clear();
-        glob('media/**/*.mp4', (error, matches) => {
-            matches.forEach(async (path) => {
-                const title = basename(path, extname(path));
-                const duration = await getDuration(path);
-                const media: Media = { title, duration, source: path };
-                localLibrary.set(title, media);
-            });
-        });
-        glob('media/**/*.mp3', (error, matches) => {
-            matches.forEach(async (path) => {
-                const title = basename(path, extname(path));
-                const duration = await getDuration(path);
-                const media: Media = { title, duration, source: path };
-                localLibrary.set(title, media);
-            });
-        });
+        glob('media/**/*.mp4', (error, matches) => matches.forEach(addLocal));
+        glob('media/**/*.mp3', (error, matches) => matches.forEach(addLocal));
     }
 
     refreshLocalVideos();
