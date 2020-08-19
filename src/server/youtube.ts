@@ -12,8 +12,6 @@ import { URL } from 'url';
 import { randomInt } from '../common/utility';
 import * as tmp from 'tmp';
 import { unlink } from 'fs';
-import { BADNAME } from 'dns';
-import { env } from 'process';
 
 tmp.setGracefulCleanup();
 
@@ -47,6 +45,10 @@ async function getCachedInfo(videoId: string) {
     } else {
         const attempt = ytdl.getInfo(videoId);
         infoCache.set(videoId, { info: attempt, expires: performance.now() + TIMEOUT });
+        attempt.catch(() => {
+            console.log(`INFO FAILED FOR ${videoId}`);
+            infoCache.delete(videoId);
+        });
 
         const info = await attempt;
         const valid = checkValid(info);
