@@ -92,7 +92,7 @@ async function run() {
 
     function getDuration(file: string): Promise<number> {
         return new Promise((resolve, reject) => {
-            exec(`${durationCommand} "${file}"`, (error, stdout, stderr) => {
+            exec(`${durationCommand} '${file}'`, (error, stdout, stderr) => {
                 if (error) reject(error);
                 else resolve(parseFloat(stdout) * 1000);
             });
