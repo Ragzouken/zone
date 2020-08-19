@@ -66,18 +66,18 @@ async function run() {
     app.set('trust proxy', true);
     app.use('/', express.static('public'));
     app.use('/media', express.static('media'));
-    app.get('/youtube/:videoId', (req, res) => {
+    app.get('/youtube/:videoId', async (req, res) => {
         if (process.env.YOUTUBE_BROKE) {
             res.status(503).send('Youtube machine broke.');
             return;
         }
 
-        const videoId = req.params.videoId;
-
-        youtube.direct(videoId).then(
-            (url) => req.pipe(request(url)).pipe(res),
-            (error) => res.status(503).send(`youtube error: ${error}`),
-        );
+        try {
+            const url = await youtube.direct(req.params.videoId);
+            req.pipe(request(url)).pipe(res);
+        } catch (e) {
+            res.status(503).send(`youtube error: ${e}`);
+        }
     });
 
     process.on('SIGINT', () => {
