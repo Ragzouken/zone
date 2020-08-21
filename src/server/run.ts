@@ -90,7 +90,9 @@ async function run() {
             // proxied request can die and needs to be killed
             direct.on('error', (e) => {
                 console.log("proxy died:", e.name, e.message);
-                res.status(503).send('proxy broke');
+                
+                direct.destroy();
+                res.destroy();
             });
 
             req.pipe(direct).pipe(res).on('error', (e) => console.log("pipe:", e));
