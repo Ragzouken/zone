@@ -12,6 +12,7 @@ import { exec } from 'child_process';
 import FileSync = require('lowdb/adapters/FileSync');
 import { Media } from '../common/zone';
 import path = require('path');
+import { release } from 'os';
 
 process.on('uncaughtException', (err) => console.log('uncaught exception:', err, err.stack));
 process.on('unhandledRejection', (err) => console.log('uncaught reject:', err));
@@ -39,7 +40,7 @@ async function run() {
     }
 
     const xws = expressWs(app, server);
-    server.listen(process.env.PORT || 4000, () => console.log('listening...'));
+    relisten();
     server.on('error', (error) => console.log('server error', error));
 
     const dataPath = process.env.ZONE_DATA_PATH || '.data/db.json';
@@ -59,8 +60,14 @@ async function run() {
         });
     }
 
+    function relisten() {
+        server.close(console.log);
+        server.listen(process.env.PORT || 4000, () => console.log('listening...'));
+    }
+
     authCommands.set('update', update);
     authCommands.set('refresh-videos', refreshLocalVideos);
+    authCommands.set('relisten', relisten);
 
     // trust glitch's proxy to give us socket ips
     app.set('trust proxy', true);
