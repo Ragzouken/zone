@@ -108,7 +108,7 @@ export function host(xws: expressWs.Instance, adapter: low.AdapterSync, options:
     }
 
     setInterval(ping, opts.pingInterval);
-    setInterval(save, opts.saveInterval);
+    // setInterval(save, opts.saveInterval);
 
     function addUserToken(user: UserState, token: string) {
         tokenToUser.set(token, user);
