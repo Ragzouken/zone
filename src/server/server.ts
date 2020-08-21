@@ -141,10 +141,6 @@ export function host(xws: expressWs.Instance, adapter: low.AdapterSync, options:
     playback.on('stop', () => sendAll('play', {}));
     playback.on('unqueue', ({ itemId }) => sendAll('unqueue', { itemId }));
 
-    playback.on('queue', save);
-    playback.on('unqueue', save);
-    playback.on('play', save);
-
     function sourceToVideoId(source: string) {
         return source.startsWith('youtube/') ? source.slice(8) : undefined;
     }
