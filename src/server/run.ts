@@ -90,7 +90,6 @@ async function run() {
             // proxied request can die and needs to be killed
             direct.on('error', (e) => {
                 console.log("proxy died:", e.name, e.message);
-                res.setHeader('Retry-After', 0);
                 res.status(503).send('proxy broke');
             });
 
