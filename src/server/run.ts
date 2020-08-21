@@ -12,6 +12,7 @@ import { exec } from 'child_process';
 import FileSync = require('lowdb/adapters/FileSync');
 import { Media } from '../common/zone';
 import path = require('path');
+import { Resolver } from 'dns';
 
 process.on('uncaughtException', (err) => console.log('uncaught exception:', err, err.stack));
 process.on('unhandledRejection', (err) => console.log('uncaught reject:', err));
@@ -84,10 +85,16 @@ async function run() {
 
         try {
             const url = await youtube.direct(req.params.videoId);
-            const prx = request(url);
-            // desperation
-            prx.on('error', (e) => console.log("prx:", e));
-            req.pipe(prx).pipe(res).on('error', (e) => console.log("pipe:", e));
+            const direct = request(url);
+            
+            // proxied request can die and needs to be killed
+            direct.on('error', (e) => {
+                console.log("proxy died:", e.name, e.message);
+                res.setHeader('Retry-After', 0);
+                res.status(503).send('proxy broke');
+            });
+
+            req.pipe(direct).pipe(res).on('error', (e) => console.log("pipe:", e));
         } catch (e) {
             res.status(503).send(`youtube error: ${e}`);
         }
