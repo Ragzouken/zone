@@ -13,6 +13,7 @@ import FileSync = require('lowdb/adapters/FileSync');
 import { Media } from '../common/zone';
 import path = require('path');
 import { release } from 'os';
+import { YoutubeService } from './youtube2';
 
 process.on('uncaughtException', (err) => console.log('uncaught exception:', err, err.stack));
 process.on('unhandledRejection', (err) => console.log('uncaught reject:', err));
@@ -74,6 +75,10 @@ async function run() {
     app.use('/', express.static('public'));
     app.use('/media', express.static('media'));
     app.get('/youtube/:videoId', async (req, res) => {
+        // desperation
+        req.on('error', (e) => console.log("req:", e));
+        res.on('error', (e) => console.log("res:", e));
+
         if (process.env.YOUTUBE_BROKE) {
             res.status(503).send('Youtube machine broke.');
             return;
@@ -81,7 +86,10 @@ async function run() {
 
         try {
             const url = await youtube.direct(req.params.videoId);
-            req.pipe(request(url)).pipe(res);
+            const prx = request(url);
+            // desperation
+            prx.on('error', (e) => console.log("prx:", e));
+            req.pipe(prx).pipe(res).on('error', (e) => console.log("pipe:", e));
         } catch (e) {
             res.status(503).send(`youtube error: ${e}`);
         }
