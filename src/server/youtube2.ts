@@ -11,17 +11,17 @@ import { Media } from '../common/zone';
 export type VideoStatus = 'broken' | 'available' | 'queued' | 'ready';
 
 export interface YoutubeServiceOptions {
-    downloadPath: string,
-    downloadOptions: ytdl.downloadOptions,
+    downloadPath: string;
+    downloadOptions: ytdl.downloadOptions;
 }
 
 export const DEFAULT_OPTIONS: YoutubeServiceOptions = {
     downloadPath: 'youtube',
     downloadOptions: {
-        quality: 'lowest', 
-        filter: f => f.hasAudio && f.hasVideo && f.container === 'mp4',
+        quality: 'lowest',
+        filter: (f) => f.hasAudio && f.hasVideo && f.container === 'mp4',
     },
-}
+};
 
 export class YoutubeService extends EventEmitter {
     private downloadBroken = new Set<string>();
@@ -54,14 +54,16 @@ export class YoutubeService extends EventEmitter {
 
     private findExistingVideos() {
         const pattern = path.join(this.options.downloadPath, '*.json');
-        glob(pattern, (error, matches) => matches.forEach((file) => {
-            readFile(file, 'UTF8', (error, data) => {
-                const videoId = path.basename(file, path.extname(file));
-                const media = JSON.parse(data) as Media;
-                console.log(`FOUND ${videoId}`);
-                this.provideVideo(videoId, media.source);
-            });
-        }));
+        glob(pattern, (error, matches) =>
+            matches.forEach((file) => {
+                readFile(file, 'UTF8', (error, data) => {
+                    const videoId = path.basename(file, path.extname(file));
+                    const media = JSON.parse(data) as Media;
+                    console.log(`FOUND ${videoId}`);
+                    this.provideVideo(videoId, media.source);
+                });
+            }),
+        );
     }
 
     private update() {
@@ -90,7 +92,7 @@ export class YoutubeService extends EventEmitter {
 
         const format = this.chooseFormat(videoInfo.formats);
         if (!videoInfo) return undefined;
-        
+
         const duration = parseInt(videoInfo.videoDetails.lengthSeconds, 10) * 1000;
         const source = 'youtube/' + videoId;
 
@@ -194,7 +196,7 @@ export class YoutubeService extends EventEmitter {
                 this.provideVideo(videoId, videoPath);
                 writeFile(mediaPath, JSON.stringify(media), () => {});
                 console.log(`DOWNLOAD DONE ${videoId}: ${this.getVideoState(videoId)}`);
-            }, 
+            },
             (error) => {
                 this.downloading = undefined;
                 this.rejectVideo(videoId);

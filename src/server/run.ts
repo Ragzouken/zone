@@ -82,8 +82,8 @@ async function run() {
     app.use('/media', express.static('media'));
     app.get('/youtube/:videoId', async (req, res) => {
         // desperation
-        req.on('error', (e) => console.log("req:", e));
-        res.on('error', (e) => console.log("res:", e));
+        req.on('error', (e) => console.log('req:', e));
+        res.on('error', (e) => console.log('res:', e));
 
         const videoId = req.params.videoId;
         const videoState = yts.getVideoState(videoId);
@@ -98,16 +98,18 @@ async function run() {
                     return;
                 }
                 const direct = request(url);
-                
+
                 // proxied request can die and needs to be killed
                 direct.on('error', (e) => {
-                    console.log("proxy died:", e.name, e.message);
-                    
+                    console.log('proxy died:', e.name, e.message);
+
                     direct.destroy();
                     res.destroy();
                 });
 
-                req.pipe(direct).pipe(res).on('error', (e) => console.log("pipe:", e));
+                req.pipe(direct)
+                    .pipe(res)
+                    .on('error', (e) => console.log('pipe:', e));
             } catch (e) {
                 res.status(503).send(`youtube error: ${e}`);
             }

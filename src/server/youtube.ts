@@ -36,14 +36,14 @@ async function refreshBangers() {
         const source = 'youtube/' + videoId;
 
         return { title: chosen.title, duration, source };
-    })
+    });
 }
 
 if (!process.env.IGNORE_YOUTUBE_BANGERS) {
     refreshBangers();
     setInterval(refreshBangers, 24 * 60 * 60 * 1000);
 } else {
-    console.log("IGNORING YOUTUBE BANGERS");
+    console.log('IGNORING YOUTUBE BANGERS');
 }
 
 export function checkValid(info: ytdl.videoInfo) {
@@ -51,11 +51,17 @@ export function checkValid(info: ytdl.videoInfo) {
         getFormat(info);
         return true;
     } catch (e) {
-        console.log('no format from', info.formats.map((format) => format.itag));
-        return false; 
+        console.log(
+            'no format from',
+            info.formats.map((format) => format.itag),
+        );
+        return false;
     }
 }
 
 function getFormat(info: ytdl.videoInfo) {
-    return ytdl.chooseFormat(info.formats, { quality: 'lowest', filter: f => f.hasAudio && f.hasVideo && f.container === 'mp4' });
+    return ytdl.chooseFormat(info.formats, {
+        quality: 'lowest',
+        filter: (f) => f.hasAudio && f.hasVideo && f.container === 'mp4',
+    });
 }

@@ -68,8 +68,8 @@ interface Ban {
 }
 
 export function host(
-    xws: expressWs.Instance, 
-    adapter: low.AdapterSync, 
+    xws: expressWs.Instance,
+    adapter: low.AdapterSync,
     yts: YoutubeService,
     options: Partial<HostOptions> = {},
 ) {
@@ -156,7 +156,7 @@ export function host(
     playback.on('unqueue', (item) => {
         const videoId = sourceToVideoId(item.media.source);
         if (videoId) yts.deleteVideo(videoId);
-    })
+    });
 
     function sourceToVideoId(source: string) {
         return source.startsWith('youtube/') ? source.slice(8) : undefined;
@@ -170,7 +170,7 @@ export function host(
 
         if (playback.currentItem) {
             const videoId = sourceToVideoId(playback.currentItem.media.source);
-            if (videoId) yts.queueVideoDownload(videoId);       
+            if (videoId) yts.queueVideoDownload(videoId);
         }
 
         playback.queue.forEach((item) => {
@@ -438,16 +438,16 @@ export function host(
         async function tryQueueYoutubeById(videoId: string) {
             const media = await yts.getVideoMedia(videoId);
             const privileged = user.tags.includes('dj') || user.tags.includes('admin');
-                
+
             if (!media) {
-                status("video unloadable", user);
+                status('video unloadable', user);
             } else if (media.duration > HALFHOUR && !privileged) {
-                status("video too long", user);
+                status('video too long', user);
             } else if (yts.getVideoState(videoId) !== 'broken') {
                 yts.queueVideoDownload(videoId);
                 tryUserQueueMedia(media);
             } else {
-                status("video unloadable (broken)", user);
+                status('video unloadable (broken)', user);
             }
         }
 
@@ -455,7 +455,7 @@ export function host(
         messaging.messages.on('local', (message: any) => tryQueueLocalByPath(message.path));
         messaging.messages.on('banger', async () => {
             const EIGHT_MINUTES = 8 * 60 * SECONDS;
-            const extras = Array.from(localLibrary.values()).filter((media) => media.duration <= EIGHT_MINUTES)
+            const extras = Array.from(localLibrary.values()).filter((media) => media.duration <= EIGHT_MINUTES);
             const banger = extras[randomInt(0, extras.length - 1)];
             tryUserQueueMedia(banger, true);
         });
@@ -465,15 +465,15 @@ export function host(
                 results = results.filter((result) => result.duration < HALFHOUR);
 
                 if (results.length === 0) {
-                    status("no loadable results, user");
+                    status('no loadable results, user');
                     return;
                 }
 
                 const media = await yts.getVideoMedia(results[0].videoId);
                 if (!media) {
-                    status("video unloadable", user);
+                    status('video unloadable', user);
                 } else if (media.duration > HALFHOUR) {
-                    status("video too long")
+                    status('video too long');
                 } else {
                     tryUserQueueMedia(media);
                 }

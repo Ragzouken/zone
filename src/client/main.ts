@@ -264,7 +264,7 @@ export async function load() {
     document.getElementById('event-mode-on')!.addEventListener('click', () => client.command('mode', ['event']));
     document.getElementById('event-mode-off')!.addEventListener('click', () => client.command('mode', ['']));
     document.getElementById('refresh-library')!.addEventListener('click', () => client.command('refresh-videos'));
-    
+
     const queueItemContainer = document.getElementById('queue-items')!;
     const queueItemTemplate = document.getElementById('queue-item-template')!;
     queueItemTemplate.parentElement!.removeChild(queueItemTemplate);
@@ -827,9 +827,9 @@ export async function load() {
     function renderScene() {
         requestAnimationFrame(renderScene);
 
-        sceneRenderer.building = !htmlui.idToWindowElement.get('blocks-panel')!.hidden; 
+        sceneRenderer.building = !htmlui.idToWindowElement.get('blocks-panel')!.hidden;
         const logo = player.hasItem ? audioLogo : zoneLogo;
-        sceneRenderer.mediaElement = (popoutPanel.hidden && player.hasVideo) ? video : logo;
+        sceneRenderer.mediaElement = popoutPanel.hidden && player.hasVideo ? video : logo;
         sceneRenderer.update();
         sceneRenderer.render();
     }
