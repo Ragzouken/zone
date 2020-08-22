@@ -36,7 +36,7 @@ html {
 input, button, option, select {
     font-family: var(--ascii-small);
     font-size: 16px;
-    height: 32px;
+    min-height: 32px;
 }
 
 input[type="text"], select {

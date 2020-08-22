@@ -7,9 +7,11 @@ import Playback from './playback';
 import Messaging from '../common/messaging';
 import { ZoneState, UserId, UserState, mediaEquals, Media, QueueItem, UserEcho } from '../common/zone';
 import { nanoid } from 'nanoid';
-import { getDefault } from '../common/utility';
+import { getDefault, randomInt } from '../common/utility';
 import { MESSAGE_SCHEMAS } from './protocol';
 import { JoinMessage, SendAuth, SendCommand, EchoMessage } from '../common/client';
+import { YoutubeService } from './youtube2';
+import { pathToFileURL } from 'url';
 
 const SECONDS = 1000;
 
@@ -44,7 +46,7 @@ export const DEFAULT_OPTIONS: HostOptions = {
     playbackStartDelay: 3 * SECONDS,
 };
 
-const HALFHOUR = 30 * 60 * 1000;
+const HALFHOUR = 30 * 60 * SECONDS;
 
 const bans = new Map<unknown, Ban>();
 
@@ -65,10 +67,13 @@ interface Ban {
     date: string;
 }
 
-export function host(xws: expressWs.Instance, adapter: low.AdapterSync, options: Partial<HostOptions> = {}) {
+export function host(
+    xws: expressWs.Instance,
+    adapter: low.AdapterSync,
+    yts: YoutubeService,
+    options: Partial<HostOptions> = {},
+) {
     const opts = Object.assign({}, DEFAULT_OPTIONS, options);
-
-    const youtubeCache = new youtube.YoutubeCache();
 
     const db = low(adapter);
     db.defaults({
@@ -110,7 +115,7 @@ export function host(xws: expressWs.Instance, adapter: low.AdapterSync, options:
     }
 
     setInterval(ping, opts.pingInterval);
-    setInterval(save, opts.saveInterval);
+    // setInterval(save, opts.saveInterval);
 
     function addUserToken(user: UserState, token: string) {
         tokenToUser.set(token, user);
@@ -136,9 +141,6 @@ export function host(xws: expressWs.Instance, adapter: low.AdapterSync, options:
 
     const localLibrary = new Map<string, Media>();
 
-    playback.on('play', cacheYoutubes);
-    playback.on('queue', cacheYoutubes);
-
     load();
 
     playback.on('queue', (item: QueueItem) => sendAll('queue', { items: [item] }));
@@ -146,41 +148,36 @@ export function host(xws: expressWs.Instance, adapter: low.AdapterSync, options:
     playback.on('stop', () => sendAll('play', {}));
     playback.on('unqueue', ({ itemId }) => sendAll('unqueue', { itemId }));
 
-    playback.on('queue', save);
-    playback.on('unqueue', save);
-    playback.on('play', save);
+    playback.on('finish', (item) => {
+        const videoId = sourceToVideoId(item.media.source);
+        if (videoId) yts.deleteVideo(videoId);
+    });
+
+    playback.on('unqueue', (item) => {
+        const videoId = sourceToVideoId(item.media.source);
+        if (videoId) yts.deleteVideo(videoId);
+    });
 
     function sourceToVideoId(source: string) {
         return source.startsWith('youtube/') ? source.slice(8) : undefined;
     }
 
-    setInterval(() => youtubeCache.deleteExpiredCachedVideos(), HALFHOUR);
-    function cacheYoutubes() {
-        const item = playback.currentItem;
-
-        if (item && item.media.duration < HALFHOUR) {
-            const videoId = sourceToVideoId(item.media.source);
-            if (videoId) youtubeCache.renewCachedVideo(videoId);
-        }
-
-        playback.queue.slice(0, 3).forEach((item) => {
-            if (item.media.duration < HALFHOUR) {
-                const videoId = sourceToVideoId(item.media.source);
-                if (videoId) youtubeCache.renewCachedVideo(videoId);
-            }
-        });
-    }
-
     const skips = new Set<UserId>();
-    playback.on('play', (item) => {
-        skips.clear();
-
-        const videoId = sourceToVideoId(item.media.source);
-        if (videoId) youtubeCache.renewCachedVideo(videoId);
-    });
+    playback.on('play', async (item) => skips.clear());
 
     function load() {
         playback.loadState(db.get('playback').value());
+
+        if (playback.currentItem) {
+            const videoId = sourceToVideoId(playback.currentItem.media.source);
+            if (videoId) yts.queueVideoDownload(videoId);
+        }
+
+        playback.queue.forEach((item) => {
+            const videoId = sourceToVideoId(item.media.source);
+            if (videoId) yts.queueVideoDownload(videoId);
+        });
+
         const banlist = db.get('bans').value() as Ban[];
         banlist.forEach((ban) => bans.set(ban.ip, ban));
 
@@ -439,36 +436,48 @@ export function host(xws: expressWs.Instance, adapter: low.AdapterSync, options:
         }
 
         async function tryQueueYoutubeById(videoId: string) {
-            if (process.env.YOUTUBE_BROKE) status('sorry, youtube machine broke :(');
-            else {
-                const media = await youtube.media(videoId);
-                const privileged = user.tags.includes('dj') || user.tags.includes('admin');
+            const media = await yts.getVideoMedia(videoId);
+            const privileged = user.tags.includes('dj') || user.tags.includes('admin');
 
-                if (media.duration > HALFHOUR && !privileged) {
-                    status("video too long", user);
-                } else {
-                    tryUserQueueMedia(await youtube.media(videoId));
-                }
+            if (!media) {
+                status('video unloadable', user);
+            } else if (media.duration > HALFHOUR && !privileged) {
+                status('video too long', user);
+            } else if (yts.getVideoState(videoId) !== 'broken') {
+                yts.queueVideoDownload(videoId);
+                tryUserQueueMedia(media);
+            } else {
+                status('video unloadable (broken)', user);
             }
         }
 
         messaging.messages.on('youtube', (message: any) => tryQueueYoutubeById(message.videoId));
         messaging.messages.on('local', (message: any) => tryQueueLocalByPath(message.path));
         messaging.messages.on('banger', async () => {
-            if (process.env.YOUTUBE_BROKE) status('sorry, youtube machine broke :(');
-            else {
-                const EIGHT_MINUTES = 8 * 60 * 1000;
-                const extras = Array.from(localLibrary.values()).filter((media) => media.duration <= EIGHT_MINUTES)
-                tryUserQueueMedia(await youtube.banger(extras), true);
-            }
+            const EIGHT_MINUTES = 8 * 60 * SECONDS;
+            const extras = Array.from(localLibrary.values()).filter((media) => media.duration <= EIGHT_MINUTES);
+            const banger = extras[randomInt(0, extras.length - 1)];
+            tryUserQueueMedia(banger, true);
         });
 
         messaging.messages.on('lucky', (message: any) => {
-            if (process.env.YOUTUBE_BROKE) status('sorry, youtube machine broke :(');
-            else
-                youtube.search(message.query).then(async (results) => {
-                    tryUserQueueMedia(await youtube.media(results[0].videoId));
-                });
+            youtube.search(message.query).then(async (results) => {
+                results = results.filter((result) => result.duration < HALFHOUR);
+
+                if (results.length === 0) {
+                    status('no loadable results, user');
+                    return;
+                }
+
+                const media = await yts.getVideoMedia(results[0].videoId);
+                if (!media) {
+                    status('video unloadable', user);
+                } else if (media.duration > HALFHOUR) {
+                    status('video too long');
+                } else {
+                    tryUserQueueMedia(media);
+                }
+            });
         });
 
         messaging.messages.on('skip', (message: any) => {
@@ -572,5 +581,5 @@ export function host(xws: expressWs.Instance, adapter: low.AdapterSync, options:
         connections.get(userId)!.send(type, message);
     }
 
-    return { zone, playback, save, sendAll, authCommands, localLibrary, youtubeCache };
+    return { zone, playback, save, sendAll, authCommands, localLibrary };
 }
