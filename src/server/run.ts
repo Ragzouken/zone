@@ -43,6 +43,10 @@ async function run() {
     relisten();
     server.on('error', (error) => console.log('server error', error));
 
+    setInterval(() => {
+        server.getConnections((e, count) => console.log(`connections: ${count} / ${server.maxConnections}`));
+    }, 5000);
+
     const dataPath = process.env.ZONE_DATA_PATH || '.data/db.json';
     fs.mkdir(path.dirname(dataPath)).catch(() => {});
     const adapter = new FileSync(dataPath, { serialize: JSON.stringify, deserialize: JSON.parse });
@@ -61,7 +65,7 @@ async function run() {
     }
 
     function relisten() {
-        server.close(console.log);
+        if (server.listening) server.close(console.log);
         server.listen(process.env.PORT || 4000, () => console.log('listening...'));
     }
 
