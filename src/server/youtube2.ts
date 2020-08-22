@@ -121,7 +121,7 @@ export class YoutubeService extends EventEmitter {
     }
 
     private async getVideoInfo(videoId: string): Promise<ytdl.videoInfo | undefined> {
-        let promise = this.downloadInfos.get(videoId) || ytdl.getInfo(videoId);
+        const promise = this.downloadInfos.get(videoId) || ytdl.getInfo(videoId);
         this.downloadInfos.set(videoId, promise);
 
         try {
