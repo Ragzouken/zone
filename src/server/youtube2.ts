@@ -30,7 +30,6 @@ export class YoutubeService extends EventEmitter {
     private downloadQueue: string[] = [];
 
     private downloading?: string;
-    private downloadURL?: string;
 
     private readonly options: YoutubeServiceOptions;
 
@@ -100,6 +99,23 @@ export class YoutubeService extends EventEmitter {
 
     queueVideoDownload(videoId: string) {
         this.downloadQueue.push(videoId);
+    }
+
+    deleteVideo(videoId: string) {
+        if (this.downloadQueue.includes(videoId)) {
+            console.log(`WON'T DELETE QUEUED ${videoId}`);
+            return;
+        } else if (this.downloading === videoId) {
+            console.log(`WON'T DELETE DOWNLOADING ${videoId}`);
+            return;
+        }
+
+        this.downloadPaths.delete(videoId);
+
+        const videoPath = path.join(this.options.downloadPath, `${videoId}.mp4`);
+        const mediaPath = path.join(this.options.downloadPath, `${videoId}.json`);
+        unlink(videoPath, () => {});
+        unlink(mediaPath, () => {});
     }
 
     private async getVideoInfo(videoId: string): Promise<ytdl.videoInfo | undefined> {

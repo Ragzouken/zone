@@ -11,7 +11,7 @@ export type PlaybackState = {
 };
 
 export interface Playback {
-    on(event: 'play' | 'queue' | 'unqueue', callback: (media: QueueItem) => void): this;
+    on(event: 'play' | 'queue' | 'unqueue' | 'finish', callback: (media: QueueItem) => void): this;
     on(event: 'stop', callback: () => void): this;
 }
 
@@ -78,6 +78,7 @@ export class Playback extends EventEmitter {
     }
 
     skip() {
+        if (this.currentItem) this.emit('finish', this.currentItem);
         const next = this.queue.shift();
         if (next) this.playMedia(next);
         else this.clearMedia();

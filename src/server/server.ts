@@ -148,6 +148,16 @@ export function host(
     playback.on('stop', () => sendAll('play', {}));
     playback.on('unqueue', ({ itemId }) => sendAll('unqueue', { itemId }));
 
+    playback.on('finish', (item) => {
+        const videoId = sourceToVideoId(item.media.source);
+        if (videoId) yts.deleteVideo(videoId);
+    });
+
+    playback.on('unqueue', (item) => {
+        const videoId = sourceToVideoId(item.media.source);
+        if (videoId) yts.deleteVideo(videoId);
+    })
+
     function sourceToVideoId(source: string) {
         return source.startsWith('youtube/') ? source.slice(8) : undefined;
     }
