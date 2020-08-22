@@ -11,6 +11,7 @@ import { getDefault, randomInt } from '../common/utility';
 import { MESSAGE_SCHEMAS } from './protocol';
 import { JoinMessage, SendAuth, SendCommand, EchoMessage } from '../common/client';
 import { YoutubeService } from './youtube2';
+import { pathToFileURL } from 'url';
 
 const SECONDS = 1000;
 
@@ -156,6 +157,17 @@ export function host(
 
     function load() {
         playback.loadState(db.get('playback').value());
+
+        if (playback.currentItem) {
+            const videoId = sourceToVideoId(playback.currentItem.media.source);
+            if (videoId) yts.queueVideoDownload(videoId);       
+        }
+
+        playback.queue.forEach((item) => {
+            const videoId = sourceToVideoId(item.media.source);
+            if (videoId) yts.queueVideoDownload(videoId);
+        });
+
         const banlist = db.get('bans').value() as Ban[];
         banlist.forEach((ban) => bans.set(ban.ip, ban));
 
