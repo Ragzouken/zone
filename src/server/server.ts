@@ -7,9 +7,10 @@ import Playback from './playback';
 import Messaging from '../common/messaging';
 import { ZoneState, UserId, UserState, mediaEquals, Media, QueueItem, UserEcho } from '../common/zone';
 import { nanoid } from 'nanoid';
-import { getDefault } from '../common/utility';
+import { getDefault, randomInt } from '../common/utility';
 import { MESSAGE_SCHEMAS } from './protocol';
 import { JoinMessage, SendAuth, SendCommand, EchoMessage } from '../common/client';
+import { YoutubeService } from './youtube2';
 
 const SECONDS = 1000;
 
@@ -65,7 +66,12 @@ interface Ban {
     date: string;
 }
 
-export function host(xws: expressWs.Instance, adapter: low.AdapterSync, options: Partial<HostOptions> = {}) {
+export function host(
+    xws: expressWs.Instance, 
+    adapter: low.AdapterSync, 
+    yts: YoutubeService,
+    options: Partial<HostOptions> = {},
+) {
     const opts = Object.assign({}, DEFAULT_OPTIONS, options);
 
     const db = low(adapter);
@@ -146,17 +152,7 @@ export function host(xws: expressWs.Instance, adapter: low.AdapterSync, options:
     }
 
     const skips = new Set<UserId>();
-    playback.on('play', async (item) => {
-        skips.clear();
-
-        const videoId = sourceToVideoId(item.media.source);
-        if (videoId) {
-            const info = await youtube.info(videoId);
-            if (!youtube.checkValid(info)) {
-                skip("skipping unplayable video :(");
-            }
-        }
-    });
+    playback.on('play', async (item) => skips.clear());
 
     function load() {
         playback.loadState(db.get('playback').value());
@@ -418,46 +414,48 @@ export function host(xws: expressWs.Instance, adapter: low.AdapterSync, options:
         }
 
         async function tryQueueYoutubeById(videoId: string) {
-            if (process.env.YOUTUBE_BROKE) status('sorry, youtube machine broke :(');
-            else {
-                try {
-                    const media = await youtube.media(videoId);
-                    const privileged = user.tags.includes('dj') || user.tags.includes('admin');
-
-                    if (media.duration > HALFHOUR && !privileged) {
-                        status("video too long", user);
-                    } else {
-                        tryUserQueueMedia(media);
-                    }
-                } catch (e) {
-                    console.log(e);
-                    status("video unloadable", user);
-                }
+            const media = await yts.getVideoMedia(videoId);
+            const privileged = user.tags.includes('dj') || user.tags.includes('admin');
+                
+            if (!media) {
+                status("video unloadable", user);
+            } else if (media.duration > HALFHOUR && !privileged) {
+                status("video too long", user);
+            } else if (yts.getVideoState(videoId) !== 'broken') {
+                yts.queueVideoDownload(videoId);
+                tryUserQueueMedia(media);
+            } else {
+                status("video unloadable (broken)", user);
             }
         }
 
         messaging.messages.on('youtube', (message: any) => tryQueueYoutubeById(message.videoId));
         messaging.messages.on('local', (message: any) => tryQueueLocalByPath(message.path));
         messaging.messages.on('banger', async () => {
-            if (process.env.YOUTUBE_BROKE) status('sorry, youtube machine broke :(');
-            else {
-                const EIGHT_MINUTES = 8 * 60 * SECONDS;
-                const extras = Array.from(localLibrary.values()).filter((media) => media.duration <= EIGHT_MINUTES)
-                tryUserQueueMedia(await youtube.banger(extras), true);
-            }
+            const EIGHT_MINUTES = 8 * 60 * SECONDS;
+            const extras = Array.from(localLibrary.values()).filter((media) => media.duration <= EIGHT_MINUTES)
+            const banger = extras[randomInt(0, extras.length - 1)];
+            tryUserQueueMedia(banger, true);
         });
 
         messaging.messages.on('lucky', (message: any) => {
-            if (process.env.YOUTUBE_BROKE) status('sorry, youtube machine broke :(');
-            else
-                youtube.search(message.query).then(async (results) => {
-                    try {
-                        tryUserQueueMedia(await youtube.media(results[0].videoId));
-                    } catch (e) {
-                        console.log(e);
-                        status("video unloadable", user);
-                    }
-                });
+            youtube.search(message.query).then(async (results) => {
+                results = results.filter((result) => result.duration < HALFHOUR);
+
+                if (results.length === 0) {
+                    status("no loadable results, user");
+                    return;
+                }
+
+                const media = await yts.getVideoMedia(results[0].videoId);
+                if (!media) {
+                    status("video unloadable", user);
+                } else if (media.duration > HALFHOUR) {
+                    status("video too long")
+                } else {
+                    tryUserQueueMedia(media);
+                }
+            });
         });
 
         messaging.messages.on('skip', (message: any) => {

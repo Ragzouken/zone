@@ -12,7 +12,7 @@ import { exec } from 'child_process';
 import FileSync = require('lowdb/adapters/FileSync');
 import { Media } from '../common/zone';
 import path = require('path');
-import { Resolver } from 'dns';
+import { YoutubeService } from './youtube2';
 
 process.on('uncaughtException', (err) => console.log('uncaught exception:', err, err.stack));
 process.on('unhandledRejection', (err) => console.log('uncaught reject:', err));
@@ -33,7 +33,7 @@ async function run() {
         redirectServer = http.createServer(redirectApp);
         redirectServer.listen(80, () => console.log('listening for http...'));
         redirectApp.get('*', (req, res) => {
-            res.redirect(`https://${req.headers.host}${req.url}`);
+            res.redirect(301, `https://${req.headers.host}${req.url}`);
         });
     } else {
         server = http.createServer(app);
@@ -46,13 +46,15 @@ async function run() {
     server.maxConnections = 1024;
     setInterval(() => {
         server.getConnections((e, count) => console.log(`connections: ${count} / ${server.maxConnections}`));
-    }, 5000);
+    }, 5 * 60 * 1000);
 
     const dataPath = process.env.ZONE_DATA_PATH || '.data/db.json';
     fs.mkdir(path.dirname(dataPath)).catch(() => {});
     const adapter = new FileSync(dataPath, { serialize: JSON.stringify, deserialize: JSON.parse });
 
-    const { save, sendAll, authCommands, localLibrary } = host(xws, adapter, {
+    const yts = new YoutubeService();
+
+    const { save, sendAll, authCommands, localLibrary } = host(xws, adapter, yts, {
         joinPassword: process.env.JOIN_PASSWORD,
         authPassword: process.env.AUTH_PASSWORD || 'riverdale',
     });
@@ -83,26 +85,34 @@ async function run() {
         req.on('error', (e) => console.log("req:", e));
         res.on('error', (e) => console.log("res:", e));
 
-        if (process.env.YOUTUBE_BROKE) {
-            res.status(503).send('Youtube machine broke.');
-            return;
-        }
+        const videoId = req.params.videoId;
+        const videoState = yts.getVideoState(videoId);
 
-        try {
-            const url = await youtube.direct(req.params.videoId);
-            const direct = request(url);
-            
-            // proxied request can die and needs to be killed
-            direct.on('error', (e) => {
-                console.log("proxy died:", e.name, e.message);
+        if (videoState === 'ready') {
+            res.sendFile(yts.getVideoPath(videoId), { root: '.' });
+        } else if (videoState === 'queued') {
+            try {
+                const url = await yts.getVideoDownloadUrl(req.params.videoId);
+                if (!url) {
+                    res.status(503).send(`youtube error, no url`);
+                    return;
+                }
+                const direct = request(url);
                 
-                direct.destroy();
-                res.destroy();
-            });
+                // proxied request can die and needs to be killed
+                direct.on('error', (e) => {
+                    console.log("proxy died:", e.name, e.message);
+                    
+                    direct.destroy();
+                    res.destroy();
+                });
 
-            req.pipe(direct).pipe(res).on('error', (e) => console.log("pipe:", e));
-        } catch (e) {
-            res.status(503).send(`youtube error: ${e}`);
+                req.pipe(direct).pipe(res).on('error', (e) => console.log("pipe:", e));
+            } catch (e) {
+                res.status(503).send(`youtube error: ${e}`);
+            }
+        } else {
+            res.status(403).send(`video not queued`);
         }
     });
 
