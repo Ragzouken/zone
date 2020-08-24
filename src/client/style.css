@@ -134,6 +134,7 @@ input[type="text"]:focus {
     display: flex;
     flex-direction: row;
     align-items: stretch;
+    flex-wrap: nowrap;
 
     background: black;
 }
@@ -145,7 +146,8 @@ input[type="text"]:focus {
 .toolbar > button {
     width: calc(10px * var(--toolbar-icon-scale));
     height: calc(10px * var(--toolbar-icon-scale));
-    
+    flex: none;
+
     border: none;
     padding: calc(1px * var(--toolbar-icon-scale));
     background-color: var(--button-color);
