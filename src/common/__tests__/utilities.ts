@@ -13,7 +13,7 @@ import ZoneClient, { ClientOptions } from '../../common/client';
 import Playback from '../../server/playback';
 import { Media } from '../zone';
 import { DAY_MEDIA, TINY_MEDIA } from './media.data';
-import { YoutubeService } from '../../server/youtube2';
+import { YoutubeService } from '../../server/youtube';
 
 export const TEST_CLIENT_OPTIONS: Partial<ClientOptions> = {
     quickResponseTimeout: 50,
