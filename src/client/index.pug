@@ -21,12 +21,16 @@ html
                         img(src="icons/music.png")                 
                     button#avatar-button(title="change appearance" data-tab-toggle="avatar")
                         img(src="icons/avatar.png")
-                    button#emotes-button(title="show emotes palette" data-tab-toggle="emotes")
-                        img(src="icons/emotes.png")
                     button#view-button(title="show view menu" data-tab-toggle="view")
                         img(src="icons/look.png")
-                    button#blocks-button(title="place blocks" data-tab-toggle="blocks")
-                        img(src="icons/blocks.png")
+                    button(title="toggle float emote (1)", data-emote-toggle="wvy")
+                        img(src="icons/wvy.png")
+                    button(title="toggle shake emote (2)", data-emote-toggle="shk")
+                        img(src="icons/shk.png")
+                    button(title="toggle rave emote (3)", data-emote-toggle="rbw")
+                        img(src="icons/rbw.png")
+                    button(title="toggle spin emote (4)", data-emote-toggle="spn")
+                        img(src="icons/spn.png")
                     #player-status
                 #panel-container
                     #social-panel.menu-panel(data-window data-tab-body="social")
@@ -99,18 +103,6 @@ html
                     #blocks-panel(data-window data-tab-body="blocks")
                         .menu-body
                             #blocks-list
-                    #emotes-panel(data-window data-tab-body="emotes")
-                        .menu-title
-                            div emotes
-                        #emotes-list.menu-body
-                            button(title="toggle float emote (1)", data-emote-toggle="wvy")
-                                img(src="icons/wvy.png")
-                            button(title="toggle shake emote (2)", data-emote-toggle="shk")
-                                img(src="icons/shk.png")
-                            button(title="toggle rave emote (3)", data-emote-toggle="rbw")
-                                img(src="icons/rbw.png")
-                            button(title="toggle spin emote (4)", data-emote-toggle="spn")
-                                img(src="icons/spn.png")
                     #view-panel(data-window data-tab-body="view")
                         .menu-title
                             div view
