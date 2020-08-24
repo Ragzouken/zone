@@ -155,6 +155,8 @@ export class SceneRenderer extends EventEmitter
                 dy -= 1 + Math.sin(performance.now() / 250 - x / 2) * 1;
             }
 
+            let tile = this.getTile(user.avatar).canvas;
+
             let [r, g, b] = [255, 255, 255];
             if (user.emotes && user.emotes.includes('rbw')) {
                 const h = Math.abs(Math.sin(performance.now() / 600 - x / 8));
@@ -162,6 +164,7 @@ export class SceneRenderer extends EventEmitter
                 r = Math.round(r);
                 g = Math.round(g);
                 b = Math.round(b);
+                tile = recolor(tile, `rgb(${r} ${g} ${b})`);
             }
 
             const spin = user.emotes && user.emotes.includes('spn');
@@ -169,7 +172,6 @@ export class SceneRenderer extends EventEmitter
             const sx = Math.cos(da);
             const ox = (8 - sx*8)/2;
 
-            const tile = recolor(this.getTile(user.avatar).canvas, `rgb(${r} ${g} ${b})`);
             context.globalAlpha = echo ? 0.5 : 1;
 
             context.drawImage(tile, margin + (x * 8 + ox + dx) * scale, margin + (z * 8 + dy) * scale, 8 * scale * sx, 8 * scale);
