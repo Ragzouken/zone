@@ -3,7 +3,6 @@ import * as expressWs from 'express-ws';
 import * as http from 'http';
 import * as https from 'https';
 import * as request from 'request';
-import * as youtube from './youtube';
 import * as glob from 'glob';
 import { promises as fs } from 'fs';
 import { basename, extname, dirname } from 'path';
@@ -12,7 +11,7 @@ import { exec } from 'child_process';
 import FileSync = require('lowdb/adapters/FileSync');
 import { Media } from '../common/zone';
 import path = require('path');
-import { YoutubeService } from './youtube2';
+import { YoutubeService } from './youtube';
 
 process.on('uncaughtException', (err) => console.log('uncaught exception:', err, err.stack));
 process.on('unhandledRejection', (err) => console.log('uncaught reject:', err));

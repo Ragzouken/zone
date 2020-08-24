@@ -10,8 +10,6 @@ import { nanoid } from 'nanoid';
 import { getDefault, randomInt } from '../common/utility';
 import { MESSAGE_SCHEMAS } from './protocol';
 import { JoinMessage, SendAuth, SendCommand, EchoMessage } from '../common/client';
-import { YoutubeService } from './youtube2';
-import { pathToFileURL } from 'url';
 
 const SECONDS = 1000;
 
@@ -70,7 +68,7 @@ interface Ban {
 export function host(
     xws: expressWs.Instance,
     adapter: low.AdapterSync,
-    yts: YoutubeService,
+    yts: youtube.YoutubeService,
     options: Partial<HostOptions> = {},
 ) {
     const opts = Object.assign({}, DEFAULT_OPTIONS, options);

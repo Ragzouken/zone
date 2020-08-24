@@ -925,6 +925,7 @@ function setupEntrySplash() {
 
     entryForm.addEventListener('submit', async (event) => {
         event.preventDefault();
+        (document.getElementById('entry-sound') as HTMLAudioElement).play();
         entrySplash.hidden = true;
         localName = nameInput.value;
         localStorage.setItem('name', localName);
