@@ -774,7 +774,7 @@ export async function load() {
 
         tooltip.hidden = names.length === 0;
         tooltip.innerHTML = names.join(', ');
-        const [ttx, tty] = eventToElementPixel(event, tooltip.parentElement!);
+        const [ttx, tty] = eventToElementPixel(event, tooltip.parentElement?.parentElement!);
         tooltip.style.left = ttx + 'px';
         tooltip.style.top = tty + 'px';
     });
