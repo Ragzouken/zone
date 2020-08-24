@@ -10,7 +10,7 @@ import { UserState } from '../common/zone';
 import { HTMLUI } from './html-ui';
 import { createContext2D } from 'blitsy';
 import { menusFromDataAttributes } from './menus';
-import { SceneRenderer, avatarImage } from './scene2';
+import { SceneRenderer, avatarImage } from './scene';
 
 window.addEventListener('load', () => load());
 
