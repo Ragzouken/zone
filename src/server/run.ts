@@ -113,7 +113,7 @@ async function run() {
                 res.status(503).send(`youtube error: ${e}`);
             }
         } else {
-            res.status(403).send(`video not queued`);
+            res.status(403).send(`video not queued (${videoState})`);
         }
     });
 
