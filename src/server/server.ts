@@ -179,17 +179,6 @@ export function host(
         const banlist = db.get('bans').value() as Ban[];
         banlist.forEach((ban) => bans.set(ban.ip, ban));
 
-        zone.grid.clear();
-
-        const cells = db.get('blocks.cells').value() as [number[], number][];
-        const coords = db.get('blocks.coords').value() as number[][];
-
-        if (!cells) {
-            coords.forEach((coord) => zone.grid.set(coord, 1));
-        } else {
-            cells.forEach(([coord, block]) => zone.grid.set(coord, block));
-        }
-
         zone.echoes.clear();
         const echoes = db.get('echoes').value() as UserEcho[];
         echoes.forEach((echo) => zone.echoes.set(echo.position!, echo));
@@ -198,13 +187,6 @@ export function host(
     function save() {
         db.set('playback', playback.copyState()).write();
         db.set('bans', Array.from(bans.values())).write();
-
-        const cells: [number[], number][] = [];
-        zone.grid.forEach((block, coord) => cells.push([coord, block]));
-
-        const coords: number[][] = [];
-        zone.grid.forEach((_, coord) => coords.push(coord));
-        db.set('blocks', { coords, cells }).write();
         db.set(
             'echoes',
             Array.from(zone.echoes).map(([, echo]) => echo),
@@ -322,9 +304,6 @@ export function host(
     }
 
     function sendOtherState(user: UserState) {
-        const cells: [number[], number][] = [];
-        zone.grid.forEach((block, coord) => cells.push([coord, block]));
-        sendOnly('blocks', { cells }, user.userId);
         sendOnly('echoes', { added: Array.from(zone.echoes).map(([, echo]) => echo) }, user.userId);
     }
 
@@ -535,23 +514,7 @@ export function host(
                 status(`no command "${name}"`, user);
             }
         });
-
-        messaging.messages.on('block', (message) => {
-            const coords = message.coords.map((coord: number) => ~~coord);
-            const value = message.value || 0;
-
-            if (value > 8) return;
-            if (coords[0] >= -7 && !user.tags.includes('admin')) return;
-
-            if (value !== 0) {
-                zone.grid.set(coords, value);
-            } else {
-                zone.grid.delete(coords);
-            }
-
-            sendAll('block', { coords, value });
-        });
-
+        
         messaging.messages.on('echo', (message: EchoMessage) => {
             const { text, position } = message;
 
