@@ -70,6 +70,9 @@ function getLocalUser() {
 
 function moveTo(x: number, y: number, z: number) {
     const user = getLocalUser()!;
+    x = Math.max(Math.min(15, x), 0);
+    y = 0;
+    z = Math.max(Math.min(15, z), 0);
     user.position = [x, y, z];
     client.move(user.position);
 }
@@ -438,7 +441,6 @@ export async function load() {
             const [px, py, pz] = user.position;
             let [nx, ny, nz] = [px + dx, py, pz + dz];
             moveTo(nx, ny, nz);
-            console.log(user.position);
         }
     }
 
