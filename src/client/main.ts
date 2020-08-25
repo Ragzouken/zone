@@ -439,8 +439,7 @@ export async function load() {
 
         if (user.position) {
             const [px, py, pz] = user.position;
-            let [nx, ny, nz] = [px + dx, py, pz + dz];
-            moveTo(nx, ny, nz);
+            moveTo(px + dx, py, pz + dz);
         }
     }
 
@@ -621,7 +620,7 @@ export async function load() {
     ];
 
     function moveVector(direction: number): [number, number] {
-        return directions[(direction) % 4];
+        return directions[direction % 4];
     }
 
     const gameKeys = new Map<string, () => void>();
@@ -728,23 +727,19 @@ export async function load() {
         return player.status !== 'playing' ? player.status : undefined;
     }
 
-    const sceneRenderer = new SceneRenderer(
-        client, client.zone, getTile, connecting, getStatus,
-    )
+    const sceneRenderer = new SceneRenderer(client, client.zone, getTile, connecting, getStatus);
 
     function renderScene() {
         requestAnimationFrame(renderScene);
 
         const logo = player.hasItem ? audioLogo : undefined;
         sceneRenderer.mediaElement = popoutPanel.hidden && player.hasVideo ? video : logo;
-        //sceneRenderer.update();
-        //sceneRenderer.render();
     }
 
     renderScene();
 
     const tooltip = document.getElementById('tooltip')!;
-    
+
     sceneRenderer.on('click', (event, [tx, tz]) => {
         const objectCoords = `${tx},0,${tz}`;
 

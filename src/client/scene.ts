@@ -1,9 +1,9 @@
-import ZoneClient from "../common/client";
-import { ZoneState, UserState } from "../common/zone";
-import { randomInt } from "../common/utility";
-import { hslToRgb, eventToElementPixel } from "./utility";
-import { EventEmitter } from "events";
-import { decodeAsciiTexture } from "blitsy";
+import ZoneClient from '../common/client';
+import { ZoneState, UserState } from '../common/zone';
+import { randomInt } from '../common/utility';
+import { hslToRgb, eventToElementPixel } from './utility';
+import { EventEmitter } from 'events';
+import { decodeAsciiTexture } from 'blitsy';
 
 export const avatarImage = decodeAsciiTexture(
     `
@@ -19,10 +19,10 @@ __X__X__
     'X',
 );
 
-const recolorCanvas = document.createElement("canvas");
+const recolorCanvas = document.createElement('canvas');
 recolorCanvas.width = 8;
 recolorCanvas.height = 8;
-const recolorContext = recolorCanvas.getContext("2d")!;
+const recolorContext = recolorCanvas.getContext('2d')!;
 
 function recolor(canvas: HTMLCanvasElement, color: string) {
     recolorContext.save();
@@ -50,8 +50,7 @@ function getSize(element: HTMLElement) {
     }
 }
 
-export class SceneRenderer extends EventEmitter
-{
+export class SceneRenderer extends EventEmitter {
     mediaElement?: HTMLImageElement | HTMLCanvasElement | HTMLVideoElement;
 
     constructor(
@@ -62,15 +61,15 @@ export class SceneRenderer extends EventEmitter
         private readonly getStatus: () => string | undefined,
     ) {
         super();
-        const renderer = document.getElementById("renderer") as HTMLCanvasElement;
+        const renderer = document.getElementById('renderer') as HTMLCanvasElement;
         const container = renderer.parentElement!;
-        const context = renderer.getContext("2d")!;
-        
-        const logo = document.createElement("img");
-        logo.src = "zone-logo-small.png";
+        const context = renderer.getContext('2d')!;
 
-        const image = document.createElement("img");
-        image.src = "mockup-small.png";
+        const logo = document.createElement('img');
+        logo.src = 'zone-logo-small.png';
+
+        const image = document.createElement('img');
+        image.src = 'mockup-small.png';
         image.addEventListener('load', resize);
 
         let scale = 1;
@@ -78,22 +77,20 @@ export class SceneRenderer extends EventEmitter
 
         let logox = 0;
         let logoy = 0;
-        let vx = .3;
-        let vy = .3;
-        
-        const screenWidth = 14. * 8;
-        const screenHeight = 8. * 8;
+        let vx = 0.3;
+        let vy = 0.3;
+
+        const screenWidth = 14 * 8;
+        const screenHeight = 8 * 8;
 
         function animateLogo() {
             const width = logo.naturalWidth;
             const height = logo.naturalHeight;
-    
-            if (logox + width + vx > screenWidth || logox + vx < 0)
-                vx *= -1;
-            
-            if (logoy + height + vy > screenHeight || logoy + vy < 0)
-                vy *= -1;
-            
+
+            if (logox + width + vx > screenWidth || logox + vx < 0) vx *= -1;
+
+            if (logoy + height + vy > screenHeight || logoy + vy < 0) vy *= -1;
+
             logox += vx;
             logoy += vy;
         }
@@ -104,7 +101,7 @@ export class SceneRenderer extends EventEmitter
             context.fillStyle = connecting() ? 'red' : 'black';
             context.fillRect(0, 0, renderer.width, renderer.height);
             context.drawImage(image, inset, inset, 128 * scale, 128 * scale);
-    
+
             context.save();
             this.zone.users.forEach((user) => drawAvatar(user));
             this.zone.echoes.forEach((echo) => drawAvatar(echo, true));
@@ -115,28 +112,32 @@ export class SceneRenderer extends EventEmitter
                 context.drawImage(
                     logo,
                     inset + 8 * scale + logox * scale,
-                    inset + 8 * scale + (logoy + 3) * scale, 
-                    logo.naturalWidth * scale, 
+                    inset + 8 * scale + (logoy + 3) * scale,
+                    logo.naturalWidth * scale,
                     logo.naturalHeight * scale,
                 );
             } else {
-                const [width, height] = getSize(this.mediaElement)
-        
-                const ws = screenWidth * scale / width;
-                const hs = screenHeight * scale / height;
+                const [width, height] = getSize(this.mediaElement);
+
+                const ws = (screenWidth * scale) / width;
+                const hs = (screenHeight * scale) / height;
                 const s = Math.min(ws, hs);
-                
+
                 const rw = Math.floor(width * s);
                 const rh = Math.floor(height * s);
-        
-                const ox = (8+0) * scale + Math.floor((screenWidth * scale - rw) / 2.);
-                const oy = (8+3) * scale + Math.floor((screenHeight * scale - rh) / 2.);
-        
+
+                const ox = (8 + 0) * scale + Math.floor((screenWidth * scale - rw) / 2);
+                const oy = (8 + 3) * scale + Math.floor((screenHeight * scale - rh) / 2);
+
                 const state = getStatus();
                 if (state) {
                     context.font = `${4 * scale}px ascii_small_simple`;
-                    context.fillStyle = "gray";
-                    context.fillText(state, margin + (8+1) * scale, margin + (8+3) * scale + (screenHeight - 1) * scale);
+                    context.fillStyle = 'gray';
+                    context.fillText(
+                        state,
+                        margin + (8 + 1) * scale,
+                        margin + (8 + 3) * scale + (screenHeight - 1) * scale,
+                    );
                 }
 
                 context.save();
@@ -144,7 +145,7 @@ export class SceneRenderer extends EventEmitter
                 context.drawImage(this.mediaElement, inset + ox, inset + oy, rw, rh);
                 context.restore();
             }
-        }
+        };
         render();
 
         const drawAvatar = (user: UserState, echo = false) => {
@@ -178,30 +179,36 @@ export class SceneRenderer extends EventEmitter
             const spin = user.emotes && user.emotes.includes('spn');
             const da = spin ? performance.now() / 150 - x : 0;
             const sx = Math.cos(da);
-            const ox = (8 - sx*8)/2;
+            const ox = (8 - sx * 8) / 2;
 
             context.globalAlpha = echo ? 0.5 : 1;
 
-            context.drawImage(tile, margin + (x * 8 + ox + dx) * scale, margin + (z * 8 + dy) * scale, 8 * scale * sx, 8 * scale);
+            context.drawImage(
+                tile,
+                margin + (x * 8 + ox + dx) * scale,
+                margin + (z * 8 + dy) * scale,
+                8 * scale * sx,
+                8 * scale,
+            );
         };
 
         function resize() {
             const width = container.clientWidth;
             const height = container.clientHeight;
-    
+
             const inner = Math.min(width, height);
             const outer = Math.max(width, height);
             const natural = image.naturalWidth;
-    
+
             scale = Math.floor(inner / natural);
             const frame = natural * scale;
-            margin = Math.ceil((outer - frame) / 2.);
-    
+            margin = Math.ceil((outer - frame) / 2);
+
             renderer.width = frame + margin * 2;
             renderer.height = frame + margin * 2;
             context.imageSmoothingEnabled = false;
         }
-    
+
         window.addEventListener('resize', resize);
         resize();
 
@@ -220,7 +227,7 @@ export class SceneRenderer extends EventEmitter
 
         renderer.addEventListener('mousemove', (event) => {
             this.emit('hover', event, mouseEventToTile(event));
-        })
+        });
 
         renderer.addEventListener('mouseleave', (event) => {
             this.emit('unhover', event);

@@ -514,7 +514,7 @@ export function host(
                 status(`no command "${name}"`, user);
             }
         });
-        
+
         messaging.messages.on('echo', (message: EchoMessage) => {
             const { text, position } = message;
 
