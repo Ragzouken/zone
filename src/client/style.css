@@ -124,10 +124,14 @@ input[type="text"]:focus {
 }
 
 #panel-container {
-    max-width: 512px;
-    max-width: 100%;
+    width: 100%;
 
     pointer-events: all;
+
+    display: flex;
+    align-items: flex-end;
+
+    overflow: hidden;
 }
 
 .toolbar {
@@ -186,11 +190,6 @@ button.active {
     filter: invert();
 }
 
-.menu-panel {
-    display: flex;
-    flex-direction: column;
-}
-
 .menu-title {
     width: 100%;
     display: flex;
@@ -212,10 +211,6 @@ button.active {
     flex-direction: column;
     padding: 8px;
     background: rgb(0 21 51);
-}
-
-#emotes-panel, #blocks-panel, #view-panel, #avatar-panel {
-    width: unset;
 }
 
 .icon-button-small {
@@ -294,6 +289,7 @@ html, body {
     width: 512px;
     height: 512px;
     max-width: 100%;
+    margin-top: -256px;
 
     pointer-events: none;
 }

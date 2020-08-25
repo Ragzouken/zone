@@ -3,12 +3,19 @@
     --tab-toggle-background: #000000;
 }
 
+.menu-panel {
+    display: flex;
+    flex-direction: column-reverse;
+
+    max-height: 100%;
+    height: 100vh;
+}
+
 .menu-panel-tab-toggle-container {
     width: 100%;
     height: 32px;
 
     display: flex;
-    flex-direction: row;
 
     background: var(--menu-background);
 }
@@ -42,6 +49,7 @@
     display: flex;
     flex-direction: column;
     align-items: stretch;
+    justify-content: flex-end;
 
     background: var(--menu-background);
 }
@@ -55,8 +63,8 @@
 }
 
 #chat-input {
-    margin-left: 8px;
-    margin-right: 8px;
+    margin: 8px;
+    flex: none;
 }
 
 #auth-row {
@@ -70,6 +78,10 @@
     flex-direction: column;
     padding: 8px;
     gap: 8px;
+}
+
+#avatar-panel .button-row {
+    padding: 8px;
 }
 
 .button-row {
@@ -153,6 +165,11 @@
 #search-form > button, #search-form > input[type="submit"] {
     flex: 0;
     margin-left: 8px;
+}
+
+#search-results {
+    overflow-y: scroll;  
+    flex: 1; 
 }
 
 .search-result {

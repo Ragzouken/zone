@@ -59,13 +59,13 @@ html
                             .menu-panel-tab-toggle(data-tab-toggle="playback/player") player
                         .menu-panel-tab-body-container
                             .menu-panel-tab-body(data-tab-body="playback/search")
-                                form#search-form
-                                    input#search-input(placeholder="search for a video" type="text" autocomplete="off")
-                                    input#search-submit(type="submit" value="search" disabled)
                                 #search-results
                                     #search-result-template.search-result
                                         div title
                                         img 
+                                form#search-form
+                                    input#search-input(placeholder="search for a video" type="text" autocomplete="off")
+                                    input#search-submit(type="submit" value="search" disabled)
                             .menu-panel-tab-body(data-tab-body="playback/playlist" hidden)
                                 #queue-title
                                 .queue-item#current-item
@@ -89,13 +89,15 @@ html
                                 .button-row
                                     button#popout-button pop out video
                                     button#resync-button resync video
-                    #avatar-panel(data-window data-tab-body="avatar")
-                        .menu-title
-                            div update appearance
-                        .menu-body
-                            canvas#avatar-paint(width=8, height=8)
-                            input#avatar-name(type="text", maxlength="16")
-                            button#avatar-update update
+                    #avatar-panel.menu-panel(data-window data-tab-body="avatar")
+                        .menu-panel-tab-toggle-container
+                            .menu-panel-tab-toggle.active(data-tab-toggle="avatar/appearance") appearance
+                        .menu-panel-tab-body-container
+                            .menu-panel-tab-body(data-tab-body="avatar/appearance")
+                                canvas#avatar-paint(width=8, height=8)
+                                .button-row
+                                    input#avatar-name(type="text", maxlength="16")
+                                    button#avatar-update update
                 canvas#chat-canvas(width=512, height=512)
             #scene
                 #tooltip
