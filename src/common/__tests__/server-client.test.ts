@@ -247,58 +247,6 @@ describe('user presence', () => {
     });
 });
 
-describe('blocks', () => {
-    const blocks = new Set([
-        [-20, 0, 0],
-        [-19, 1, 2],
-        [-18, 5, 6],
-    ]);
-
-    it('can add a block', async () => {
-        const coords = [-99, -88, -77];
-        const value = 6;
-
-        await zoneServer({}, async (server) => {
-            const client = await server.client();
-            await client.join();
-
-            const waiter = client.expect('block');
-            client.setBlock(coords, value);
-
-            const added = await waiter;
-            expect(added.coords).toEqual(coords);
-            expect(added.value).toEqual(value);
-        });
-    });
-
-    it('can remove a block', async () => {
-        const coords = [-88, -77, -99];
-
-        await zoneServer({}, async (server) => {
-            const client = await server.client();
-            await client.join();
-
-            const waiter = client.expect('block');
-            client.setBlock(coords, 0);
-
-            const added = await waiter;
-            expect(added.coords).toEqual(coords);
-            expect(added.value).toEqual(0);
-        });
-    });
-
-    it('receives existing blocks', async () => {
-        await zoneServer({}, async (server) => {
-            const clien = await server.client();
-            const waiter = clien.expect('blocks');
-            await clien.join();
-
-            const received = await waiter;
-            expect(received.cells).toEqual([[[0, -4, 0], 1]]);
-        });
-    });
-});
-
 describe('echoes', () => {
     const position = [6, 9, 0];
     const message = 'hello';

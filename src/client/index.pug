@@ -10,10 +10,8 @@ html
         link(rel="stylesheet", href="menus.css")
         script(src="script.js")
     body
-        #scene
-            #tooltip
-            #three-container
-            #menu-container
+        #zone
+            #sidebar
                 #menu-tabs.toolbar
                     button(title="show chat & users" data-tab-toggle="social")
                         img(src="icons/users.png")
@@ -21,8 +19,7 @@ html
                         img(src="icons/music.png")                 
                     button#avatar-button(title="change appearance" data-tab-toggle="avatar")
                         img(src="icons/avatar.png")
-                    button#view-button(title="show view menu" data-tab-toggle="view")
-                        img(src="icons/look.png")
+                    .spacer
                     button(title="toggle float emote (1)", data-emote-toggle="wvy")
                         img(src="icons/wvy.png")
                     button(title="toggle shake emote (2)", data-emote-toggle="shk")
@@ -31,7 +28,6 @@ html
                         img(src="icons/rbw.png")
                     button(title="toggle spin emote (4)", data-emote-toggle="spn")
                         img(src="icons/spn.png")
-                    #player-status
                 #panel-container
                     #social-panel.menu-panel(data-window data-tab-body="social")
                         .menu-panel-tab-toggle-container
@@ -100,20 +96,10 @@ html
                             canvas#avatar-paint(width=8, height=8)
                             input#avatar-name(type="text", maxlength="16")
                             button#avatar-update update
-                    #blocks-panel(data-window data-tab-body="blocks")
-                        .menu-body
-                            #blocks-list
-                    #view-panel(data-window data-tab-body="view")
-                        .menu-title
-                            div view
-                        .menu-body
-                            button#rotate-l-button(title="rotate view ([)")
-                                img(src="icons/rotate-l.png")
-                            button#camera-button(title="switch view (v)")
-                                img(src="icons/look.png")
-                            button#rotate-r-button(title="rotate view (])")
-                                img(src="icons/rotate-r.png")
                 canvas#chat-canvas(width=512, height=512)
+            #scene
+                #tooltip
+                canvas#renderer
         #popout-panel.menu-panel(data-window)
             .menu-title(data-window-drag)
                 div video pop-out

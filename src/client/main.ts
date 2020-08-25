@@ -5,12 +5,12 @@ import { ChatPanel } from './chat';
 
 import ZoneClient from '../common/client';
 import { YoutubeVideo } from '../server/youtube';
-import { ZoneSceneRenderer, avatarImage, tilemapContext, blockTexture } from './scene';
 import { Player } from './player';
 import { UserState } from '../common/zone';
 import { HTMLUI } from './html-ui';
 import { createContext2D } from 'blitsy';
 import { menusFromDataAttributes } from './menus';
+import { SceneRenderer, avatarImage } from './scene';
 
 window.addEventListener('load', () => load());
 
@@ -70,6 +70,9 @@ function getLocalUser() {
 
 function moveTo(x: number, y: number, z: number) {
     const user = getLocalUser()!;
+    x = Math.max(Math.min(15, x), 0);
+    y = 0;
+    z = Math.max(Math.min(15, z), 0);
     user.position = [x, y, z];
     client.move(user.position);
 }
@@ -429,8 +432,6 @@ export async function load() {
         }
     });
 
-    client.on('blocks', ({ coords }) => sceneRenderer.rebuildAtCoords(coords));
-
     setInterval(() => client.heartbeat(), 30 * 1000);
 
     function move(dx: number, dz: number) {
@@ -438,56 +439,7 @@ export async function load() {
 
         if (user.position) {
             const [px, py, pz] = user.position;
-            let [nx, ny, nz] = [px + dx, py, pz + dz];
-
-            const grid = client.zone.grid;
-
-            const block = grid.has([nx, ny, nz]);
-            const belowMe = grid.has([px, py - 1, pz]);
-            const aboveMe = grid.has([px, py + 1, pz]);
-            const belowBlock = grid.has([nx, ny - 1, nz]);
-            const belowBlock2 = grid.has([nx, ny - 2, nz]);
-            const aboveBlock = grid.has([nx, ny + 1, nz]);
-
-            const walled =
-                grid.has([nx - 1, ny, nz]) ||
-                grid.has([nx + 1, ny, nz]) ||
-                grid.has([nx, ny, nz - 1]) ||
-                grid.has([nx, ny, nz + 1]);
-
-            // walk into empty space along floor
-            if (!block && belowBlock) {
-                // great
-                // special step down
-            } else if (belowMe && !block && !belowBlock && belowBlock2) {
-                ny -= 1;
-                // walk into empty space along wall
-            } else if (!block && walled) {
-                // great
-                // walk up wall
-            } else if (block && aboveBlock && !aboveMe) {
-                nx = px;
-                nz = pz;
-                ny = py + 1;
-                // step up
-            } else if (block && !aboveBlock && !aboveMe) {
-                ny += 1;
-                // fall down wall
-            } else if (!block && !belowMe && !walled && !belowBlock) {
-                nx = px;
-                nz = pz;
-                ny = py - 1;
-                // step down
-            } else if (!block && !belowBlock) {
-                ny -= 1;
-                // can't move
-            } else {
-                nx = px;
-                ny = py;
-                nz = pz;
-            }
-
-            moveTo(nx, ny, nz);
+            moveTo(px + dx, py, pz + dz);
         }
     }
 
@@ -523,40 +475,6 @@ export async function load() {
         fullChat = false;
         chatInput.blur();
         chatContext.canvas.classList.toggle('open', false);
-    });
-
-    const blockListContainer = document.getElementById('blocks-list') as HTMLElement;
-
-    const blockButtons: HTMLElement[] = [];
-    const setBlock = (blockId: number) => {
-        sceneRenderer.buildBlock = blockId;
-        for (let i = 0; i < 8; ++i) {
-            blockButtons[i].classList.toggle('selected', i === blockId);
-        }
-    };
-
-    const addBlockButton = (element: HTMLElement, blockId: number) => {
-        element.addEventListener('click', () => setBlock(blockId));
-        blockListContainer.appendChild(element);
-        blockButtons.push(element);
-    };
-
-    const tileset = document.createElement('img');
-    tileset.src = './tileset.png';
-    tileset.addEventListener('load', () => {
-        const eraseImage = document.createElement('img');
-        eraseImage.src = './erase-tile.png';
-        addBlockButton(eraseImage, 0);
-
-        tilemapContext.drawImage(tileset, 0, 0);
-        blockTexture.needsUpdate = true;
-        for (let i = 1; i < 8; ++i) {
-            const context = createContext2D(8, 16);
-            context.drawImage(tilemapContext.canvas, -(i - 1) * 16, 0);
-            addBlockButton(context.canvas, i);
-        }
-
-        setBlock(1);
     });
 
     const avatarPanel = document.querySelector('#avatar-panel') as HTMLElement;
@@ -702,7 +620,7 @@ export async function load() {
     ];
 
     function moveVector(direction: number): [number, number] {
-        return directions[(direction + sceneRenderer.rotateStep) % 4];
+        return directions[direction % 4];
     }
 
     const gameKeys = new Map<string, () => void>();
@@ -722,15 +640,6 @@ export async function load() {
     gameKeys.set('ArrowRight', () => move(...moveVector(0)));
     gameKeys.set('ArrowDown', () => move(...moveVector(3)));
     gameKeys.set('ArrowUp', () => move(...moveVector(1)));
-
-    const rot = Math.PI / 4;
-
-    document.getElementById('rotate-l-button')?.addEventListener('click', () => (sceneRenderer.followCam.angle -= rot));
-    document.getElementById('rotate-r-button')?.addEventListener('click', () => (sceneRenderer.followCam.angle += rot));
-
-    gameKeys.set('[', () => (sceneRenderer.followCam.angle -= rot));
-    gameKeys.set(']', () => (sceneRenderer.followCam.angle += rot));
-    gameKeys.set('v', () => sceneRenderer.cycleCamera());
 
     function toggleMenuPath(path: string) {
         if (!menu.isVisible(path)) menu.open(path);
@@ -786,7 +695,6 @@ export async function load() {
         }
     });
 
-    const playerStatus = document.getElementById('player-status')!;
     const chatContext = document.querySelector<HTMLCanvasElement>('#chat-canvas')!.getContext('2d')!;
     const chatContext2 = document.querySelector<HTMLCanvasElement>('#chat-canvas2')!.getContext('2d')!;
     chatContext.imageSmoothingEnabled = false;
@@ -794,7 +702,6 @@ export async function load() {
 
     function redraw() {
         refreshCurrentItem();
-        playerStatus.innerHTML = player.status;
         chatContext.clearRect(0, 0, 512, 512);
         chatContext2.clearRect(0, 0, 512, 512);
 
@@ -816,66 +723,61 @@ export async function load() {
         return state !== WebSocket.OPEN;
     }
 
-    const sceneRenderer = new ZoneSceneRenderer(
-        document.getElementById('three-container')!,
-        client,
-        client.zone,
-        getTile,
-        connecting,
-    );
+    function getStatus() {
+        return player.status !== 'playing' ? player.status : undefined;
+    }
+
+    const sceneRenderer = new SceneRenderer(client, client.zone, getTile, connecting, getStatus);
 
     function renderScene() {
         requestAnimationFrame(renderScene);
 
-        sceneRenderer.building = !htmlui.idToWindowElement.get('blocks-panel')!.hidden;
-        const logo = player.hasItem ? audioLogo : zoneLogo;
+        const logo = player.hasItem ? audioLogo : undefined;
         sceneRenderer.mediaElement = popoutPanel.hidden && player.hasVideo ? video : logo;
-        sceneRenderer.update();
-        sceneRenderer.render();
     }
 
     renderScene();
 
-    document.getElementById('camera-button')!.addEventListener('click', () => sceneRenderer.cycleCamera());
-
     const tooltip = document.getElementById('tooltip')!;
-    sceneRenderer.on('pointerdown', (info) => {
-        const objectCoords = info.objectCoords?.join(',') || '';
+
+    sceneRenderer.on('click', (event, [tx, tz]) => {
+        const objectCoords = `${tx},0,${tz}`;
+
         const echoes = Array.from(client.zone.echoes)
             .map(([, echo]) => echo)
             .filter((echo) => echo.position!.join(',') === objectCoords);
 
         if (echoes.length > 0) {
             chat.log(`{clr=#808080}"${parseFakedown(echoes[0].text)}"`);
-        } else if (info.spaceCoords) {
-            const [x, y, z] = info.spaceCoords;
-            moveTo(x, y, z);
+        } else {
+            moveTo(tx, 0, tz);
         }
     });
-    sceneRenderer.on('pointermove', (info) => {
-        const objectCoords = info.objectCoords?.join(',') || '';
 
-        if (objectCoords) {
-            const users = Array.from(client.zone.users.values()).filter(
-                (user) => user.position?.join(',') === objectCoords,
-            );
-            const echoes = Array.from(client.zone.echoes)
-                .map(([, echo]) => echo)
-                .filter((echo) => echo.position!.join(',') === objectCoords);
+    sceneRenderer.on('hover', (event, [tx, tz]) => {
+        const objectCoords = `${tx},0,${tz}`;
 
-            const names = [
-                ...users.map((user) => formatName(user)),
-                ...echoes.map((echo) => 'echo of ' + formatName(echo)),
-            ];
+        const users = Array.from(client.zone.users.values()).filter(
+            (user) => user.position?.join(',') === objectCoords,
+        );
+        const echoes = Array.from(client.zone.echoes)
+            .map(([, echo]) => echo)
+            .filter((echo) => echo.position!.join(',') === objectCoords);
 
-            tooltip.hidden = false;
-            tooltip.innerHTML = names.join(', ');
-            const [tx, ty] = eventToElementPixel(info.event, tooltip.parentElement!);
-            tooltip.style.left = tx + 'px';
-            tooltip.style.top = ty + 'px';
-        } else {
-            tooltip.hidden = true;
-        }
+        const names = [
+            ...users.map((user) => formatName(user)),
+            ...echoes.map((echo) => 'echo of ' + formatName(echo)),
+        ];
+
+        tooltip.hidden = names.length === 0;
+        tooltip.innerHTML = names.join(', ');
+        const [ttx, tty] = eventToElementPixel(event, tooltip.parentElement?.parentElement!);
+        tooltip.style.left = ttx + 'px';
+        tooltip.style.top = tty + 'px';
+    });
+
+    sceneRenderer.on('unhover', (event) => {
+        tooltip.hidden = true;
     });
 }
 

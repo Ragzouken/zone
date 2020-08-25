@@ -21,9 +21,6 @@ export type RecvChat = { text: string; userId: string };
 export type SendAuth = { password: string };
 export type SendCommand = { name: string; args: any[] };
 
-export type BlocksMessage = { cells: [number[], number][] };
-export type BlockMessage = { coords: number[]; value: number };
-
 export type EchoMessage = { position: number[]; text: string };
 export type EchoesMessage = { added?: UserEcho[]; removed?: number[][] };
 
@@ -41,8 +38,6 @@ export interface MessageMap {
     chat: SendChat;
     user: UserState;
 
-    block: BlockMessage;
-    blocks: BlocksMessage;
     echoes: EchoesMessage;
 }
 
@@ -78,8 +73,6 @@ export interface ClientEventMap {
     emotes: (event: { user: UserState; emotes: string[]; local: boolean }) => void;
     avatar: (event: { user: UserState; data: string; local: boolean }) => void;
     tags: (event: { user: UserState; tags: string[]; local: boolean }) => void;
-
-    blocks: (event: { coords: number[][] }) => void;
 }
 
 export interface ZoneClient {
@@ -261,22 +254,6 @@ export class ZoneClient extends EventEmitter {
                 this.zone.users.set(user.userId, user);
             });
             this.emit('users', {});
-        });
-        this.messaging.messages.on('blocks', (message: BlocksMessage) => {
-            const coords: number[][] = [];
-            message.cells.forEach(([coord, block]) => {
-                this.zone.grid.set(coord, block);
-                coords.push(coord);
-            });
-            this.emit('blocks', { coords });
-        });
-        this.messaging.messages.on('block', (message: BlockMessage) => {
-            if (message.value) {
-                this.zone.grid.set(message.coords, message.value);
-            } else {
-                this.zone.grid.delete(message.coords);
-            }
-            this.emit('blocks', { coords: [message.coords] });
         });
         this.messaging.messages.on('echoes', (message: EchoesMessage) => {
             if (message.added) {

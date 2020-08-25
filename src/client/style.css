@@ -25,6 +25,54 @@ html, body {
     overflow: hidden;
 }
 
+#zone {
+    width: 100%; height: 100%;
+
+    display: flex;
+    flex-direction: row;
+    align-items: stretch;
+
+    background: black;
+}
+
+#sidebar {
+    width: 512px;
+    
+    background: rgb(0 0 0 / 100%);
+
+    display: flex;
+    flex-direction: column-reverse;
+}
+
+#scene {
+    flex: 1;
+    overflow: hidden;
+
+    background: black;
+}
+
+#renderer {
+    position: relative;
+    left: 50%; top: 50%;
+    transform: translate(-50%, -50%);
+}
+
+@media (max-width: 1024px) {
+    #sidebar {
+        z-index: 1;
+        position: absolute;
+
+        background: none;
+        height: unset;
+
+        pointer-events: none;
+    }
+
+    #menu-tabs { pointer-events: initial; }
+    #panel-container { pointer-events: initial; }
+    #chat-canvas { display: none; }
+}
+
 html {
     color: white;
     background: black;
@@ -51,10 +99,6 @@ input[type="text"]:focus {
     border-bottom: solid red 3px;
 }
 
-#entry-panel {
-    width: 512px;
-}
-
 #entry {
     padding: 16px 48px;
     display: flex;
@@ -62,6 +106,7 @@ input[type="text"]:focus {
 
 #entry-logo {
     width: 512px;
+    max-width: 100%;
     margin-bottom: -64px;
 }
 
@@ -80,6 +125,7 @@ input[type="text"]:focus {
 
 #panel-container {
     max-width: 512px;
+    max-width: 100%;
 
     pointer-events: all;
 }
@@ -88,6 +134,7 @@ input[type="text"]:focus {
     display: flex;
     flex-direction: row;
     align-items: stretch;
+    flex-wrap: nowrap;
 
     background: black;
 }
@@ -99,7 +146,8 @@ input[type="text"]:focus {
 .toolbar > button {
     width: calc(10px * var(--toolbar-icon-scale));
     height: calc(10px * var(--toolbar-icon-scale));
-    
+    flex: none;
+
     border: none;
     padding: calc(1px * var(--toolbar-icon-scale));
     background-color: var(--button-color);
@@ -120,10 +168,6 @@ button > img {
     margin-left: var(--toolbar-gap); 
     margin-top: var(--toolbar-gap);
     margin-bottom: var(--toolbar-gap);
-}
-
-#player-status {
-    margin: 16px;
 }
 
 #tooltip {
@@ -214,64 +258,9 @@ button.active {
 
 [data-window] {
     width: 512px;
+    max-width: 100%;
     display: flex;
     flex-direction: column;
-}
-
-#emotes-panel > .menu-body > button, #view-panel > .menu-body > button {
-    width: 64px; height: 64px;
-    
-    border: none;
-    padding: 8px;
-    background-color: var(--button-color);
-    border-color: var(--button-color);
-
-    pointer-events: initial;
-}
-
-#emotes-list {
-    display: grid;
-    align-items: center;
-    align-content: center;
-    padding: 8px;
-    gap: 16px 16px;
-    grid-template-columns: repeat(4, 64px);
-    grid-template-rows: repeat(1, 64px);
-}
-
-#view-panel > .menu-body {
-    display: grid;
-    align-items: center;
-    align-content: center;
-    padding: 8px;
-    gap: 16px 16px;
-    grid-template-columns: repeat(3, 64px);
-    grid-template-rows: repeat(1, 64px);
-}
-
-#blocks-panel {
-    display: flex;
-    flex-direction: column;
-
-    align-items: center;
-}
-
-#blocks-list {
-    display: grid;
-    align-items: center;
-    align-content: center;
-    padding: 8px;
-    gap: 16px 16px;
-    grid-template-columns: repeat(8, 32px);
-    grid-template-rows: repeat(1, 64px);
-}
-
-#blocks-list > * {
-    width: 100%; height: 100%;
-}
-
-#blocks-list > *.selected {
-    outline: 4px solid var(--button-color);
 }
 
 #avatar-panel {
@@ -298,11 +287,13 @@ html, body {
 #chat-canvas2 {
     width: 512px;
     height: 512px;
+    max-width: 100%;
 }
 
 #chat-canvas {
     width: 512px;
     height: 512px;
+    max-width: 100%;
 
     pointer-events: none;
 }
@@ -364,11 +355,6 @@ html, body {
     overflow-y: auto;
 }
 
-#scene {
-    position: relative;
-    width: 100%; height: 100%;
-}
-
 .controls > button {
     flex: 1;
 }
@@ -381,11 +367,6 @@ html, body {
     width: 320px; height: 320px;
     background-color: var(--button-color);
     margin: auto;
-}
-
-#three-container {
-    position: absolute;
-    width: 100%; height: 100%;
 }
 
 .player {
@@ -403,11 +384,10 @@ html, body {
 }
 
 #entry-splash {
+    z-index: 5;
     position: absolute;
-    left: 0;
-    top: 0;
-    width: 100vw;
-    height: 100vh;
+    left: 0; top: 0;
+    width: 100vw; height: 100vh;
 
     background: black;
     color: white;
@@ -418,7 +398,9 @@ html, body {
 }
 
 #entry-panel {
+    width: 512px;
     text-align: center;
+    max-width: 100%;
 }
 
 #join-name {

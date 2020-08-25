@@ -1,13 +1,9 @@
-import * as THREE from 'three';
-import { ZoneState, UserState } from '../common/zone';
-import { hslToRgb, eventToElementPixel } from './utility';
-import { randomInt, Grid } from '../common/utility';
-import { decodeAsciiTexture, createContext2D } from 'blitsy';
-import { EventEmitter } from 'events';
 import ZoneClient from '../common/client';
-import { cubeData } from './blocks';
-import { BlockShape } from './blocks/block-shape';
-import { BlockGeometry } from './blocks/block-geometry';
+import { ZoneState, UserState } from '../common/zone';
+import { randomInt } from '../common/utility';
+import { hslToRgb, eventToElementPixel } from './utility';
+import { EventEmitter } from 'events';
+import { decodeAsciiTexture } from 'blitsy';
 
 export const avatarImage = decodeAsciiTexture(
     `
@@ -23,433 +19,152 @@ __X__X__
     'X',
 );
 
-export const tilemapContext = createContext2D(16 * 8, 16);
+const recolorCanvas = document.createElement('canvas');
+recolorCanvas.width = 8;
+recolorCanvas.height = 8;
+const recolorContext = recolorCanvas.getContext('2d')!;
 
-const cursorTile = decodeAsciiTexture(
-    `
-########
-#______#
-#______#
-#______#
-#______#
-#______#
-#______#
-########
-`,
-    '#',
-);
-
-const black = new THREE.Color(0, 0, 0);
-const red = new THREE.Color(255, 0, 0);
-
-export const blockTexture = makeTileCanvasTexture(tilemapContext.canvas);
-const cursorTexture = makeTileCanvasTexture(cursorTile.canvas);
-
-const blockMaterial = new THREE.MeshBasicMaterial({ map: blockTexture });
-const blockGeometries: BlockGeometry[] = [new BlockGeometry()];
-
-const cursorGeo = new THREE.BoxBufferGeometry(1 / 16, 1 / 16, 1 / 16);
-const cursorMat = new THREE.MeshBasicMaterial({ map: cursorTexture, side: THREE.DoubleSide, transparent: true });
-
-const cubeShape = new BlockShape().fromData(cubeData);
-
-const sides = ['left', 'right', 'back', 'front'];
-const ends = ['top', 'bottom'];
-
-function setGeoTile(geo: BlockGeometry, faceId: string, x: number, y: number) {
-    const sx = 8 / tilemapContext.canvas.width;
-    const sy = 8 / tilemapContext.canvas.height;
-
-    geo.setFaceTile(faceId, x * sx, y * sy, (x + 1) * sx, (y + 1) * sy);
+function recolor(canvas: HTMLCanvasElement, color: string) {
+    recolorContext.save();
+    recolorContext.fillStyle = color;
+    recolorContext.fillRect(0, 0, 8, 8);
+    recolorContext.globalCompositeOperation = 'destination-in';
+    recolorContext.drawImage(canvas, 0, 0);
+    recolorContext.restore();
+    return recolorContext.canvas;
 }
 
-for (let i = 0; i < 8; ++i) {
-    const geo = new BlockGeometry();
-    blockGeometries.push(geo);
-    geo.setShape(cubeShape);
+const isVideo = (element: HTMLElement | undefined): element is HTMLVideoElement => element?.nodeName === 'VIDEO';
+const isCanvas = (element: HTMLElement | undefined): element is HTMLCanvasElement => element?.nodeName === 'CANVAS';
+const isImage = (element: HTMLElement | undefined): element is HTMLImageElement => element?.nodeName === 'IMG';
 
-    sides.forEach((faceId) => setGeoTile(geo, faceId, i * 2, 0));
-    ends.forEach((faceId) => setGeoTile(geo, faceId, i * 2, 1));
-}
-
-blockGeometries[1].geometry.translate(-0.5, -0.5, -0.5);
-blockGeometries[1].geometry.scale(1 / 16, 1 / 16, 1 / 16);
-blockGeometries[1].geometry.rotateY(Math.PI / 2);
-
-function makeTileCanvasTexture(canvas: HTMLCanvasElement) {
-    const texture = new THREE.CanvasTexture(canvas);
-    texture.minFilter = THREE.NearestFilter;
-    texture.magFilter = THREE.NearestFilter;
-    texture.wrapS = THREE.RepeatWrapping;
-    texture.wrapT = THREE.RepeatWrapping;
-    return texture;
-}
-
-function isVideo(element: HTMLElement | undefined): element is HTMLVideoElement {
-    return element?.nodeName === 'VIDEO';
-}
-
-function isCanvas(element: HTMLElement | undefined): element is HTMLCanvasElement {
-    return element?.nodeName === 'CANVAS';
-}
-
-function isImage(element: HTMLElement | undefined): element is HTMLImageElement {
-    return element?.nodeName === 'IMG';
-}
-
-const tileTextures = new Map<HTMLCanvasElement, THREE.CanvasTexture>();
-function getTileTexture(canvas: HTMLCanvasElement) {
-    const existing = tileTextures.get(canvas);
-    if (existing) return existing;
-
-    const texture = new THREE.CanvasTexture(canvas);
-    texture.minFilter = THREE.NearestFilter;
-    texture.magFilter = THREE.NearestFilter;
-    texture.wrapS = THREE.ClampToEdgeWrapping;
-    texture.wrapT = THREE.ClampToEdgeWrapping;
-
-    tileTextures.set(canvas, texture);
-    return texture;
-}
-
-const avatarQuad = new THREE.PlaneGeometry(1 / 16, 1 / 16, 1, 1);
-const avatarMeshes: THREE.Mesh[] = [];
-function setAvatarCount(count: number) {
-    while (avatarMeshes.length < count) {
-        const material = new THREE.MeshBasicMaterial({
-            map: new THREE.CanvasTexture(avatarImage.canvas),
-            transparent: true,
-            alphaTest: 0.25,
-            side: THREE.DoubleSide,
-        });
-        avatarMeshes.push(new THREE.Mesh(avatarQuad, material));
+function getSize(element: HTMLElement) {
+    if (isVideo(element)) {
+        return [element.videoWidth, element.videoHeight];
+    } else if (isCanvas(element)) {
+        return [element.width, element.height];
+    } else if (isImage(element)) {
+        return [element.naturalWidth, element.naturalHeight];
+    } else {
+        return [0, 0];
     }
 }
 
-function orientCamera(camera: THREE.Camera, focus: THREE.Vector3, angle: number, pitch: number, depth: number) {
-    const euler = new THREE.Euler(-pitch, angle, 0, 'ZYX');
-    const position = new THREE.Vector3(0, 0, depth);
-    position.applyEuler(euler);
-    position.add(focus);
-
-    camera.position.copy(position);
-    camera.lookAt(focus);
-}
-
-export class FocusCamera {
-    focus = new THREE.Vector3();
-    angle = -Math.PI / 12;
-    pitch = Math.PI / 4;
-    depth = 1;
-}
-
-export interface ScenePointerInfo {
-    spaceCoords?: number[];
-    blockCoords?: number[];
-    objectCoords?: number[];
-    event: MouseEvent;
-}
-
-export interface ZoneSceneRenderer {
-    on(event: 'pointerdown' | 'pointermove', callback: (info: ScenePointerInfo) => void): this;
-}
-
-export class ZoneSceneRenderer extends EventEmitter {
+export class SceneRenderer extends EventEmitter {
     mediaElement?: HTMLImageElement | HTMLCanvasElement | HTMLVideoElement;
 
-    private readonly renderer = new THREE.WebGLRenderer({ antialias: false });
-    private readonly cameras: [THREE.Camera, boolean, boolean][] = [];
-    private readonly raycaster = new THREE.Raycaster();
-
-    private readonly mediaTexture = new THREE.VideoTexture(document.createElement('video'));
-
-    private readonly scene = new THREE.Scene();
-    private readonly avatarGroup = new THREE.Group();
-    private readonly blockGroup = new THREE.Group();
-    private readonly mediaMesh: THREE.Mesh;
-
-    private readonly cubeToCoords = new Map<THREE.Object3D, number[]>();
-    private readonly coordsToCube = new Grid<THREE.Object3D>();
-    private readonly avatarToCoords = new Map<THREE.Object3D, number[]>();
-
-    private cameraIndex = 0;
-    private cursor = new THREE.Mesh(cursorGeo, cursorMat);
-
-    public readonly followCam: FocusCamera;
-    private readonly cinemaCamera: THREE.PerspectiveCamera;
-    private readonly isoCamera: THREE.OrthographicCamera;
-    private readonly flatCamera: THREE.OrthographicCamera;
-
-    public building = false;
-    public buildBlock = 1;
-
-    private readonly chunks = new Grid<THREE.Group>();
-
-    private get camera() {
-        return this.cameras[this.cameraIndex][0];
-    }
-
-    private get follow() {
-        return this.cameras[this.cameraIndex][1];
-    }
-
-    get rotateStep() {
-        if (!this.cameras[this.cameraIndex][2]) return 0;
-        const increment = Math.round((2 * this.followCam.angle) / Math.PI);
-        return (increment % 4) + 4;
-    }
-
     constructor(
-        container: HTMLElement,
         private readonly client: ZoneClient,
         private readonly zone: ZoneState,
         private readonly getTile: (base64: string | undefined) => CanvasRenderingContext2D,
         private readonly connecting: () => boolean,
+        private readonly getStatus: () => string | undefined,
     ) {
         super();
+        const renderer = document.getElementById('renderer') as HTMLCanvasElement;
+        const container = renderer.parentElement!;
+        const context = renderer.getContext('2d')!;
 
-        this.cursor.scale.set(1.1, 1.1, 1.1);
-        this.cursor.visible = false;
+        const logo = document.createElement('img');
+        logo.src = 'zone-logo-small.png';
 
-        const aspect = container.clientWidth / container.clientHeight;
-        const frustumSize = 1.1;
+        const image = document.createElement('img');
+        image.src = 'mockup-small.png';
+        image.addEventListener('load', resize);
 
-        this.isoCamera = new THREE.OrthographicCamera(
-            (frustumSize * aspect) / -2,
-            (frustumSize * aspect) / 2,
-            frustumSize / 2,
-            frustumSize / -2,
-            0.01,
-            10,
-        );
+        let scale = 1;
+        let margin = 0;
 
-        this.followCam = new FocusCamera();
+        let logox = 0;
+        let logoy = 0;
+        let vx = 0.3;
+        let vy = 0.3;
 
-        const factor = Math.sqrt(2);
+        const screenWidth = 14 * 8;
+        const screenHeight = 8 * 8;
 
-        this.flatCamera = new THREE.OrthographicCamera(
-            (1 * aspect) / -2,
-            (1 * aspect) / 2,
-            0.5 / factor,
-            -0.5 / factor,
-            0.01,
-            10,
-        );
-        this.flatCamera.position.set(0.5 / 16, 1, 1);
-        this.flatCamera.lookAt(0.5 / 16, 0, 0);
+        function animateLogo() {
+            const width = logo.naturalWidth;
+            const height = logo.naturalHeight;
 
-        const cinemaCamera = new THREE.PerspectiveCamera(70, aspect, 0.01, 10);
-        cinemaCamera.position.set(0.5 / 16, 0, 0.8);
-        cinemaCamera.lookAt(0.5 / 16, 0, 0);
-        this.cinemaCamera = cinemaCamera;
+            if (logox + width + vx > screenWidth || logox + vx < 0) vx *= -1;
 
-        const setAspect = (aspect: number) => {
-            this.cinemaCamera.aspect = aspect;
-            this.cinemaCamera.updateProjectionMatrix();
+            if (logoy + height + vy > screenHeight || logoy + vy < 0) vy *= -1;
 
-            this.isoCamera.left = (frustumSize * aspect) / -2;
-            this.isoCamera.right = (frustumSize * aspect) / 2;
-            this.isoCamera.updateProjectionMatrix();
+            logox += vx;
+            logoy += vy;
+        }
 
-            this.flatCamera.left = (1 * aspect) / -2;
-            this.flatCamera.right = (1 * aspect) / 2;
-            this.flatCamera.updateProjectionMatrix();
-        };
+        const render = () => {
+            window.requestAnimationFrame(render);
+            const inset = margin;
+            context.fillStyle = connecting() ? 'red' : 'black';
+            context.fillRect(0, 0, renderer.width, renderer.height);
+            context.drawImage(image, inset, inset, 128 * scale, 128 * scale);
 
-        this.cameras.push([this.isoCamera, false, false]);
-        this.cameras.push([this.cinemaCamera, true, true]);
-        this.cameras.push([this.flatCamera, false, false]);
-        this.cameras.push([this.isoCamera, true, true]);
+            context.save();
+            this.zone.users.forEach((user) => drawAvatar(user));
+            this.zone.echoes.forEach((echo) => drawAvatar(echo, true));
+            context.restore();
 
-        this.mediaTexture.minFilter = THREE.NearestFilter;
-        this.mediaTexture.magFilter = THREE.NearestFilter;
-        this.mediaTexture.wrapS = THREE.ClampToEdgeWrapping;
-        this.mediaTexture.wrapT = THREE.ClampToEdgeWrapping;
-        this.mediaTexture.format = THREE.RGBFormat;
-
-        const mediaMaterial = new THREE.MeshBasicMaterial({
-            map: this.mediaTexture,
-            side: THREE.DoubleSide,
-            blending: THREE.AdditiveBlending,
-            transparent: true,
-            depthTest: true,
-            depthWrite: false,
-        });
-
-        this.mediaMesh = new THREE.Mesh(new THREE.PlaneGeometry(1, 1, 1, 1), mediaMaterial);
-        this.mediaMesh.translateX(0.5 / 16);
-        this.mediaMesh.translateZ(-2.5 / 16 + 1 / 512);
-
-        this.scene.add(this.blockGroup);
-        this.scene.add(this.avatarGroup);
-        this.scene.add(this.mediaMesh);
-        this.scene.add(this.cursor);
-
-        this.scene.fog = new THREE.Fog(0, 0.0025, 10);
-
-        this.renderer.setSize(container.clientWidth, container.clientHeight);
-        container.appendChild(this.renderer.domElement);
-
-        this.renderer.domElement.addEventListener('pointerdown', (event) => {
-            const info = this.getInfoUnderMouseEvent(event);
-            const erase = this.buildBlock === 0 && info.blockCoords;
-
-            if (this.building && erase && info.blockCoords) {
-                client.setBlock(info.blockCoords, this.buildBlock);
-            } else if (this.building && info.spaceCoords) {
-                client.setBlock(info.spaceCoords, this.buildBlock);
+            if (!this.mediaElement) {
+                animateLogo();
+                context.drawImage(
+                    logo,
+                    inset + 8 * scale + logox * scale,
+                    inset + 8 * scale + (logoy + 3) * scale,
+                    logo.naturalWidth * scale,
+                    logo.naturalHeight * scale,
+                );
             } else {
-                this.emit('pointerdown', info);
+                const [width, height] = getSize(this.mediaElement);
+
+                const ws = (screenWidth * scale) / width;
+                const hs = (screenHeight * scale) / height;
+                const s = Math.min(ws, hs);
+
+                const rw = Math.floor(width * s);
+                const rh = Math.floor(height * s);
+
+                const ox = (8 + 0) * scale + Math.floor((screenWidth * scale - rw) / 2);
+                const oy = (8 + 3) * scale + Math.floor((screenHeight * scale - rh) / 2);
+
+                const state = getStatus();
+                if (state) {
+                    context.font = `${4 * scale}px ascii_small_simple`;
+                    context.fillStyle = 'gray';
+                    context.fillText(
+                        state,
+                        margin + (8 + 1) * scale,
+                        margin + (8 + 3) * scale + (screenHeight - 1) * scale,
+                    );
+                }
+
+                context.save();
+                context.globalCompositeOperation = 'screen';
+                context.drawImage(this.mediaElement, inset + ox, inset + oy, rw, rh);
+                context.restore();
             }
+        };
+        render();
 
-            event.preventDefault();
-            event.stopPropagation();
-        });
+        const drawAvatar = (user: UserState, echo = false) => {
+            if (!user.position) return;
 
-        document.addEventListener('mousemove', (event) => {
-            const info = this.getInfoUnderMouseEvent(event);
-
-            if (info?.blockCoords) {
-                const [x, y, z] = info.blockCoords;
-                this.cursor.position.set(x / 16, y / 16, z / 16);
-            }
-
-            this.cursor.visible = this.building;
-            this.emit('pointermove', info);
-        });
-
-        window.addEventListener('resize', () => {
-            setAspect(container.clientWidth / container.clientHeight);
-            this.renderer.setSize(container.clientWidth, container.clientHeight);
-        });
-    }
-
-    cycleCamera() {
-        this.cameraIndex = (this.cameraIndex + 1) % this.cameras.length;
-    }
-
-    getChunkCoord([x, y, z]: number[]) {
-        return [Math.floor(x / 32), 0, Math.floor(z / 32)];
-    }
-
-    areCoordsVisible(coords: number[]) {
-        const [ox, oy, oz] = this.getChunkCoord(this.cullOrigin);
-        const [cx, cy, cz] = this.getChunkCoord(coords);
-
-        const dx = Math.abs(cx - ox);
-        const dy = Math.abs(cy - oy);
-        const dz = Math.abs(cz - oz);
-
-        return Math.max(dx, dy, dz) <= this.cullRange;
-    }
-
-    private cullOrigin = [0, 0, 0];
-    private cullRange = 1;
-    setVisibility(origin: number[], radius: number) {
-        this.cullOrigin = origin;
-        this.cullRange = radius;
-        const [ox, oy, oz] = this.getChunkCoord(origin);
-
-        this.chunks.forEach((chunk, [cx, cy, cz]) => {
-            const dx = Math.abs(cx - ox);
-            const dy = Math.abs(cy - oy);
-            const dz = Math.abs(cz - oz);
-
-            chunk.visible = Math.max(dx, dy, dz) <= this.cullRange;
-        });
-    }
-
-    getChunkGroup(coords: number[]): THREE.Group {
-        const group = this.chunks.get(coords) || new THREE.Group();
-        this.blockGroup.add(group);
-        this.chunks.set(coords, group);
-        return group;
-    }
-
-    rebuildAtCoords(coords: number[][]) {
-        coords.forEach((coord) => {
-            const block = this.zone.grid.get(coord);
-            const chunk = this.getChunkGroup(this.getChunkCoord(coord));
-
-            if (block && !this.coordsToCube.has(coord)) {
-                const cube = new THREE.Mesh(blockGeometries[block].geometry, blockMaterial);
-                chunk.add(cube);
-                const [x, y, z] = coord;
-                cube.position.set(x / 16, y / 16, z / 16);
-                this.cubeToCoords.set(cube, coord);
-                this.coordsToCube.set(coord, cube);
-            } else if (!block && this.coordsToCube.has(coord)) {
-                const mesh = this.coordsToCube.get(coord)!;
-                chunk.remove(mesh);
-                this.cubeToCoords.delete(mesh);
-                this.coordsToCube.delete(coord);
-            }
-        });
-    }
-
-    update() {
-        const localCoords = this.client.localUser?.position;
-        if (localCoords) {
-            this.setVisibility(localCoords, 2);
-        }
-        if (localCoords && this.follow) {
-            const [x, y, z] = localCoords;
-            this.followCam.focus.set(x / 16, y / 16, z / 16);
-        } else {
-            this.followCam.focus.set(0.5 / 16, 0, 0);
-        }
-
-        orientCamera(
-            this.isoCamera,
-            this.followCam.focus,
-            this.followCam.angle,
-            this.followCam.pitch,
-            this.followCam.depth,
-        );
-        orientCamera(
-            this.cinemaCamera,
-            this.followCam.focus,
-            this.followCam.angle,
-            this.followCam.pitch,
-            this.followCam.depth,
-        );
-
-        this.renderer.setClearColor(this.connecting() ? red : black);
-        this.mediaTexture.image = this.mediaElement;
-        this.mediaTexture.needsUpdate = true;
-
-        let mediaAspect = 1;
-
-        if (isVideo(this.mediaElement)) {
-            mediaAspect = this.mediaElement.videoWidth / this.mediaElement.videoHeight;
-        } else if (isImage(this.mediaElement)) {
-            mediaAspect = this.mediaElement.naturalWidth / this.mediaElement.naturalHeight;
-        } else if (isCanvas(this.mediaElement)) {
-            mediaAspect = this.mediaElement.width / this.mediaElement.height;
-        }
-
-        this.mediaMesh.scale.set((252 * mediaAspect) / 512, 252 / 512, 1);
-
-        setAvatarCount(this.zone.users.size + this.zone.echoes.size);
-        this.avatarGroup.children = [];
-
-        let i = 0;
-
-        const showAvatar = (user: UserState, echo = false) => {
-            const mesh = avatarMeshes[i++];
-            mesh.visible = !!user.position && this.areCoordsVisible(user.position);
-            if (!user.position || !this.areCoordsVisible(user.position)) return;
             const [x, y, z] = user.position;
+            if (x < 0 || z < 0 || x > 15 || z > 15) return;
 
             let [dy, dx] = [0, 0];
             if (user.emotes && user.emotes.includes('shk')) {
-                dy += randomInt(-8, 8);
-                dx += randomInt(-8, 8);
+                dy += randomInt(-2, 2);
+                dx += randomInt(-2, 2);
             }
 
             if (user.emotes && user.emotes.includes('wvy')) {
-                dy += 4 + Math.sin(performance.now() / 250 - x / 2) * 4;
+                dy -= 1 + Math.sin(performance.now() / 250 - x / 2) * 1;
             }
+
+            let tile = this.getTile(user.avatar).canvas;
 
             let [r, g, b] = [255, 255, 255];
             if (user.emotes && user.emotes.includes('rbw')) {
@@ -458,92 +173,64 @@ export class ZoneSceneRenderer extends EventEmitter {
                 r = Math.round(r);
                 g = Math.round(g);
                 b = Math.round(b);
+                tile = recolor(tile, `rgb(${r} ${g} ${b})`);
             }
 
             const spin = user.emotes && user.emotes.includes('spn');
-            const da = spin ? performance.now() / 100 - x : 0;
+            const da = spin ? performance.now() / 150 - x : 0;
+            const sx = Math.cos(da);
+            const ox = (8 - sx * 8) / 2;
 
-            const tile = this.getTile(user.avatar).canvas;
-            const material = mesh.material as THREE.MeshBasicMaterial;
-            material.color.setRGB(r / 255, g / 255, b / 255);
-            material.opacity = echo ? 0.5 : 1;
-            material.map = getTileTexture(tile);
+            context.globalAlpha = echo ? 0.5 : 1;
 
-            const angle = this.camera === this.flatCamera ? 0 : this.followCam.angle;
-            mesh.position.set(x / 16 + dx / 512, y / 16 + dy / 512, z / 16);
-            mesh.rotation.y = angle + da;
-
-            this.avatarGroup.add(mesh);
-            this.avatarToCoords.set(mesh, user.position);
+            context.drawImage(
+                tile,
+                margin + (x * 8 + ox + dx) * scale,
+                margin + (z * 8 + dy) * scale,
+                8 * scale * sx,
+                8 * scale,
+            );
         };
 
-        this.zone.users.forEach((user) => showAvatar(user));
-        this.zone.echoes.forEach((echo) => showAvatar(echo, true));
-    }
+        function resize() {
+            const width = container.clientWidth;
+            const height = container.clientHeight;
 
-    render() {
-        this.renderer.render(this.scene, this.camera);
-    }
+            const inner = Math.min(width, height);
+            const outer = Math.max(width, height);
+            const natural = image.naturalWidth;
 
-    cameraPointFromMouseEvent(event: MouseEvent) {
-        const [cx, cy] = eventToElementPixel(event, this.renderer.domElement);
+            scale = Math.floor(inner / natural);
+            const frame = natural * scale;
+            margin = Math.ceil((outer - frame) / 2);
 
-        return new THREE.Vector2(
-            -1 + (cx / this.renderer.domElement.clientWidth) * 2,
-            1 - (cy / this.renderer.domElement.clientHeight) * 2,
-        );
-    }
-
-    blockIntersectCameraPoint(point: THREE.Vector2): THREE.Intersection | undefined {
-        this.raycaster.setFromCamera(point, this.camera);
-        return this.raycaster.intersectObject(this.blockGroup, true)[0];
-    }
-
-    objectIntersectCameraPoint(point: THREE.Vector2): THREE.Intersection | undefined {
-        this.raycaster.setFromCamera(point, this.camera);
-        const objects = [this.blockGroup, this.avatarGroup];
-        const hits = this.raycaster.intersectObjects(objects, true);
-
-        if (hits.length === 0 || hits[0].object.parent !== this.avatarGroup) {
-            return;
-        } else {
-            return hits[0];
-        }
-    }
-
-    getAvatarCoordsUnderMouseEvent(event: MouseEvent) {
-        const point = this.cameraPointFromMouseEvent(event);
-        const intersection = this.objectIntersectCameraPoint(point);
-
-        if (!intersection) return undefined;
-
-        return this.avatarToCoords.get(intersection.object)!;
-    }
-
-    getInfoUnderMouseEvent(event: MouseEvent): ScenePointerInfo {
-        const point = this.cameraPointFromMouseEvent(event);
-        const intersection = this.blockIntersectCameraPoint(point);
-        const objectCoords = this.getAvatarCoordsUnderMouseEvent(event);
-
-        const info: ScenePointerInfo = { objectCoords, event };
-
-        if (intersection) {
-            info.blockCoords = this.cubeToCoords.get(intersection.object)!;
-
-            let [x, y, z] = info.blockCoords;
-            const delta = intersection.point.sub(intersection.object.position);
-
-            if (Math.abs(delta.y) > Math.abs(delta.x) && Math.abs(delta.y) > Math.abs(delta.z)) {
-                y += Math.sign(delta.y);
-            } else if (Math.abs(delta.x) > Math.abs(delta.y) && Math.abs(delta.x) > Math.abs(delta.z)) {
-                x += Math.sign(delta.x);
-            } else if (Math.abs(delta.z) > Math.abs(delta.x) && Math.abs(delta.z) > Math.abs(delta.y)) {
-                z += Math.sign(delta.z);
-            }
-
-            info.spaceCoords = [x, y, z];
+            renderer.width = frame + margin * 2;
+            renderer.height = frame + margin * 2;
+            context.imageSmoothingEnabled = false;
         }
 
-        return info;
+        window.addEventListener('resize', resize);
+        resize();
+
+        function mouseEventToTile(event: MouseEvent) {
+            const [mx, my] = eventToElementPixel(event, renderer);
+            const [sx, sy] = [mx - margin, my - margin];
+            const inv = 1 / (8 * scale);
+            const [tx, ty] = [Math.floor(sx * inv), Math.floor(sy * inv)];
+
+            return [tx, ty];
+        }
+
+        renderer.addEventListener('click', (event) => {
+            this.emit('click', event, mouseEventToTile(event));
+        });
+
+        renderer.addEventListener('mousemove', (event) => {
+            this.emit('hover', event, mouseEventToTile(event));
+        });
+
+        renderer.addEventListener('mouseleave', (event) => {
+            this.emit('unhover', event);
+        });
     }
 }
