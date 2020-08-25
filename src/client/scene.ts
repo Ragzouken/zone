@@ -59,6 +59,7 @@ export class SceneRenderer extends EventEmitter
         private readonly zone: ZoneState,
         private readonly getTile: (base64: string | undefined) => CanvasRenderingContext2D,
         private readonly connecting: () => boolean,
+        private readonly getStatus: () => string | undefined,
     ) {
         super();
         const renderer = document.getElementById("renderer") as HTMLCanvasElement;
@@ -131,6 +132,13 @@ export class SceneRenderer extends EventEmitter
                 const ox = (8+0) * scale + Math.floor((screenWidth * scale - rw) / 2.);
                 const oy = (8+3) * scale + Math.floor((screenHeight * scale - rh) / 2.);
         
+                const state = getStatus();
+                if (state) {
+                    context.font = `${4 * scale}px ascii_small_simple`;
+                    context.fillStyle = "gray";
+                    context.fillText(state, margin + (8+1) * scale, margin + (8+3) * scale + (screenHeight - 1) * scale);
+                }
+
                 context.save();
                 context.globalCompositeOperation = 'screen';
                 context.drawImage(this.mediaElement, inset + ox, inset + oy, rw, rh);

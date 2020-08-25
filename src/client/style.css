@@ -170,10 +170,6 @@ button > img {
     margin-bottom: var(--toolbar-gap);
 }
 
-#player-status {
-    margin: 16px;
-}
-
 #tooltip {
     position: absolute;
     transform: translate(-50%, 24px);

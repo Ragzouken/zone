@@ -696,7 +696,6 @@ export async function load() {
         }
     });
 
-    const playerStatus = document.getElementById('player-status')!;
     const chatContext = document.querySelector<HTMLCanvasElement>('#chat-canvas')!.getContext('2d')!;
     const chatContext2 = document.querySelector<HTMLCanvasElement>('#chat-canvas2')!.getContext('2d')!;
     chatContext.imageSmoothingEnabled = false;
@@ -704,7 +703,6 @@ export async function load() {
 
     function redraw() {
         refreshCurrentItem();
-        playerStatus.innerHTML = player.status;
         chatContext.clearRect(0, 0, 512, 512);
         chatContext2.clearRect(0, 0, 512, 512);
 
@@ -726,8 +724,12 @@ export async function load() {
         return state !== WebSocket.OPEN;
     }
 
+    function getStatus() {
+        return player.status !== 'playing' ? player.status : undefined;
+    }
+
     const sceneRenderer = new SceneRenderer(
-        client, client.zone, getTile, connecting,
+        client, client.zone, getTile, connecting, getStatus,
     )
 
     function renderScene() {
