@@ -60,6 +60,7 @@
 #chat-panel {
     display: flex;
     flex-direction: column;
+    flex: 1;
 }
 
 #chat-canvas2 {
@@ -203,7 +204,7 @@
 }
 
 #search-results {
-    overflow-y: scroll;  
+    overflow-y: auto;  
     flex: 1; 
 }
 
