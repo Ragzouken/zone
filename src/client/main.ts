@@ -454,8 +454,6 @@ export async function load() {
 
     document.getElementById('play-banger')?.addEventListener('click', () => client.messaging.send('banger', {}));
 
-    let fullChat = false;
-
     const menu = menusFromDataAttributes(document.documentElement);
     menu.on('show:avatar', openAvatarEditor);
     menu.on('show:playback/queue', refreshQueue);
@@ -638,6 +636,8 @@ export async function load() {
     gameKeys.set('u', () => toggleMenuPath('social/users'));
     gameKeys.set('s', () => toggleMenuPath('playback/search'));
     gameKeys.set('q', () => toggleMenuPath('playback/playlist'));
+    gameKeys.set('w', () => toggleMenuPath('social'));
+    gameKeys.set('e', () => toggleMenuPath('avatar'));
 
     function sendChat() {
         const line = chatInput.value;
@@ -702,7 +702,7 @@ export async function load() {
         chatContext2.imageSmoothingEnabled = false;
         chat.height = Math.ceil(height / 2.);
         if (chat.height === 0) return;
-        chat.render(fullChat || true);
+        chat.render(true);
         chatContext2.drawImage(chat.context.canvas, 0, 0, 512, chat.height * 2);
     }
 
