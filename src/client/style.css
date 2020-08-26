@@ -58,12 +58,16 @@ html, body {
 }
 
 @media (max-width: 1024px) {
+    :root {
+        --mobile: 1;
+    }
+
     #sidebar {
         z-index: 1;
         position: absolute;
 
         background: none;
-        height: unset;
+        height: 100vh;
 
         pointer-events: none;
     }
@@ -138,10 +142,9 @@ input[type="text"]:focus {
     flex-wrap: nowrap;
 
     background: black;
-}
 
-.toolbar > *:last-child {
-    margin-right: 16px;
+    padding: 8px;
+    gap: 8px;
 }
 
 .toolbar > button {
@@ -159,16 +162,6 @@ input[type="text"]:focus {
 
 button > img {
     width: 100%; height: 100%;
-}
-
-#top-toolbar {
-    top: 0;
-}
-
-.toolbar > button {
-    margin-left: var(--toolbar-gap); 
-    margin-top: var(--toolbar-gap);
-    margin-bottom: var(--toolbar-gap);
 }
 
 #tooltip {
