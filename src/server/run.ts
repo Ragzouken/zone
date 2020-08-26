@@ -42,11 +42,6 @@ async function run() {
     relisten();
     server.on('error', (error) => console.log('server error', error));
 
-    server.maxConnections = 1024;
-    setInterval(() => {
-        server.getConnections((e, count) => console.log(`connections: ${count} / ${server.maxConnections}`));
-    }, 5 * 60 * 1000);
-
     const dataPath = process.env.ZONE_DATA_PATH || '.data/db.json';
     fs.mkdir(path.dirname(dataPath)).catch(() => {});
     const adapter = new FileSync(dataPath, { serialize: JSON.stringify, deserialize: JSON.parse });
