@@ -702,8 +702,8 @@ export async function load() {
         chatContext2.imageSmoothingEnabled = false;
         chat.height = Math.ceil(height / 2.);
         if (chat.height === 0) return;
-        const mobile = window.getComputedStyle(document.documentElement).getPropertyValue('--mobile') === "1";
-        chat.render(mobile);
+        const mobile = window.getComputedStyle(document.documentElement).getPropertyValue('--mobile').trim() === "1";
+        chat.render(!mobile);
         chatContext2.drawImage(chat.context.canvas, 0, 0, 512, chat.height * 2);
     }
 
