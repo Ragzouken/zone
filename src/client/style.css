@@ -70,7 +70,6 @@ html, body {
 
     #menu-tabs { pointer-events: initial; }
     #panel-container { pointer-events: initial; }
-    #chat-canvas { display: none; }
 }
 
 html {
@@ -130,8 +129,6 @@ input[type="text"]:focus {
 
     display: flex;
     align-items: flex-end;
-
-    overflow: hidden;
 }
 
 .toolbar {
@@ -279,27 +276,6 @@ html, body {
     flex: 1;
 }
 
-#chat-canvas2 {
-    width: 512px;
-    height: 512px;
-    max-width: 100%;
-}
-
-#chat-canvas {
-    width: 512px;
-    height: 512px;
-    max-width: 100%;
-    margin-top: -256px;
-
-    pointer-events: none;
-}
-
-#chat-canvas.open {
-    pointer-events: initial;
-    cursor: pointer;
-    display: none;
-}
-
 #user-panel {
     max-height: 480px;
 }
@@ -310,33 +286,6 @@ html, body {
 
 #entry-users {
     margin: 1em;
-}
-
-.user-container {
-    display: flex;
-    flex-wrap: wrap;
-    flex: 1;
-
-    align-items: center;
-    align-content: center;
-    justify-content: space-evenly;
-    gap: 16px 32px;
-}
-
-.user-container > div {
-    display: flex;
-    flex-direction: row;
-}
-
-.user-container > div > canvas {
-    width: 24px;
-    height: 24px;
-    margin-right: 9px;
-}
-
-.user-container > div > div {
-    white-space: nowrap;
-    overflow-x: hidden;
 }
 
 .user-dj {

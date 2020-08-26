@@ -465,18 +465,6 @@ export async function load() {
         searchResults.innerHTML = '';
     });
 
-    menu.on('show:social/chat', () => {
-        fullChat = true;
-        chatInput.focus();
-        chatContext.canvas.classList.toggle('open', true);
-    });
-
-    menu.on('hide:social/chat', () => {
-        fullChat = false;
-        chatInput.blur();
-        chatContext.canvas.classList.toggle('open', false);
-    });
-
     const avatarPanel = document.querySelector('#avatar-panel') as HTMLElement;
     const avatarName = document.querySelector('#avatar-name') as HTMLInputElement;
     const avatarPaint = document.querySelector('#avatar-paint') as HTMLCanvasElement;
@@ -625,12 +613,13 @@ export async function load() {
 
     const gameKeys = new Map<string, () => void>();
     gameKeys.set('Tab', () => {
-        const socialToggle = menu.tabToggles.get('social')!;
-        const chatToggle = menu.tabToggles.get('social/chat')!;
+        const typing = document.activeElement === chatInput;
 
-        if (chatToggle.classList.contains('active') && socialToggle.classList.contains('active'))
-            menu.closeChildren('');
-        else menu.open('social/chat');
+        if (typing) {
+            chatInput.blur();
+        } else {
+            chatInput.focus();
+        }
     });
     gameKeys.set('1', () => toggleEmote('wvy'));
     gameKeys.set('2', () => toggleEmote('shk'));
@@ -695,21 +684,26 @@ export async function load() {
         }
     });
 
-    const chatContext = document.querySelector<HTMLCanvasElement>('#chat-canvas')!.getContext('2d')!;
     const chatContext2 = document.querySelector<HTMLCanvasElement>('#chat-canvas2')!.getContext('2d')!;
-    chatContext.imageSmoothingEnabled = false;
     chatContext2.imageSmoothingEnabled = false;
 
+    function clearContext(context: CanvasRenderingContext2D) {
+        context.clearRect(0, 0, context.canvas.width, context.canvas.height);
+    }
+
     function redraw() {
-        refreshCurrentItem();
-        chatContext.clearRect(0, 0, 512, 512);
-        chatContext2.clearRect(0, 0, 512, 512);
-
-        chat.render(fullChat);
-        chatContext.drawImage(chat.context.canvas, 0, 0, 512, 512);
-        chatContext2.drawImage(chat.context.canvas, 0, 0, 512, 512);
-
         window.requestAnimationFrame(redraw);
+
+        refreshCurrentItem();
+        clearContext(chatContext2);
+
+        const height = chatContext2.canvas.clientHeight;
+        chatContext2.canvas.height = height;
+        chatContext2.imageSmoothingEnabled = false;
+        chat.height = Math.ceil(height / 2.);
+        if (chat.height === 0) return;
+        chat.render(fullChat || true);
+        chatContext2.drawImage(chat.context.canvas, 0, 0, 512, chat.height * 2);
     }
 
     redraw();

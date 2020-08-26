@@ -30,28 +30,21 @@ html
                         img(src="icons/spn.png")
                 #panel-container
                     #social-panel.menu-panel(data-window data-tab-body="social")
-                        .menu-panel-tab-toggle-container
-                            .menu-panel-tab-toggle.active(data-tab-toggle="social/chat") chat
-                            .menu-panel-tab-toggle(data-tab-toggle="social/users") zonies
                         .menu-panel-tab-body-container
-                            .menu-panel-tab-body(data-tab-body="social/chat")
-                                canvas#chat-canvas2(width=512, height=512)
-                                input#chat-input(type="text" placeholder="chat message..." maxlength="160" autocomplete="off")
-                            .menu-panel-tab-body(data-tab-body="social/users" hidden)
-                                #user-items.user-container
-                                #auth-row
-                                    input(type="text" placeholder="admin password...")#auth-input
-                                    button#auth-button authorise
-                                #auth-content
-                                    .button-row
-                                        select#user-select
-                                        button#add-dj-button add dj
-                                        button#del-dj-button del dj
-                                        button#ban-ip-button ban ip
-                                    .button-row
-                                        button#event-mode-on event mode on
-                                        button#event-mode-off event mode off
-                                        button#refresh-library refresh library
+                            #user-items.user-container
+                            #auth-row
+                                input(type="text" placeholder="admin password...")#auth-input
+                                button#auth-button authorise
+                            #auth-content
+                                .button-row
+                                    select#user-select
+                                    button#add-dj-button add dj
+                                    button#del-dj-button del dj
+                                    button#ban-ip-button ban ip
+                                .button-row
+                                    button#event-mode-on event mode on
+                                    button#event-mode-off event mode off
+                                    button#refresh-library refresh library
                     #playback-panel.menu-panel(data-window data-tab-body="playback")
                         .menu-panel-tab-toggle-container
                             .menu-panel-tab-toggle.active(data-tab-toggle="playback/search") search
@@ -98,7 +91,9 @@ html
                                 .button-row
                                     input#avatar-name(type="text", maxlength="16")
                                     button#avatar-update update
-                canvas#chat-canvas(width=512, height=512)
+                #chat-panel
+                    canvas#chat-canvas2(width=512, height=512)
+                    input#chat-input(type="text" placeholder="chat message..." maxlength="160" autocomplete="off")
             #scene
                 #tooltip
                 canvas#renderer

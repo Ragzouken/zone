@@ -20,6 +20,14 @@ export class ChatPanel {
 
     constructor(public previewTime = 5000) {}
 
+    get height() {
+        return this.context.canvas.height;
+    }
+
+    set height(height: number) {
+        this.context.canvas.height = height;
+    }
+
     public error(text: string) {
         this.log('{clr=#FF0000}ERROR: ' + text);
     }
@@ -33,13 +41,17 @@ export class ChatPanel {
         const page = scriptToPages(text, layout)[0];
         this.timers.set(page, performance.now() + this.previewTime);
 
+        const pageLimit = 48;
         this.chatPages.push(page);
-        this.chatPages.slice(0, -32).forEach((page) => this.cached.delete(page));
-        this.chatPages = this.chatPages.slice(-32);
+        this.chatPages.slice(0, -pageLimit).forEach((page) => this.cached.delete(page));
+        this.chatPages = this.chatPages.slice(-pageLimit);
     }
 
     public render(full: boolean) {
-        this.context.clearRect(0, 0, 256, 256);
+        const width = this.context.canvas.width;
+        const height = this.context.canvas.height;
+
+        this.context.clearRect(0, 0, width, height);
 
         if (full) {
             /*
@@ -53,7 +65,7 @@ export class ChatPanel {
         }
 
         const now = performance.now();
-        let bottom = 256;
+        let bottom = height;
         for (let i = this.chatPages.length - 1; i >= 0 && bottom >= 0; --i) {
             const page = this.chatPages[i];
             const messageHeight = getPageHeight(page, font);
