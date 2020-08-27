@@ -26,6 +26,7 @@ export type HostOptions = {
 
     joinPassword?: string;
     authPassword?: string;
+    uploadPassword?: string;
 
     playbackStartDelay: number;
 };

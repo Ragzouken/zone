@@ -4,14 +4,21 @@ import * as http from 'http';
 import * as https from 'https';
 import * as request from 'request';
 import * as glob from 'glob';
-import { promises as fs } from 'fs';
-import { basename, extname, dirname } from 'path';
+import { promises as fs, mkdir, writeFile } from 'fs';
+import { basename, extname, parse, join } from 'path';
 import { host } from './server';
 import { exec } from 'child_process';
 import FileSync = require('lowdb/adapters/FileSync');
 import { Media } from '../common/zone';
 import path = require('path');
 import { YoutubeService } from './youtube';
+import * as expressFileUpload from 'express-fileupload';
+import { isArray } from 'util';
+import { nanoid } from 'nanoid';
+import { env } from 'process';
+
+const ffprobe = require('ffprobe');
+const ffprobeStatic = require('ffprobe-static');
 
 process.on('uncaughtException', (err) => console.log('uncaught exception:', err, err.stack));
 process.on('unhandledRejection', (err) => console.log('uncaught reject:', err));
@@ -70,6 +77,12 @@ async function run() {
     authCommands.set('refresh-videos', refreshLocalVideos);
     authCommands.set('relisten', relisten);
 
+    app.use(expressFileUpload({
+        abortOnLimit: true,
+        uriDecodeFileNames: true,
+        limits: { fileSize: 16 * 1024 * 1024 },
+    }));
+
     // trust glitch's proxy to give us socket ips
     app.set('trust proxy', true);
     app.use('/', express.static('public'));
@@ -112,6 +125,45 @@ async function run() {
         }
     });
 
+    app.use('/uploads', express.static('uploads'));
+    app.post('/upload', async (req, res) => {
+        if (!process.env.UPLOAD_PASSWORD || req.body.password !== process.env.UPLOAD_PASSWORD) {
+            res.status(400).send("WRONG PASSWORD");
+        } else if (req.files && req.files.file) {
+            if (isArray(req.files.file)) {
+                res.status(400).send("ONE FILE ONLY PLEASE");
+            } else {
+                try {
+                    const shortcut: string = req.body.shortcut;
+                    const title: string = req.body.title;
+                    const type = extname(req.files.file.name);
+                    const id = nanoid();
+                    const filepath = path.join('uploads', id + type);
+
+                    await fs.mkdir('uploads').catch(() => {});
+                    await req.files.file.mv(filepath);
+
+                    const media = {
+                        title,
+                        duration: await getDurationInSeconds(filepath) * 1000,
+                        source: filepath,
+                        shortcut,
+                    }
+
+                    localLibrary.set(shortcut, media);
+                    writeFile(path.join('uploads', id + '.json'), JSON.stringify(media), () => {});
+
+                    res.status(201).send(`THANKS, play with /local ${shortcut}`);
+                } catch(e) {
+                    console.log("UPLOAD ERROR", e);
+                    res.status(500).send("UPLOAD ERROR, ASK CANDLE");
+                }
+            }
+        } else {
+            res.status(400).send("NO FILE?");
+        }
+    });
+
     process.on('SIGINT', () => {
         console.log('exiting due to SIGINT');
         save();
@@ -122,23 +174,27 @@ async function run() {
     const durationCommand =
         'ffprobe -v error -select_streams a:0 -show_entries stream=duration -of default=noprint_wrappers=1:nokey=1';
 
-    function getDuration(file: string): Promise<number> {
-        return new Promise((resolve, reject) => {
-            exec(`${durationCommand} '${file.replace(/'/g, "'\\''")}'`, (error, stdout, stderr) => {
-                if (error) reject(error);
-                else resolve(parseFloat(stdout) * 1000);
-            });
-        });
+    async function getDurationInSeconds(file: string): Promise<number> {
+        const info = await ffprobe(file, { path: ffprobeStatic.path });
+        return info.streams[0].duration;
     }
 
     async function addLocal(path: string) {
-        const title = basename(path, extname(path));
         try {
-            const duration = await getDuration(path);
-            const media: Media = { title, duration, source: path };
-            localLibrary.set(title, media);
+            const parsed = parse(path);
+            const filename = basename(path, extname(path));
+
+            try {
+                const mediaPath = join(parsed.dir, parsed.name + '.json');
+                const media = await fs.readFile(mediaPath, 'UTF8').then((data) => JSON.parse(data as string) as Media);
+                localLibrary.set(media.shortcut || filename, media);
+            } catch (e) {
+                const duration = await getDurationInSeconds(path) * 1000;
+                const media: Media = { title: filename, duration, source: path };
+                localLibrary.set(filename, media);
+            }
         } catch (e) {
-            console.log(`LOCAL FAILED "${title}": ${e}`);
+            console.log(`LOCAL FAILED "${path}": ${e}`);
         }
     }
 
@@ -146,6 +202,8 @@ async function run() {
         localLibrary.clear();
         glob('media/**/*.mp4', (error, matches) => matches.forEach(addLocal));
         glob('media/**/*.mp3', (error, matches) => matches.forEach(addLocal));
+        glob('uploads/**/*.mp3', (error, matches) => matches.forEach(addLocal));
+        glob('uploads/**/*.mp4', (error, matches) => matches.forEach(addLocal));
     }
 
     refreshLocalVideos();

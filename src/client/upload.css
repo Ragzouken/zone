@@ -1,0 +1,17 @@
+#upload-form {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+label {
+    display: flex;
+}
+
+label > * {
+    flex: 1;
+}
+
+input {
+    flex: 1;
+}
