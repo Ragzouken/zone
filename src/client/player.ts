@@ -113,6 +113,7 @@ export class Player extends EventEmitter {
         this.item = undefined;
         this.itemPlayStart = performance.now();
 
+        this.element.pause();
         this.removeSource();
     }
 
