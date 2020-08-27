@@ -60,7 +60,7 @@ export class YoutubeService extends EventEmitter {
     async getVideoDownloadUrl(videoId: string): Promise<string | undefined> {
         const videoInfo = await this.getVideoInfo(videoId);
         if (!videoInfo) return undefined;
-        const format = this.chooseFormat(videoInfo.formats);
+        const format = this.chooseFormat(videoInfo);
         return format?.url;
     }
 
@@ -99,14 +99,14 @@ export class YoutubeService extends EventEmitter {
 
     async getVideoValid(videoId: string): Promise<boolean> {
         const videoInfo = await this.getVideoInfo(videoId);
-        return videoInfo !== undefined && this.chooseFormat(videoInfo.formats) !== undefined;
+        return videoInfo !== undefined && this.chooseFormat(videoInfo) !== undefined;
     }
 
     async getVideoMedia(videoId: string): Promise<Media | undefined> {
         const videoInfo = await this.getVideoInfo(videoId);
         if (!videoInfo) return undefined;
 
-        const format = this.chooseFormat(videoInfo.formats);
+        const format = this.chooseFormat(videoInfo);
         if (!format) return undefined;
 
         const duration = parseInt(videoInfo.videoDetails.lengthSeconds, 10) * 1000;
@@ -150,10 +150,12 @@ export class YoutubeService extends EventEmitter {
         }
     }
 
-    private chooseFormat(formats: ytdl.videoFormat[]) {
+    private chooseFormat(videoInfo: ytdl.videoInfo) {
         try {
-            return ytdl.chooseFormat(formats, this.options.downloadOptions);
+            return ytdl.chooseFormat(videoInfo.formats, this.options.downloadOptions);
         } catch (e) {
+            const names = videoInfo.formats.map((format) => format.itag).join(", ");
+            console.log(`NO FORMAT FOR ${videoInfo.video_id} FROM ${names}`);
             return undefined;
         }
     }
@@ -187,7 +189,7 @@ export class YoutubeService extends EventEmitter {
             source: videoPath,
         };
 
-        const format = this.chooseFormat(videoInfo.formats);
+        const format = this.chooseFormat(videoInfo);
         if (!format) {
             this.downloading = undefined;
             this.rejectVideo(videoId);
