@@ -443,16 +443,8 @@ export function host(
 
                 if (results.length === 0) {
                     status('no loadable results, user');
-                    return;
-                }
-
-                const media = await yts.getVideoMedia(results[0].videoId);
-                if (!media) {
-                    status('video unloadable', user);
-                } else if (media.duration > HALFHOUR) {
-                    status('video too long');
                 } else {
-                    tryUserQueueMedia(media);
+                    tryQueueYoutubeById(results[0].videoId);
                 }
             });
         });
