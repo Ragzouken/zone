@@ -203,7 +203,7 @@ button.active {
     background: rgb(0 21 51);
 }
 
-.icon-button-small {
+.icon-button {
     width: 24px;
     height: 24px;
     flex: 0;
@@ -214,7 +214,7 @@ button.active {
     border-color: var(--button-color);
 }
 
-.icon-button-small > img {
+.icon-button > img {
     width: 16px; height: 16px;
 }
 

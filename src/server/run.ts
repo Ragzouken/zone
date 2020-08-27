@@ -16,6 +16,7 @@ import * as expressFileUpload from 'express-fileupload';
 import { isArray } from 'util';
 import { nanoid } from 'nanoid';
 import { env } from 'process';
+import { F_OK } from 'constants';
 
 const ffprobe = require('ffprobe');
 const ffprobeStatic = require('ffprobe-static');
@@ -182,17 +183,26 @@ async function run() {
     async function addLocal(path: string) {
         try {
             const parsed = parse(path);
-            const filename = basename(path, extname(path));
+            const mediaPath = join(parsed.dir, parsed.name + '.json');
+            const subtitlePath = join(parsed.dir, parsed.name + '.vtt');
+
+            let media: Media;
 
             try {
-                const mediaPath = join(parsed.dir, parsed.name + '.json');
-                const media = await fs.readFile(mediaPath, 'UTF8').then((data) => JSON.parse(data as string) as Media);
-                localLibrary.set(media.shortcut || filename, media);
+                media = await fs.readFile(mediaPath, 'UTF8').then((data) => JSON.parse(data as string) as Media);
             } catch (e) {
                 const duration = await getDurationInSeconds(path) * 1000;
-                const media: Media = { title: filename, duration, source: path };
-                localLibrary.set(filename, media);
+                media = { title: parsed.name, duration, source: path };
             }
+
+            if (!media.subtitle) {
+                fs.access(subtitlePath, F_OK).then(
+                    () => media.subtitle = subtitlePath,
+                    () => {},
+                );
+            }
+
+            localLibrary.set(media.shortcut || parsed.name, media);
         } catch (e) {
             console.log(`LOCAL FAILED "${path}": ${e}`);
         }

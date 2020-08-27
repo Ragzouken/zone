@@ -33,16 +33,7 @@ export class Player extends EventEmitter {
 
         this.source = document.createElement('source');
         element.appendChild(this.source);
-
         this.subtrack = document.createElement('track');
-        this.subtrack.kind = 'subtitles';
-        this.subtrack.label = 'english';
-
-        this.subtrack.addEventListener('cuechange', (event) => {
-            const cues = Array.from(this.subtrack.track.activeCues || []) as VTTCue[];
-            const lines = cues.map((cue) => cue.text);
-            this.emit('subtitles', lines);
-        });
 
         let lastUnstall = performance.now();
         setInterval(() => {
@@ -137,8 +128,28 @@ export class Player extends EventEmitter {
         if (error > 0.1) this.element.currentTime = target;
     }
 
+    private reloadSubtitles() {
+        if (!this.item?.media.subtitle) return;
+
+        this.subtrack = document.createElement('track');
+        this.subtrack.kind = 'subtitles';
+        this.subtrack.label = 'english';
+        this.subtrack.src = this.item.media.subtitle;
+        this.element.appendChild(this.subtrack);
+        this.element.textTracks[0].mode = "showing";
+
+        this.subtrack.addEventListener('cuechange', (event) => {
+            if (!this.subtrack) return;
+            const cues = Array.from(this.subtrack.track.activeCues || []) as VTTCue[];
+            const lines = cues.map((cue) => cue.text);
+            this.emit('subtitles', lines);
+        });
+    }
+
     private async reloadSource(force = false) {
         if (!this.item || (!force && !!this.reloading)) return;
+        this.removeSource();
+
         const token = {};
         this.startedPlaying = false;
         this.reloading = token;
@@ -147,18 +158,13 @@ export class Player extends EventEmitter {
             if (this.reloading === token) this.reloading = undefined;
         };
 
-        const path = this.item.media.source;
-        if (path.endsWith('.mp3') || path.endsWith('.mp4')) {
-            this.subtrack.src = path.substr(0, path.lastIndexOf('.')) + '.vtt';
-            this.element.appendChild(this.subtrack);
-            this.element.textTracks[0].mode = 'showing';
-        } else if (this.subtrack.parentElement) {
-            this.element.removeChild(this.subtrack);
-        }
+        this.reloadSubtitles();
 
         this.element.pause();
         const waiter = expectMetadata(this.element);
+        this.source = document.createElement('source');
         this.source.src = this.item.media.source;
+        this.element.appendChild(this.source);
         this.element.load();
 
         try {
@@ -182,8 +188,8 @@ export class Player extends EventEmitter {
     private removeSource() {
         this.reloading = undefined;
         this.startedPlaying = false;
-        this.element.pause();
-        this.source.removeAttribute('src');
-        this.element.load();
+
+        if (this.source.parentElement) this.element.removeChild(this.source);
+        if (this.subtrack.parentElement) this.element.removeChild(this.subtrack);
     }
 }
