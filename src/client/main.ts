@@ -722,7 +722,7 @@ export async function load() {
         return player.status !== 'playing' ? player.status : undefined;
     }
 
-    const sceneRenderer = new SceneRenderer(client, client.zone, getTile, connecting, getStatus);
+    const sceneRenderer = new SceneRenderer(client, client.zone, getTile, connecting, getStatus, player);
 
     function renderScene() {
         requestAnimationFrame(renderScene);
