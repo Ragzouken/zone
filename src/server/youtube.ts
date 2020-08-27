@@ -107,7 +107,7 @@ export class YoutubeService extends EventEmitter {
         if (!videoInfo) return undefined;
 
         const format = this.chooseFormat(videoInfo.formats);
-        if (!videoInfo) return undefined;
+        if (!format) return undefined;
 
         const duration = parseInt(videoInfo.videoDetails.lengthSeconds, 10) * 1000;
         const source = 'youtube/' + videoId;
