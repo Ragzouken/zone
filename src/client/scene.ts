@@ -237,10 +237,10 @@ export class SceneRenderer extends EventEmitter {
             this.emit('click', event, mouseEventToTile(event.touches[0]));
         });
 
-        let touchedTile: number[] | undefined = undefined;
+        let touchedTile: number[] | undefined;
         renderer.addEventListener('touchmove', (event) => {
             const [nx, ny] = mouseEventToTile(event.touches[0]);
-            
+
             if (!touchedTile || touchedTile[0] !== nx || touchedTile[1] !== ny) {
                 touchedTile = [nx, ny];
                 this.emit('click', event, [nx, ny]);

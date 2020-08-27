@@ -154,7 +154,7 @@ export class YoutubeService extends EventEmitter {
         try {
             return ytdl.chooseFormat(videoInfo.formats, this.options.downloadOptions);
         } catch (e) {
-            const names = videoInfo.formats.map((format) => format.itag).join(", ");
+            const names = videoInfo.formats.map((format) => format.itag).join(', ');
             console.log(`NO FORMAT FOR ${videoInfo.video_id} FROM ${names}`);
             return undefined;
         }
