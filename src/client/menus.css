@@ -72,6 +72,7 @@
 #chat-input {
     margin: 8px;
     flex: none;
+    pointer-events: auto;
 }
 
 
