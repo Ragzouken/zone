@@ -456,7 +456,7 @@ export async function load() {
 
     const menu = menusFromDataAttributes(document.documentElement);
     menu.on('show:avatar', openAvatarEditor);
-    menu.on('show:playback/queue', refreshQueue);
+    menu.on('show:playback/playlist', refreshQueue);
     menu.on('show:playback/search', () => {
         searchInput.value = '';
         searchInput.focus();
