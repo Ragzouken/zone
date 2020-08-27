@@ -96,7 +96,7 @@ export function hex2rgb(color: string): [number, number, number] {
     return [0, 0, 0];
 }
 
-export function eventToElementPixel(event: MouseEvent, element: HTMLElement) {
+export function eventToElementPixel(event: MouseEvent | Touch, element: HTMLElement) {
     const rect = element.getBoundingClientRect();
     return [event.clientX - rect.x, event.clientY - rect.y];
 }

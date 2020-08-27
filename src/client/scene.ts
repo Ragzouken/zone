@@ -212,7 +212,7 @@ export class SceneRenderer extends EventEmitter {
         window.addEventListener('resize', resize);
         resize();
 
-        function mouseEventToTile(event: MouseEvent) {
+        function mouseEventToTile(event: MouseEvent | Touch) {
             const [mx, my] = eventToElementPixel(event, renderer);
             const [sx, sy] = [mx - margin, my - margin];
             const inv = 1 / (8 * scale);
@@ -231,6 +231,24 @@ export class SceneRenderer extends EventEmitter {
 
         renderer.addEventListener('mouseleave', (event) => {
             this.emit('unhover', event);
+        });
+
+        renderer.addEventListener('touchstart', (event) => {
+            this.emit('click', event, mouseEventToTile(event.touches[0]));
+        });
+
+        let touchedTile: number[] | undefined = undefined;
+        renderer.addEventListener('touchmove', (event) => {
+            const [nx, ny] = mouseEventToTile(event.touches[0]);
+            
+            if (!touchedTile || touchedTile[0] !== nx || touchedTile[1] !== ny) {
+                touchedTile = [nx, ny];
+                this.emit('click', event, [nx, ny]);
+            }
+        });
+
+        renderer.addEventListener('touchend', (event) => {
+            touchedTile = undefined;
         });
     }
 }

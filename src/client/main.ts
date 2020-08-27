@@ -744,7 +744,7 @@ export async function load() {
 
         if (echoes.length > 0) {
             chat.log(`{clr=#808080}"${parseFakedown(echoes[0].text)}"`);
-        } else {
+        } else if (tx >= 0 && tz >= 0 && tx < 16 && tz < 16) {
             moveTo(tx, 0, tz);
         }
     });
