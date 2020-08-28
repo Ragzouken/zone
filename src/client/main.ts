@@ -83,7 +83,8 @@ const avatarToggles = new Map<string, CanvasRenderingContext2D>();
 let activeAvatarSlot = '';
 
 function getInitialAvatar() {
-    return localStorage.getItem(localStorage.getItem('avatar-slot-active') || '');
+    return localStorage.getItem(localStorage.getItem('avatar-slot-active') || '')
+        || localStorage.getItem('avatar');
 }
 
 const emoteToggles = new Map<string, Element>();
@@ -194,7 +195,10 @@ export async function load() {
     
             const context = createContext2D(8, 8);
             const existing = getTile(localStorage.getItem(name) || localStorage.getItem('avatar') || undefined);
+
+            context.clearRect(0, 0, 8, 8);
             context.drawImage(existing.canvas, 0, 0);
+            iconContext.clearRect(0, 0, 8, 8);
             iconContext.drawImage(existing.canvas, 0, 0);
             avatarSlots.set(name, context);
         });
