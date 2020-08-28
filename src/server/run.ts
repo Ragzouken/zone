@@ -11,7 +11,7 @@ import { exec } from 'child_process';
 import FileSync = require('lowdb/adapters/FileSync');
 import { Media } from '../common/zone';
 import path = require('path');
-import { YoutubeService } from './youtube';
+import { YoutubeService, search } from './youtube';
 import * as expressFileUpload from 'express-fileupload';
 import { isArray } from 'util';
 import { nanoid } from 'nanoid';
@@ -88,6 +88,18 @@ async function run() {
     app.set('trust proxy', true);
     app.use('/', express.static('public'));
     app.use('/media', express.static('media'));
+
+    app.get('/youtube', (req, res) => {
+        const query = req.query.q;
+        if (!query || typeof query !== 'string') {
+            res.status(400).send('bad query');
+        } else {
+            search(query).then(
+                (results) => res.json(results),
+                (reason) => res.status(500).send('search failed'),
+            );
+        }
+    });
     app.get('/youtube/:videoId', async (req, res) => {
         // desperation
         req.on('error', (e) => console.log('req:', e));

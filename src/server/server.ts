@@ -2,7 +2,6 @@ import * as WebSocket from 'ws';
 import * as expressWs from 'express-ws';
 import * as low from 'lowdb';
 
-import * as youtube from './youtube';
 import Playback from './playback';
 import Messaging from '../common/messaging';
 import { ZoneState, UserId, UserState, mediaEquals, Media, QueueItem, UserEcho } from '../common/zone';
@@ -10,6 +9,7 @@ import { nanoid } from 'nanoid';
 import { getDefault, randomInt } from '../common/utility';
 import { MESSAGE_SCHEMAS } from './protocol';
 import { JoinMessage, SendAuth, SendCommand, EchoMessage } from '../common/client';
+import { YoutubeService, search } from './youtube';
 
 const SECONDS = 1000;
 
@@ -69,7 +69,7 @@ interface Ban {
 export function host(
     xws: expressWs.Instance,
     adapter: low.AdapterSync,
-    yts: youtube.YoutubeService,
+    yts: YoutubeService,
     options: Partial<HostOptions> = {},
 ) {
     const opts = Object.assign({}, DEFAULT_OPTIONS, options);
@@ -78,7 +78,6 @@ export function host(
     db.defaults({
         playback: { current: undefined, queue: [], time: 0 },
         bans: [],
-        blocks: { cells: [[[0, -4, 0], 1]] },
         echoes: [],
     }).write();
 
@@ -89,18 +88,6 @@ export function host(
         const users = Array.from(zone.users.values());
         const names = users.map(({ name, avatar }) => ({ name, avatar }));
         res.json(names);
-    });
-
-    xws.app.get('/youtube', (req, res) => {
-        const query = req.query.q;
-        if (!query || typeof query !== 'string') {
-            res.status(400).send('bad query');
-        } else {
-            youtube.search(query).then(
-                (results) => res.json(results),
-                (reason) => res.status(500).send('search failed'),
-            );
-        }
     });
 
     function ping() {
@@ -439,7 +426,7 @@ export function host(
         });
 
         messaging.messages.on('lucky', (message: any) => {
-            youtube.search(message.query).then(async (results) => {
+            search(message.query).then(async (results) => {
                 results = results.filter((result) => result.duration < HALFHOUR);
 
                 if (results.length === 0) {
