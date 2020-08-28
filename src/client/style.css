@@ -23,6 +23,12 @@ html, body {
     margin: 0;
     padding: 0;
     overflow: hidden;
+
+    width: 100%;
+    height: calc(var(--vh, 1vh) * 100);
+    display: flex;
+    align-items: center;
+    justify-content: center;
 }
 
 #zone {
@@ -65,11 +71,10 @@ html, body {
     #sidebar {
         z-index: 1;
         position: absolute;
-
         background: none;
-        height: 100vh;
-
         pointer-events: none;
+
+        height: calc(var(--vh, 1vh) * 100);
     }
 
     #menu-tabs { pointer-events: initial; }
@@ -255,14 +260,6 @@ button.active {
 #avatar-panel > .controls {
     display: flex;
     flex: 1;
-}
-
-html, body {
-    width: 100%;
-    height: 100%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
 }
 
 .spacer {

@@ -160,6 +160,13 @@ export async function load() {
     htmlui.addElementsInRoot(document.body);
     htmlui.hideAllWindows();
 
+    function mobileHeightFix() {
+        const vh = window.innerHeight / 100;
+        document.documentElement.style.setProperty('--vh', `${vh}px`);
+    }
+    window.addEventListener('resize', mobileHeightFix);
+    mobileHeightFix();
+
     const popoutPanel = document.getElementById('popout-panel') as HTMLElement;
     const video = document.createElement('video');
     popoutPanel.appendChild(video);
