@@ -4,6 +4,7 @@ import { randomInt } from '../common/utility';
 import { hslToRgb, eventToElementPixel } from './utility';
 import { EventEmitter } from 'events';
 import { decodeAsciiTexture } from 'blitsy';
+import { Player } from './player';
 
 export const avatarImage = decodeAsciiTexture(
     `
@@ -59,6 +60,7 @@ export class SceneRenderer extends EventEmitter {
         private readonly getTile: (base64: string | undefined) => CanvasRenderingContext2D,
         private readonly connecting: () => boolean,
         private readonly getStatus: () => string | undefined,
+        private readonly player: Player,
     ) {
         super();
         const renderer = document.getElementById('renderer') as HTMLCanvasElement;
@@ -94,6 +96,11 @@ export class SceneRenderer extends EventEmitter {
             logox += vx;
             logoy += vy;
         }
+
+        let subtitles: string[] = [];
+        player.on('subtitles', (lines) => {
+            subtitles = lines.slice().join('\n').split('\n').reverse();
+        });
 
         const render = () => {
             window.requestAnimationFrame(render);
@@ -139,6 +146,19 @@ export class SceneRenderer extends EventEmitter {
                         margin + (8 + 3) * scale + (screenHeight - 1) * scale,
                     );
                 }
+
+                context.save();
+                context.font = `${2 * scale}px ascii_small_simple`;
+                context.fillStyle = 'gray';
+                context.textAlign = 'center';
+                subtitles.forEach((line, i) => {
+                    context.fillText(
+                        line,
+                        margin + (8 + 1) * scale + screenWidth * scale * 0.5,
+                        margin + (8 + 3) * scale + (screenHeight - 1) * scale - 2 * scale * i,
+                    );
+                });
+                context.restore();
 
                 context.save();
                 context.globalCompositeOperation = 'screen';
@@ -212,7 +232,7 @@ export class SceneRenderer extends EventEmitter {
         window.addEventListener('resize', resize);
         resize();
 
-        function mouseEventToTile(event: MouseEvent) {
+        function mouseEventToTile(event: MouseEvent | Touch) {
             const [mx, my] = eventToElementPixel(event, renderer);
             const [sx, sy] = [mx - margin, my - margin];
             const inv = 1 / (8 * scale);
@@ -231,6 +251,24 @@ export class SceneRenderer extends EventEmitter {
 
         renderer.addEventListener('mouseleave', (event) => {
             this.emit('unhover', event);
+        });
+
+        renderer.addEventListener('touchstart', (event) => {
+            this.emit('click', event, mouseEventToTile(event.touches[0]));
+        });
+
+        let touchedTile: number[] | undefined;
+        renderer.addEventListener('touchmove', (event) => {
+            const [nx, ny] = mouseEventToTile(event.touches[0]);
+
+            if (!touchedTile || touchedTile[0] !== nx || touchedTile[1] !== ny) {
+                touchedTile = [nx, ny];
+                this.emit('click', event, [nx, ny]);
+            }
+        });
+
+        renderer.addEventListener('touchend', (event) => {
+            touchedTile = undefined;
         });
     }
 }

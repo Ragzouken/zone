@@ -17,6 +17,7 @@ export type Media = {
     source: string;
     subtitle?: string;
     thumbnail?: string;
+    shortcut?: string;
 };
 
 export type UserEcho = UserState & {

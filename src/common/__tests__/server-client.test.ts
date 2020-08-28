@@ -518,6 +518,7 @@ describe('media sources', () => {
         });
     });
 
+    /*
     test('can search youtube', async () => {
         await zoneServer({}, async (server) => {
             const client = await server.client();
@@ -525,6 +526,7 @@ describe('media sources', () => {
             await client.search('hello');
         });
     });
+    */
 
     test('can lucky search youtube', async () => {
         await zoneServer({}, async (server) => {

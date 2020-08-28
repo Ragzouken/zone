@@ -58,19 +58,22 @@ html, body {
 }
 
 @media (max-width: 1024px) {
+    :root {
+        --mobile: 1;
+    }
+
     #sidebar {
         z-index: 1;
         position: absolute;
 
         background: none;
-        height: unset;
+        height: 100vh;
 
         pointer-events: none;
     }
 
     #menu-tabs { pointer-events: initial; }
     #panel-container { pointer-events: initial; }
-    #chat-canvas { display: none; }
 }
 
 html {
@@ -124,10 +127,12 @@ input[type="text"]:focus {
 }
 
 #panel-container {
-    max-width: 512px;
-    max-width: 100%;
+    width: 100%;
 
     pointer-events: all;
+
+    display: flex;
+    align-items: flex-end;
 }
 
 .toolbar {
@@ -137,10 +142,9 @@ input[type="text"]:focus {
     flex-wrap: nowrap;
 
     background: black;
-}
 
-.toolbar > *:last-child {
-    margin-right: 16px;
+    padding: 8px;
+    gap: 8px;
 }
 
 .toolbar > button {
@@ -160,16 +164,6 @@ button > img {
     width: 100%; height: 100%;
 }
 
-#top-toolbar {
-    top: 0;
-}
-
-.toolbar > button {
-    margin-left: var(--toolbar-gap); 
-    margin-top: var(--toolbar-gap);
-    margin-bottom: var(--toolbar-gap);
-}
-
 #tooltip {
     position: absolute;
     transform: translate(-50%, 24px);
@@ -184,11 +178,6 @@ button > img {
 
 button.active {
     filter: invert();
-}
-
-.menu-panel {
-    display: flex;
-    flex-direction: column;
 }
 
 .menu-title {
@@ -214,11 +203,7 @@ button.active {
     background: rgb(0 21 51);
 }
 
-#emotes-panel, #blocks-panel, #view-panel, #avatar-panel {
-    width: unset;
-}
-
-.icon-button-small {
+.icon-button {
     width: 24px;
     height: 24px;
     flex: 0;
@@ -229,7 +214,7 @@ button.active {
     border-color: var(--button-color);
 }
 
-.icon-button-small > img {
+.icon-button > img {
     width: 16px; height: 16px;
 }
 
@@ -284,26 +269,6 @@ html, body {
     flex: 1;
 }
 
-#chat-canvas2 {
-    width: 512px;
-    height: 512px;
-    max-width: 100%;
-}
-
-#chat-canvas {
-    width: 512px;
-    height: 512px;
-    max-width: 100%;
-
-    pointer-events: none;
-}
-
-#chat-canvas.open {
-    pointer-events: initial;
-    cursor: pointer;
-    display: none;
-}
-
 #user-panel {
     max-height: 480px;
 }
@@ -314,33 +279,6 @@ html, body {
 
 #entry-users {
     margin: 1em;
-}
-
-.user-container {
-    display: flex;
-    flex-wrap: wrap;
-    flex: 1;
-
-    align-items: center;
-    align-content: center;
-    justify-content: space-evenly;
-    gap: 16px 32px;
-}
-
-.user-container > div {
-    display: flex;
-    flex-direction: row;
-}
-
-.user-container > div > canvas {
-    width: 24px;
-    height: 24px;
-    margin-right: 9px;
-}
-
-.user-container > div > div {
-    white-space: nowrap;
-    overflow-x: hidden;
 }
 
 .user-dj {

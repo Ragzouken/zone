@@ -454,27 +454,13 @@ export async function load() {
 
     document.getElementById('play-banger')?.addEventListener('click', () => client.messaging.send('banger', {}));
 
-    let fullChat = false;
-
     const menu = menusFromDataAttributes(document.documentElement);
     menu.on('show:avatar', openAvatarEditor);
-    menu.on('show:playback/queue', refreshQueue);
+    menu.on('show:playback/playlist', refreshQueue);
     menu.on('show:playback/search', () => {
         searchInput.value = '';
         searchInput.focus();
         searchResults.innerHTML = '';
-    });
-
-    menu.on('show:social/chat', () => {
-        fullChat = true;
-        chatInput.focus();
-        chatContext.canvas.classList.toggle('open', true);
-    });
-
-    menu.on('hide:social/chat', () => {
-        fullChat = false;
-        chatInput.blur();
-        chatContext.canvas.classList.toggle('open', false);
     });
 
     const avatarPanel = document.querySelector('#avatar-panel') as HTMLElement;
@@ -625,12 +611,13 @@ export async function load() {
 
     const gameKeys = new Map<string, () => void>();
     gameKeys.set('Tab', () => {
-        const socialToggle = menu.tabToggles.get('social')!;
-        const chatToggle = menu.tabToggles.get('social/chat')!;
+        const typing = document.activeElement === chatInput;
 
-        if (chatToggle.classList.contains('active') && socialToggle.classList.contains('active'))
-            menu.closeChildren('');
-        else menu.open('social/chat');
+        if (typing) {
+            chatInput.blur();
+        } else {
+            chatInput.focus();
+        }
     });
     gameKeys.set('1', () => toggleEmote('wvy'));
     gameKeys.set('2', () => toggleEmote('shk'));
@@ -649,6 +636,8 @@ export async function load() {
     gameKeys.set('u', () => toggleMenuPath('social/users'));
     gameKeys.set('s', () => toggleMenuPath('playback/search'));
     gameKeys.set('q', () => toggleMenuPath('playback/playlist'));
+    gameKeys.set('w', () => toggleMenuPath('social'));
+    gameKeys.set('e', () => toggleMenuPath('avatar'));
 
     function sendChat() {
         const line = chatInput.value;
@@ -695,21 +684,27 @@ export async function load() {
         }
     });
 
-    const chatContext = document.querySelector<HTMLCanvasElement>('#chat-canvas')!.getContext('2d')!;
     const chatContext2 = document.querySelector<HTMLCanvasElement>('#chat-canvas2')!.getContext('2d')!;
-    chatContext.imageSmoothingEnabled = false;
     chatContext2.imageSmoothingEnabled = false;
 
+    function clearContext(context: CanvasRenderingContext2D) {
+        context.clearRect(0, 0, context.canvas.width, context.canvas.height);
+    }
+
     function redraw() {
-        refreshCurrentItem();
-        chatContext.clearRect(0, 0, 512, 512);
-        chatContext2.clearRect(0, 0, 512, 512);
-
-        chat.render(fullChat);
-        chatContext.drawImage(chat.context.canvas, 0, 0, 512, 512);
-        chatContext2.drawImage(chat.context.canvas, 0, 0, 512, 512);
-
         window.requestAnimationFrame(redraw);
+
+        refreshCurrentItem();
+        clearContext(chatContext2);
+
+        const height = chatContext2.canvas.clientHeight;
+        chatContext2.canvas.height = height;
+        chatContext2.imageSmoothingEnabled = false;
+        chat.height = Math.ceil(height / 2);
+        if (chat.height === 0) return;
+        const mobile = window.getComputedStyle(document.documentElement).getPropertyValue('--mobile').trim() === '1';
+        chat.render(!mobile);
+        chatContext2.drawImage(chat.context.canvas, 0, 0, 512, chat.height * 2);
     }
 
     redraw();
@@ -727,7 +722,7 @@ export async function load() {
         return player.status !== 'playing' ? player.status : undefined;
     }
 
-    const sceneRenderer = new SceneRenderer(client, client.zone, getTile, connecting, getStatus);
+    const sceneRenderer = new SceneRenderer(client, client.zone, getTile, connecting, getStatus, player);
 
     function renderScene() {
         requestAnimationFrame(renderScene);
@@ -749,7 +744,7 @@ export async function load() {
 
         if (echoes.length > 0) {
             chat.log(`{clr=#808080}"${parseFakedown(echoes[0].text)}"`);
-        } else {
+        } else if (tx >= 0 && tz >= 0 && tx < 16 && tz < 16) {
             moveTo(tx, 0, tz);
         }
     });

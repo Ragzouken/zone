@@ -1,5 +1,4 @@
 import { EventEmitter } from 'events';
-import { timeStamp } from 'console';
 
 export class Menu extends EventEmitter {
     paths = new Set<string>();
