@@ -208,8 +208,15 @@ export async function load() {
     
     function saveToAvatarSlot(name: string, data: string) {
         const canvas = getTile(data).canvas;
-        avatarSlots.get(name)!.drawImage(canvas, 0, 0);
-        avatarToggles.get(name)!.drawImage(canvas, 0, 0);
+
+        const slot = avatarSlots.get(name)!;
+        slot.clearRect(0, 0, 8, 8);
+        slot.drawImage(canvas, 0, 0);
+
+        const toggle = avatarToggles.get(name)!;
+        toggle.clearRect(0, 0, 8, 8);
+        toggle.drawImage(canvas, 0, 0);
+        
         localStorage.setItem(name, data);
         setActiveAvatarSlot(name);
     }
