@@ -9,8 +9,9 @@ import { Player } from './player';
 import { UserState } from '../common/zone';
 import { HTMLUI } from './html-ui';
 import { createContext2D } from 'blitsy';
-import { menusFromDataAttributes } from './menus';
+import { menusFromDataAttributes, indexByDataAttribute } from './menus';
 import { SceneRenderer, avatarImage } from './scene';
+import { Context } from 'vm';
 
 window.addEventListener('load', () => load());
 
@@ -77,6 +78,14 @@ function moveTo(x: number, y: number, z: number) {
     client.move(user.position);
 }
 
+const avatarSlots = new Map<string, CanvasRenderingContext2D>();
+const avatarToggles = new Map<string, CanvasRenderingContext2D>();
+let activeAvatarSlot = '';
+
+function getInitialAvatar() {
+    return localStorage.getItem(localStorage.getItem('avatar-slot-active') || '');
+}
+
 const emoteToggles = new Map<string, Element>();
 const getEmote = (emote: string) => emoteToggles.get(emote)?.classList.contains('active');
 
@@ -112,7 +121,7 @@ async function connect(): Promise<void> {
 
     try {
         const assign = await client.join({ name: localName, password: joinPassword });
-        const data = localStorage.getItem('avatar');
+        const data = getInitialAvatar();
         if (data) client.avatar(data);
     } catch (e) {
         chat.error(`assignment failed (${e})`);
@@ -159,6 +168,47 @@ function textToYoutubeVideoId(text: string) {
 export async function load() {
     htmlui.addElementsInRoot(document.body);
     htmlui.hideAllWindows();
+
+    function setActiveAvatarSlot(active: string) {
+        activeAvatarSlot = active;
+        
+        avatarToggles.forEach((context, name) => {
+            context.canvas.classList.toggle('active', name === active);
+            if (name === active) {
+                avatarContext.clearRect(0, 0, 8, 8);
+                avatarContext.drawImage(context.canvas, 0, 0);
+                client.avatar(blitsy.encodeTexture(context, 'M1').data).catch(() => {});
+            }
+        });
+
+        localStorage.setItem('avatar-slot-active', activeAvatarSlot);
+    }
+    
+    function setupAvatarSlots() {
+        const toggles = indexByDataAttribute(document.body, "data-avatar-slot");
+        toggles.forEach((element, name) => {
+            const iconCanvas = element as HTMLCanvasElement;
+            const iconContext = iconCanvas.getContext('2d')!;
+            avatarToggles.set(name, iconContext);
+            element.addEventListener('click', () => setActiveAvatarSlot(name));
+    
+            const context = createContext2D(8, 8);
+            const existing = getTile(localStorage.getItem(name) || localStorage.getItem('avatar') || undefined);
+            context.drawImage(existing.canvas, 0, 0);
+            iconContext.drawImage(existing.canvas, 0, 0);
+            avatarSlots.set(name, context);
+        });
+    
+        setActiveAvatarSlot(localStorage.getItem('avatar-slot-active') || 'a');
+    }
+    
+    function saveToAvatarSlot(name: string, data: string) {
+        const canvas = getTile(data).canvas;
+        avatarSlots.get(name)!.drawImage(canvas, 0, 0);
+        avatarToggles.get(name)!.drawImage(canvas, 0, 0);
+        localStorage.setItem(name, data);
+        setActiveAvatarSlot(name);
+    }
 
     function mobileHeightFix() {
         const vh = window.innerHeight / 100;
@@ -478,10 +528,11 @@ export async function load() {
 
     function openAvatarEditor() {
         avatarName.value = getLocalUser()?.name || '';
+        /*
         const avatar = getTile(getLocalUser()!.avatar) || avatarImage;
         avatarContext.clearRect(0, 0, 8, 8);
         avatarContext.drawImage(avatar.canvas, 0, 0);
-        avatarPanel.hidden = false;
+        */
     }
 
     let painting = false;
@@ -490,6 +541,8 @@ export async function load() {
     function paint(px: number, py: number) {
         withPixels(avatarContext, (pixels) => (pixels[py * 8 + px] = erase ? 0 : 0xffffffff));
     }
+
+    setupAvatarSlots();
 
     window.addEventListener('pointerup', (event) => {
         if (painting) {
@@ -525,7 +578,8 @@ export async function load() {
 
     avatarUpdate.addEventListener('click', () => {
         if (avatarName.value !== getLocalUser()?.name) rename(avatarName.value);
-        client.avatar(blitsy.encodeTexture(avatarContext, 'M1').data);
+        const data = blitsy.encodeTexture(avatarContext, 'M1').data;
+        saveToAvatarSlot(activeAvatarSlot, data);
     });
 
     let lastSearchResults: YoutubeVideo[] = [];

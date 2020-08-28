@@ -4,6 +4,8 @@ input[type="submit"], button { cursor: pointer; }
 .spacer { flex: 1; }
 
 :root {
+    --bitsy-blue: #0052cc;
+
     --button-color: #0052cc;
     --disable-color: #888888;
     --ascii-small: 'ascii_small_simple', monospace;
@@ -253,15 +255,6 @@ button.active {
     flex-direction: column;
 }
 
-#avatar-panel {
-    align-items: center;
-}
-
-#avatar-panel > .controls {
-    display: flex;
-    flex: 1;
-}
-
 .spacer {
     flex: 1;
 }
@@ -296,12 +289,6 @@ button.active {
 
 .controls > button:not(:first-child) {
     margin-left: 8px;
-}
-
-#avatar-paint {
-    width: 320px; height: 320px;
-    background-color: var(--button-color);
-    margin: auto;
 }
 
 .player {
