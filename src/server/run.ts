@@ -15,11 +15,10 @@ import { YoutubeService, search } from './youtube';
 import * as expressFileUpload from 'express-fileupload';
 import { isArray } from 'util';
 import { nanoid } from 'nanoid';
-import { env } from 'process';
 import { F_OK } from 'constants';
 
-const ffprobe = require('ffprobe');
-const ffprobeStatic = require('ffprobe-static');
+import ffprobe = require('ffprobe');
+import ffprobeStatic = require('ffprobe-static');
 
 process.on('uncaughtException', (err) => console.log('uncaught exception:', err, err.stack));
 process.on('unhandledRejection', (err) => console.log('uncaught reject:', err));
@@ -78,11 +77,13 @@ async function run() {
     authCommands.set('refresh-videos', refreshLocalVideos);
     authCommands.set('relisten', relisten);
 
-    app.use(expressFileUpload({
-        abortOnLimit: true,
-        uriDecodeFileNames: true,
-        limits: { fileSize: 16 * 1024 * 1024 },
-    }));
+    app.use(
+        expressFileUpload({
+            abortOnLimit: true,
+            uriDecodeFileNames: true,
+            limits: { fileSize: 16 * 1024 * 1024 },
+        }),
+    );
 
     // trust glitch's proxy to give us socket ips
     app.set('trust proxy', true);
@@ -141,10 +142,10 @@ async function run() {
     app.use('/uploads', express.static('uploads'));
     app.post('/upload', async (req, res) => {
         if (!process.env.UPLOAD_PASSWORD || req.body.password !== process.env.UPLOAD_PASSWORD) {
-            res.status(400).send("WRONG PASSWORD");
+            res.status(400).send('WRONG PASSWORD');
         } else if (req.files && req.files.file) {
             if (isArray(req.files.file)) {
-                res.status(400).send("ONE FILE ONLY PLEASE");
+                res.status(400).send('ONE FILE ONLY PLEASE');
             } else {
                 try {
                     const shortcut: string = req.body.shortcut;
@@ -158,22 +159,22 @@ async function run() {
 
                     const media = {
                         title,
-                        duration: await getDurationInSeconds(filepath) * 1000,
+                        duration: (await getDurationInSeconds(filepath)) * 1000,
                         source: filepath,
                         shortcut,
-                    }
+                    };
 
                     localLibrary.set(shortcut, media);
                     writeFile(path.join('uploads', id + '.json'), JSON.stringify(media), () => {});
 
                     res.status(201).send(`THANKS, play with /local ${shortcut}`);
-                } catch(e) {
-                    console.log("UPLOAD ERROR", e);
-                    res.status(500).send("UPLOAD ERROR, ASK CANDLE");
+                } catch (e) {
+                    console.log('UPLOAD ERROR', e);
+                    res.status(500).send('UPLOAD ERROR, ASK CANDLE');
                 }
             }
         } else {
-            res.status(400).send("NO FILE?");
+            res.status(400).send('NO FILE?');
         }
     });
 
@@ -203,13 +204,13 @@ async function run() {
             try {
                 media = await fs.readFile(mediaPath, 'UTF8').then((data) => JSON.parse(data as string) as Media);
             } catch (e) {
-                const duration = await getDurationInSeconds(path) * 1000;
+                const duration = (await getDurationInSeconds(path)) * 1000;
                 media = { title: parsed.name, duration, source: path };
             }
 
             if (!media.subtitle) {
                 fs.access(subtitlePath, F_OK).then(
-                    () => media.subtitle = subtitlePath,
+                    () => (media.subtitle = subtitlePath),
                     () => {},
                 );
             }

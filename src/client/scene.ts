@@ -99,7 +99,7 @@ export class SceneRenderer extends EventEmitter {
 
         let subtitles: string[] = [];
         player.on('subtitles', (lines) => {
-            subtitles = lines.slice().join("\n").split("\n").reverse();
+            subtitles = lines.slice().join('\n').split('\n').reverse();
         });
 
         const render = () => {
@@ -154,8 +154,8 @@ export class SceneRenderer extends EventEmitter {
                 subtitles.forEach((line, i) => {
                     context.fillText(
                         line,
-                        margin + (8 + 1) * scale + screenWidth * scale * .5,
-                        margin + (8 + 3) * scale + (screenHeight - 1) * scale - (2 * scale * i),
+                        margin + (8 + 1) * scale + screenWidth * scale * 0.5,
+                        margin + (8 + 3) * scale + (screenHeight - 1) * scale - 2 * scale * i,
                     );
                 });
                 context.restore();

@@ -137,7 +137,7 @@ export class Player extends EventEmitter {
         this.subtrack.label = 'english';
         this.subtrack.src = this.item.media.subtitle;
         this.element.appendChild(this.subtrack);
-        this.element.textTracks[0].mode = "showing";
+        this.element.textTracks[0].mode = 'showing';
 
         this.subtrack.addEventListener('cuechange', (event) => {
             if (!this.subtrack) return;
