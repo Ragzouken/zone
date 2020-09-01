@@ -8,6 +8,9 @@ import path = require('path');
 import * as glob from 'glob';
 import { Media, MediaMeta } from '../common/zone';
 import { timeToSeconds } from '../common/utility';
+import { performance } from 'perf_hooks';
+
+const INFO_LIFESPAN = 8 * 60 * 60 * 1000;
 
 export type YoutubeVideo = MediaMeta & { videoId: string };
 
@@ -44,6 +47,8 @@ export class YoutubeService extends EventEmitter {
     private downloadInfos = new Map<string, Promise<ytdl.videoInfo>>();
     private downloadPaths = new Map<string, string>();
     private downloadQueue: string[] = [];
+
+    private downloadInfoExpiries = new Map<string, number>();
 
     private downloading?: string;
 
@@ -137,6 +142,15 @@ export class YoutubeService extends EventEmitter {
     }
 
     private async getVideoInfo(videoId: string): Promise<ytdl.videoInfo | undefined> {
+        const expiry = this.downloadInfoExpiries.get(videoId);
+
+        if (expiry && expiry > performance.now()) {
+            this.downloadInfoExpiries.delete(videoId);
+            this.downloadInfos.delete(videoId);
+        } else if (!expiry) {
+            this.downloadInfoExpiries.set(videoId, performance.now() + INFO_LIFESPAN);
+        }
+
         const promise = this.downloadInfos.get(videoId) || ytdl.getInfo(videoId);
         this.downloadInfos.set(videoId, promise);
 
