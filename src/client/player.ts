@@ -36,6 +36,7 @@ export class Player extends EventEmitter {
         this.subtrack = document.createElement('track');
 
         let lastUnstall = performance.now();
+        let stallTimeout = STALL_TIMEOUT;
         setInterval(() => {
             if (!this.startedPlaying) return;
 
@@ -43,8 +44,9 @@ export class Player extends EventEmitter {
 
             if (state >= HTMLMediaElement.HAVE_FUTURE_DATA) {
                 lastUnstall = performance.now();
-            } else if (state >= HTMLMediaElement.HAVE_METADATA && performance.now() - lastUnstall > STALL_TIMEOUT) {
+            } else if (state >= HTMLMediaElement.HAVE_METADATA && performance.now() - lastUnstall > stallTimeout) {
                 this.forceRetry('stalling');
+                stallTimeout += STALL_TIMEOUT;
             }
         }, 100);
     }
