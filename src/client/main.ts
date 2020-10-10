@@ -734,6 +734,7 @@ export async function load() {
     renderScene();
 
     const tooltip = document.getElementById('tooltip')!;
+    tooltip.hidden = true;
 
     sceneRenderer.on('click', (event, [tx, tz]) => {
         const objectCoords = `${tx},0,${tz}`;
