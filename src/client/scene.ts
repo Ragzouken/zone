@@ -220,7 +220,7 @@ export class SceneRenderer extends EventEmitter {
             const outer = Math.max(width, height);
             const natural = image.naturalWidth;
 
-            scale = Math.floor(inner / natural);
+            scale = Math.max(1, Math.floor(inner / natural));
             const frame = natural * scale;
             margin = Math.ceil((outer - frame) / 2);
 
