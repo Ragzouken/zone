@@ -15,22 +15,9 @@ html
                 #tooltip
                 canvas#renderer
             #sidebar
-                #menu-tabs.toolbar
-                    button(title="show playback panel (q)" data-tab-toggle="playback")
-                        img(src="icons/music.png")      
-                    button(title="show zonies (w)" data-tab-toggle="social")
-                        img(src="icons/users.png")           
-                    button#avatar-button(title="change appearance (e)" data-tab-toggle="avatar")
-                        img(src="icons/avatar.png")
-                    .spacer
-                    button(title="toggle float emote (1)", data-emote-toggle="wvy")
-                        img(src="icons/wvy.png")
-                    button(title="toggle shake emote (2)", data-emote-toggle="shk")
-                        img(src="icons/shk.png")
-                    button(title="toggle rave emote (3)", data-emote-toggle="rbw")
-                        img(src="icons/rbw.png")
-                    button(title="toggle spin emote (4)", data-emote-toggle="spn")
-                        img(src="icons/spn.png")
+                #chat-panel
+                    canvas#chat-canvas2(width=512, height=512)
+                    input#chat-input(type="text" placeholder="chat message..." maxlength="160" autocomplete="off")
                 #panel-container
                     #social-panel.menu-panel(data-window data-tab-body="social")
                         .menu-panel-tab-body-container
@@ -94,9 +81,23 @@ html
                                 .button-row
                                     input#avatar-name(type="text", maxlength="16")
                                     button#avatar-update update
-                #chat-panel
-                    canvas#chat-canvas2(width=512, height=512)
-                    input#chat-input(type="text" placeholder="chat message..." maxlength="160" autocomplete="off")
+                #menu-tabs.toolbar
+                    button(title="show playback panel (q)" data-tab-toggle="playback")
+                        img(src="icons/music.png")      
+                    button(title="show zonies (w)" data-tab-toggle="social")
+                        img(src="icons/users.png")           
+                    button#avatar-button(title="change appearance (e)" data-tab-toggle="avatar")
+                        img(src="icons/avatar.png")
+                    .spacer
+                    button(title="toggle float emote (1)", data-emote-toggle="wvy")
+                        img(src="icons/wvy.png")
+                    button(title="toggle shake emote (2)", data-emote-toggle="shk")
+                        img(src="icons/shk.png")
+                    button(title="toggle rave emote (3)", data-emote-toggle="rbw")
+                        img(src="icons/rbw.png")
+                    button(title="toggle spin emote (4)", data-emote-toggle="spn")
+                        img(src="icons/spn.png")
+
         #popout-panel.menu-panel(data-window)
             .menu-title(data-window-drag)
                 div video pop-out

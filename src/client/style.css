@@ -41,7 +41,8 @@ html, body {
     background: rgb(0 0 0 / 100%);
 
     display: flex;
-    flex-direction: column-reverse;
+    flex-direction: column;
+    justify-content: flex-end;
 }
 
 #scene {

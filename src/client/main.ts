@@ -610,15 +610,6 @@ export async function load() {
     }
 
     const gameKeys = new Map<string, () => void>();
-    gameKeys.set('Tab', () => {
-        const typing = document.activeElement === chatInput;
-
-        if (typing) {
-            chatInput.blur();
-        } else {
-            chatInput.focus();
-        }
-    });
     gameKeys.set('1', () => toggleEmote('wvy'));
     gameKeys.set('2', () => toggleEmote('shk'));
     gameKeys.set('3', () => toggleEmote('rbw'));
