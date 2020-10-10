@@ -36,12 +36,12 @@ html
                                     button#event-mode-off event mode off
                                     button#refresh-library refresh library
                     #playback-panel.menu-panel(data-window data-tab-body="playback")
-                        .menu-panel-tab-toggle-container
-                            .menu-panel-tab-toggle.active(data-tab-toggle="playback/search") search
-                            .menu-panel-tab-toggle(data-tab-toggle="playback/playlist") playlist
-                            .menu-panel-tab-toggle(data-tab-toggle="playback/player") player
+                        .menu-panel-tab-toggle-container(role="tablist")
+                            button.menu-panel-tab-toggle.active(role="tab" data-tab-toggle="playback/search") search
+                            button.menu-panel-tab-toggle(role="tab" data-tab-toggle="playback/playlist") playlist
+                            button.menu-panel-tab-toggle(role="tab" data-tab-toggle="playback/player") player
                         .menu-panel-tab-body-container
-                            .menu-panel-tab-body(data-tab-body="playback/search")
+                            .menu-panel-tab-body(role="tabpanel" data-tab-body="playback/search")
                                 #search-results
                                     #search-result-template.search-result
                                         div title
@@ -49,7 +49,7 @@ html
                                 form#search-form
                                     input#search-input(placeholder="search for a video" type="text" autocomplete="off")
                                     input#search-submit(type="submit" value="search" disabled)
-                            .menu-panel-tab-body(data-tab-body="playback/playlist" hidden)
+                            .menu-panel-tab-body(role="tabpanel" data-tab-body="playback/playlist" hidden)
                                 #queue-title
                                 .queue-item#current-item
                                     .queue-item-title#current-item-title title
@@ -65,7 +65,7 @@ html
                                 .button-rows
                                     .button-row
                                         button#play-banger(title="queue random song", type="button") queue random song
-                            .menu-panel-tab-body.button-rows(data-tab-body="playback/player" hidden)
+                            .menu-panel-tab-body.button-rows(role="tabpanel" data-tab-body="playback/player" hidden)
                                 .button-row
                                     label(for="volume-slider") volume
                                     input#volume-slider(type="range", min="0", max="1", step=".01")
@@ -74,9 +74,9 @@ html
                                     button#resync-button resync video
                     #avatar-panel.menu-panel(data-window data-tab-body="avatar")
                         .menu-panel-tab-toggle-container
-                            .menu-panel-tab-toggle.active(data-tab-toggle="avatar/appearance") appearance
+                            button.menu-panel-tab-toggle.active(role="tab" data-tab-toggle="avatar/appearance") appearance
                         .menu-panel-tab-body-container
-                            .menu-panel-tab-body(data-tab-body="avatar/appearance")
+                            .menu-panel-tab-body(role="tabpanel" data-tab-body="avatar/appearance")
                                 canvas#avatar-paint(width=8, height=8)
                                 .button-row
                                     input#avatar-name(type="text", maxlength="16")

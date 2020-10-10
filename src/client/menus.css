@@ -21,12 +21,11 @@
 
 .menu-panel-tab-toggle {
     flex: 1;
-    display: flex;
-    align-items: center;
-    justify-content: center;
 
     background: var(--tab-toggle-background);
     cursor: pointer;
+    border: none;
+    color: unset;
 }
 
 .menu-panel-tab-toggle.active {
