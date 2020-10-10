@@ -36,10 +36,6 @@ html
                                     button#event-mode-off event mode off
                                     button#refresh-library refresh library
                     #playback-panel.menu-panel(data-window data-tab-body="playback")
-                        .menu-panel-tab-toggle-container(role="tablist")
-                            button.menu-panel-tab-toggle.active(role="tab" data-tab-toggle="playback/search") search
-                            button.menu-panel-tab-toggle(role="tab" data-tab-toggle="playback/playlist") playlist
-                            button.menu-panel-tab-toggle(role="tab" data-tab-toggle="playback/player") player
                         .menu-panel-tab-body-container
                             .menu-panel-tab-body(role="tabpanel" data-tab-body="playback/search")
                                 #search-results
@@ -72,15 +68,19 @@ html
                                 .button-row
                                     button#popout-button pop out video
                                     button#resync-button resync video
+                        .menu-panel-tab-toggle-container(role="tablist")
+                            button.menu-panel-tab-toggle.active(role="tab" data-tab-toggle="playback/search") search
+                            button.menu-panel-tab-toggle(role="tab" data-tab-toggle="playback/playlist") playlist
+                            button.menu-panel-tab-toggle(role="tab" data-tab-toggle="playback/player") player
                     #avatar-panel.menu-panel(data-window data-tab-body="avatar")
-                        .menu-panel-tab-toggle-container
-                            button.menu-panel-tab-toggle.active(role="tab" data-tab-toggle="avatar/appearance") appearance
                         .menu-panel-tab-body-container
                             .menu-panel-tab-body(role="tabpanel" data-tab-body="avatar/appearance")
                                 canvas#avatar-paint(width=8, height=8)
                                 .button-row
                                     input#avatar-name(type="text", maxlength="16")
                                     button#avatar-update update
+                        .menu-panel-tab-toggle-container
+                            button.menu-panel-tab-toggle.active(role="tab" data-tab-toggle="avatar/appearance") appearance
                 #menu-tabs.toolbar
                     button(title="show playback panel (q)" data-tab-toggle="playback")
                         img(src="icons/music.png")      
