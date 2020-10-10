@@ -784,6 +784,7 @@ function createAvatarElement(avatar: string) {
 }
 
 function setupEntrySplash() {
+    const zone = document.getElementById('zone') as HTMLElement;
     const nameInput = document.querySelector('#join-name') as HTMLInputElement;
     const entrySplash = document.getElementById('entry-splash') as HTMLElement;
     const entryUsers = document.getElementById('entry-users') as HTMLParagraphElement;
@@ -820,11 +821,14 @@ function setupEntrySplash() {
 
     entryButton.disabled = !entryForm.checkValidity();
     nameInput.addEventListener('input', () => (entryButton.disabled = !entryForm.checkValidity()));
+    zone.hidden = true;
 
     entryForm.addEventListener('submit', async (event) => {
         event.preventDefault();
         (document.getElementById('entry-sound') as HTMLAudioElement).play();
         entrySplash.hidden = true;
+        zone.hidden = false;
+        window.dispatchEvent(new Event('resize')); // trigger a resize to update renderer
         localName = nameInput.value;
         localStorage.setItem('name', localName);
         await connect();
