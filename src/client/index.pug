@@ -11,6 +11,9 @@ html
         script(src="script.js")
     body
         #zone
+            #scene
+                #tooltip
+                canvas#renderer
             #sidebar
                 #menu-tabs.toolbar
                     button(title="show playback panel (q)" data-tab-toggle="playback")
@@ -94,9 +97,6 @@ html
                 #chat-panel
                     canvas#chat-canvas2(width=512, height=512)
                     input#chat-input(type="text" placeholder="chat message..." maxlength="160" autocomplete="off")
-            #scene
-                #tooltip
-                canvas#renderer
         #popout-panel.menu-panel(data-window)
             .menu-title(data-window-drag)
                 div video pop-out
