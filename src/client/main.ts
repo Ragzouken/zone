@@ -440,6 +440,13 @@ export async function load() {
         if (user.position) {
             const [px, py, pz] = user.position;
             moveTo(px + dx, py, pz + dz);
+
+            // HACK: when moving, focus + blur chat canvas so that next tab press will take you to the chat input
+            const el = chatInput.previousElementSibling as HTMLCanvasElement;
+            el.tabIndex = 0;
+            el.focus();
+            el.blur();
+            el.tabIndex = -1;
         }
     }
 
