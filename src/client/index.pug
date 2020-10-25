@@ -47,11 +47,11 @@ html
                                     button#refresh-library refresh library
                     #playback-panel.menu-panel(data-window data-tab-body="playback")
                         .menu-panel-tab-toggle-container
-                            .menu-panel-tab-toggle.active(data-tab-toggle="playback/search") search
-                            .menu-panel-tab-toggle(data-tab-toggle="playback/playlist") playlist
+                            .menu-panel-tab-toggle(data-tab-toggle="playback/search" hidden) search
+                            .menu-panel-tab-toggle.active(data-tab-toggle="playback/playlist") playlist
                             .menu-panel-tab-toggle(data-tab-toggle="playback/player") player
                         .menu-panel-tab-body-container
-                            .menu-panel-tab-body(data-tab-body="playback/search")
+                            .menu-panel-tab-body(data-tab-body="playback/search" hidden)
                                 #search-results
                                     #search-result-template.search-result
                                         div title
@@ -59,7 +59,7 @@ html
                                 form#search-form
                                     input#search-input(placeholder="search for a video" type="text" autocomplete="off")
                                     input#search-submit(type="submit" value="search" disabled)
-                            .menu-panel-tab-body(data-tab-body="playback/playlist" hidden)
+                            .menu-panel-tab-body(data-tab-body="playback/playlist")
                                 #queue-title
                                 .queue-item#current-item
                                     .queue-item-title#current-item-title title
