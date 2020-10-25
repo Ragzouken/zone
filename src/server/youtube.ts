@@ -16,8 +16,8 @@ export type YoutubeVideo = MediaMeta & { videoId: string };
 
 export async function search(query: string): Promise<YoutubeVideo[]> {
     const results = await ytsr(query, { limit: 15 });
-    const videos = results.items.filter((item) => item.type === 'video' && !(item as any).live).slice(0, 5);
-    return videos.map((item) => {
+    const videos = results.items.filter((item) => item.type === 'video' && !(item as any).live && item.duration).slice(0, 5);
+    return videos.map((item: any) => {
         const videoId = ytdl.getVideoID(item.link);
         const duration = timeToSeconds(item.duration) * 1000;
         const title = item.title;
