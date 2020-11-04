@@ -169,7 +169,7 @@ export class YoutubeService extends EventEmitter {
             return ytdl.chooseFormat(videoInfo.formats, this.options.downloadOptions);
         } catch (e) {
             const names = videoInfo.formats.map((format) => format.itag).join(', ');
-            console.log(`NO FORMAT FOR ${videoInfo.video_id} FROM ${names}`);
+            console.log(`NO FORMAT FOR ${videoInfo.videoDetails.videoId} FROM ${names}`);
             return undefined;
         }
     }
