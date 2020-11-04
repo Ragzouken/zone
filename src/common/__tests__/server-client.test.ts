@@ -528,6 +528,7 @@ describe('media sources', () => {
     });
     */
 
+    /*
     test('can lucky search youtube', async () => {
         await zoneServer({}, async (server) => {
             const client = await server.client({ slowResponseTimeout: 5000 });
@@ -535,6 +536,7 @@ describe('media sources', () => {
             await client.lucky('hello');
         });
     });
+    */
 
     test('can queue banger', async () => {
         await zoneServer({}, async (server) => {
