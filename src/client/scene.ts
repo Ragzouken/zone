@@ -110,6 +110,8 @@ export class SceneRenderer extends EventEmitter {
             context.drawImage(image, inset, inset, 128 * scale, 128 * scale);
 
             context.save();
+            context.translate(margin, margin);
+            context.scale(scale, scale);
             this.zone.users.forEach((user) => drawAvatar(user));
             this.zone.echoes.forEach((echo) => drawAvatar(echo, true));
             context.restore();
@@ -197,19 +199,24 @@ export class SceneRenderer extends EventEmitter {
             }
 
             const spin = user.emotes && user.emotes.includes('spn');
-            const da = spin ? performance.now() / 150 - x : 0;
-            const sx = Math.cos(da);
-            const ox = (8 - sx * 8) / 2;
 
+            context.save();
             context.globalAlpha = echo ? 0.5 : 1;
+            context.translate(x * 8 + dx + 4, z * 8 + dy);
+            if (spin) {
+                const da = performance.now() / 150 - x;
+                const sx = Math.cos(da);
+                context.scale(sx, 1);
+            }
 
             context.drawImage(
                 tile,
-                margin + (x * 8 + ox + dx) * scale,
-                margin + (z * 8 + dy) * scale,
-                8 * scale * sx,
-                8 * scale,
+                -4,
+                0,
+                8,
+                8,
             );
+            context.restore();
         };
 
         function resize() {
