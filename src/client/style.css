@@ -4,6 +4,8 @@ input[type="submit"], button { cursor: pointer; }
 .spacer { flex: 1; }
 
 :root {
+    --bitsy-blue: #0052cc;
+
     --button-color: #0052cc;
     --disable-color: #888888;
     --ascii-small: 'ascii_small_simple', monospace;
@@ -23,6 +25,12 @@ html, body {
     margin: 0;
     padding: 0;
     overflow: hidden;
+
+    width: 100%;
+    height: calc(var(--vh, 1vh) * 100);
+    display: flex;
+    align-items: center;
+    justify-content: center;
 }
 
 #zone {
@@ -68,9 +76,9 @@ html, body {
         left: 0;
 
         background: none;
-        height: 100vh;
-
         pointer-events: none;
+
+        height: calc(var(--vh, 1vh) * 100);
     }
 
     #menu-tabs { pointer-events: initial; }
@@ -249,23 +257,6 @@ button > img {
     flex-direction: column;
 }
 
-#avatar-panel {
-    align-items: center;
-}
-
-#avatar-panel > .controls {
-    display: flex;
-    flex: 1;
-}
-
-html, body {
-    width: 100%;
-    height: 100%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-}
-
 .spacer {
     flex: 1;
 }
@@ -300,12 +291,6 @@ html, body {
 
 .controls > button:not(:first-child) {
     margin-left: 8px;
-}
-
-#avatar-paint {
-    width: 320px; height: 320px;
-    background-color: var(--button-color);
-    margin: auto;
 }
 
 .player {

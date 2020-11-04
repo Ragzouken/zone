@@ -37,7 +37,7 @@ html
                                     button#refresh-library refresh library
                     #playback-panel.menu-panel(data-window data-tab-body="playback")
                         .menu-panel-tab-body-container
-                            .menu-panel-tab-body(role="tabpanel" data-tab-body="playback/search")
+                            .menu-panel-tab-body(role="tabpanel" data-tab-body="playback/search" hidden)
                                 #search-results
                                     #search-result-template.search-result
                                         div title
@@ -75,7 +75,13 @@ html
                     #avatar-panel.menu-panel(data-window data-tab-body="avatar")
                         .menu-panel-tab-body-container
                             .menu-panel-tab-body(role="tabpanel" data-tab-body="avatar/appearance")
-                                canvas#avatar-paint(width=8, height=8)
+                                #avatar-paint-container
+                                    canvas#avatar-paint(width=8 height=8)
+                                    #avatar-slot-container
+                                        canvas.avatar-slot(width=8 height=8 data-avatar-slot="a")
+                                        canvas.avatar-slot(width=8 height=8 data-avatar-slot="b")
+                                        canvas.avatar-slot(width=8 height=8 data-avatar-slot="c")
+                                        canvas.avatar-slot(width=8 height=8 data-avatar-slot="d")
                                 .button-row
                                     input#avatar-name(type="text", maxlength="16")
                                     button#avatar-update update

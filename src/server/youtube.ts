@@ -8,13 +8,16 @@ import path = require('path');
 import * as glob from 'glob';
 import { Media, MediaMeta } from '../common/zone';
 import { timeToSeconds } from '../common/utility';
+import { performance } from 'perf_hooks';
+
+const INFO_LIFESPAN = 8 * 60 * 60 * 1000;
 
 export type YoutubeVideo = MediaMeta & { videoId: string };
 
 export async function search(query: string): Promise<YoutubeVideo[]> {
     const results = await ytsr(query, { limit: 15 });
-    const videos = results.items.filter((item) => item.type === 'video' && !(item as any).live).slice(0, 5);
-    return videos.map((item) => {
+    const videos = results.items.filter((item) => item.type === 'video' && !(item as any).live && item.duration).slice(0, 5);
+    return videos.map((item: any) => {
         const videoId = ytdl.getVideoID(item.link);
         const duration = timeToSeconds(item.duration) * 1000;
         const title = item.title;
@@ -44,6 +47,8 @@ export class YoutubeService extends EventEmitter {
     private downloadInfos = new Map<string, Promise<ytdl.videoInfo>>();
     private downloadPaths = new Map<string, string>();
     private downloadQueue: string[] = [];
+
+    private downloadInfoExpiries = new Map<string, number>();
 
     private downloading?: string;
 
@@ -137,6 +142,15 @@ export class YoutubeService extends EventEmitter {
     }
 
     private async getVideoInfo(videoId: string): Promise<ytdl.videoInfo | undefined> {
+        const expiry = this.downloadInfoExpiries.get(videoId);
+
+        if (expiry && expiry > performance.now()) {
+            this.downloadInfoExpiries.delete(videoId);
+            this.downloadInfos.delete(videoId);
+        } else if (!expiry) {
+            this.downloadInfoExpiries.set(videoId, performance.now() + INFO_LIFESPAN);
+        }
+
         const promise = this.downloadInfos.get(videoId) || ytdl.getInfo(videoId);
         this.downloadInfos.set(videoId, promise);
 
@@ -155,7 +169,7 @@ export class YoutubeService extends EventEmitter {
             return ytdl.chooseFormat(videoInfo.formats, this.options.downloadOptions);
         } catch (e) {
             const names = videoInfo.formats.map((format) => format.itag).join(', ');
-            console.log(`NO FORMAT FOR ${videoInfo.video_id} FROM ${names}`);
+            console.log(`NO FORMAT FOR ${videoInfo.videoDetails.videoId} FROM ${names}`);
             return undefined;
         }
     }
