@@ -95,7 +95,7 @@ function getPathParent(id: string) {
     return components.slice(0, -1).join('/');
 }
 
-function indexByDataAttribute(root: HTMLElement, attribute: string) {
+export function indexByDataAttribute(root: HTMLElement, attribute: string) {
     const index = new Map<string, HTMLElement>();
     root.querySelectorAll(`[${attribute}]`).forEach((element) => {
         const value = element.getAttribute(attribute);

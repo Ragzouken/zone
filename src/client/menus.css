@@ -121,6 +121,44 @@
     padding: 8px;
 }
 
+#avatar-paint-container {
+    display: flex;
+    flex-direction: row;
+    padding: 8px;
+    gap: 8px;
+    align-self: center;
+}
+
+#avatar-paint {
+    width: 320px; height: 320px;
+    background-color: var(--bitsy-blue);
+}
+
+#avatar-slot-container {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+}
+
+.avatar-slot {
+    width: 72px; height: 72px;
+    background-color: var(--bitsy-blue);
+}
+
+.avatar-slot.active {
+    filter: invert();
+}
+
+#avatar-panel {
+    align-items: center;
+}
+
+#avatar-panel > .controls {
+    display: flex;
+    flex: 1;
+}
+
 .button-row {
     display: flex;
     align-content: stretch;
