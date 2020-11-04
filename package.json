@@ -43,7 +43,7 @@
     "node-fetch": "^2.6.0",
     "request": "^2.88.2",
     "tmp": "^0.2.1",
-    "ytdl-core": "^3.4.2",
+    "ytdl-core": "^4.0.3",
     "ytpl": "^0.2.3",
     "ytsr": "git://github.com/skick1234/node-ytsr.git#v2"
   },
