@@ -97,7 +97,7 @@ async function run() {
         } else {
             search(query).then(
                 (results) => res.json(results),
-                (reason) => res.status(500).send('search failed'),
+                (reason) => res.status(500).send(`search failed ${reason}`),
             );
         }
     });
