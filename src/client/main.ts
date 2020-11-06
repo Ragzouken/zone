@@ -1,5 +1,5 @@
 import * as blitsy from 'blitsy';
-import { secondsToTime, fakedownToTag, eventToElementPixel, withPixels } from './utility';
+import { secondsToTime, fakedownToTag, eventToElementPixel, withPixels, escapeHtml } from './utility';
 import { sleep } from '../common/utility';
 import { ChatPanel } from './chat';
 
@@ -268,13 +268,15 @@ export async function load() {
     const userItemContainer = document.getElementById('user-items')!;
     const userSelect = document.getElementById('user-select') as HTMLSelectElement;
 
-    function formatName(user: UserState) {
+    function formatNameHTML(user: UserState) {
+        const name = escapeHtml(user.name || '');
+
         if (user.tags.includes('admin')) {
-            return `<span class="user-admin">${user.name}</span>`;
+            return `<span class="user-admin">${name}</span>`;
         } else if (user.tags.includes('dj')) {
-            return `<span class="user-dj">${user.name}</span>`;
+            return `<span class="user-dj">${name}</span>`;
         } else {
-            return user.name || '';
+            return name;
         }
     }
 
@@ -286,7 +288,7 @@ export async function load() {
 
     function refreshUsers() {
         const users = Array.from(client.zone.users.values()).filter((user) => !!user.name);
-        const names = users.map((user) => formatName(user));
+        const names = users.map((user) => formatNameHTML(user));
         userItemContainer.innerHTML = `${names.length} people are zoning: ` + names.join(', <br>');
 
         userAvatars.clear();
@@ -301,12 +303,12 @@ export async function load() {
         users.forEach((user, index) => {
             const option = document.createElement('option');
             option.value = user.name || '';
-            option.innerHTML = formatName(user);
+            option.innerHTML = formatNameHTML(user);
             userSelect.appendChild(option);
 
             const element = document.createElement('div');
             const label = document.createElement('div');
-            label.innerHTML = formatName(user);
+            label.innerHTML = formatNameHTML(user);
             element.appendChild((userAvatars.get(user) || iconTest).canvas);
             element.appendChild(label);
             userItemContainer.appendChild(element);
@@ -832,8 +834,8 @@ export async function load() {
             .filter((echo) => echo.position!.join(',') === objectCoords);
 
         const names = [
-            ...users.map((user) => formatName(user)),
-            ...echoes.map((echo) => 'echo of ' + formatName(echo)),
+            ...users.map((user) => formatNameHTML(user)),
+            ...echoes.map((echo) => 'echo of ' + formatNameHTML(echo)),
         ];
 
         tooltip.hidden = names.length === 0;
