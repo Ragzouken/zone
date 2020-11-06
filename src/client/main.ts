@@ -868,7 +868,7 @@ function setupEntrySplash() {
         users.forEach(({ name, avatar }) => {
             const element = document.createElement('div');
             const label = document.createElement('div');
-            label.innerHTML = name || 'anonymous';
+            label.innerHTML = escapeHtml(name || 'anonymous');
             element.appendChild(createAvatarElement(avatar || 'GBgYPH69JCQ='));
             element.appendChild(label);
             entryUsers.appendChild(element);
