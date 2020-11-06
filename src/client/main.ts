@@ -355,7 +355,7 @@ export async function load() {
 
         skipButton.disabled = false; // TODO: know when it's event mode
         currentItemContainer.hidden = !player.hasItem;
-        currentItemTitle.innerHTML = player.playingItem?.media.title || '';
+        currentItemTitle.innerHTML = escapeHtml(player.playingItem?.media.title || '');
         currentItemTime.innerHTML = secondsToTime(player.remaining / 1000);
 
         if (client.zone.lastPlayedItem?.info.userId) {
@@ -378,7 +378,7 @@ export async function load() {
             const cancelButton = element.querySelector('.queue-item-cancel') as HTMLButtonElement;
 
             const cancellable = item.info.userId === user?.userId || user?.tags.includes('dj');
-            titleElement.innerHTML = item.media.title;
+            titleElement.innerHTML = escapeHtml(item.media.title);
             if (item.info.userId) {
                 const user = client.zone.getUser(item.info.userId);
                 titleElement.setAttribute('title', 'queued by ' + user.name);
@@ -427,7 +427,7 @@ export async function load() {
                 const div = row.querySelector('div')!;
                 const img = row.querySelector('img')!;
 
-                div.innerHTML = `${title} (${secondsToTime(duration / 1000)})`;
+                div.innerHTML = escapeHtml(`${title} (${secondsToTime(duration / 1000)})`);
                 img.src = thumbnail || '';
                 searchResults.appendChild(row);
             });
@@ -868,7 +868,7 @@ function setupEntrySplash() {
         users.forEach(({ name, avatar }) => {
             const element = document.createElement('div');
             const label = document.createElement('div');
-            label.innerHTML = name || 'anonymous';
+            label.innerHTML = escapeHtml(name || 'anonymous');
             element.appendChild(createAvatarElement(avatar || 'GBgYPH69JCQ='));
             element.appendChild(label);
             entryUsers.appendChild(element);
