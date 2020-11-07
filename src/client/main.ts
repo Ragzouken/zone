@@ -1,5 +1,5 @@
 import * as blitsy from 'blitsy';
-import { secondsToTime, fakedownToTag, eventToElementPixel, withPixels } from './utility';
+import { secondsToTime, fakedownToTag, eventToElementPixel, withPixels, escapeHtml } from './utility';
 import { sleep } from '../common/utility';
 import { ChatPanel } from './chat';
 
@@ -268,13 +268,15 @@ export async function load() {
     const userItemContainer = document.getElementById('user-items')!;
     const userSelect = document.getElementById('user-select') as HTMLSelectElement;
 
-    function formatName(user: UserState) {
+    function formatNameHTML(user: UserState) {
+        const name = escapeHtml(user.name || '');
+
         if (user.tags.includes('admin')) {
-            return `<span class="user-admin">${user.name}</span>`;
+            return `<span class="user-admin">${name}</span>`;
         } else if (user.tags.includes('dj')) {
-            return `<span class="user-dj">${user.name}</span>`;
+            return `<span class="user-dj">${name}</span>`;
         } else {
-            return user.name || '';
+            return name;
         }
     }
 
@@ -286,7 +288,7 @@ export async function load() {
 
     function refreshUsers() {
         const users = Array.from(client.zone.users.values()).filter((user) => !!user.name);
-        const names = users.map((user) => formatName(user));
+        const names = users.map((user) => formatNameHTML(user));
         userItemContainer.innerHTML = `${names.length} people are zoning: ` + names.join(', <br>');
 
         userAvatars.clear();
@@ -301,12 +303,12 @@ export async function load() {
         users.forEach((user, index) => {
             const option = document.createElement('option');
             option.value = user.name || '';
-            option.innerHTML = formatName(user);
+            option.innerHTML = formatNameHTML(user);
             userSelect.appendChild(option);
 
             const element = document.createElement('div');
             const label = document.createElement('div');
-            label.innerHTML = formatName(user);
+            label.innerHTML = formatNameHTML(user);
             element.appendChild((userAvatars.get(user) || iconTest).canvas);
             element.appendChild(label);
             userItemContainer.appendChild(element);
@@ -353,7 +355,7 @@ export async function load() {
 
         skipButton.disabled = false; // TODO: know when it's event mode
         currentItemContainer.hidden = !player.hasItem;
-        currentItemTitle.innerHTML = player.playingItem?.media.title || '';
+        currentItemTitle.innerHTML = escapeHtml(player.playingItem?.media.title || '');
         currentItemTime.innerHTML = secondsToTime(player.remaining / 1000);
 
         if (client.zone.lastPlayedItem?.info.userId) {
@@ -376,7 +378,7 @@ export async function load() {
             const cancelButton = element.querySelector('.queue-item-cancel') as HTMLButtonElement;
 
             const cancellable = item.info.userId === user?.userId || user?.tags.includes('dj');
-            titleElement.innerHTML = item.media.title;
+            titleElement.innerHTML = escapeHtml(item.media.title);
             if (item.info.userId) {
                 const user = client.zone.getUser(item.info.userId);
                 titleElement.setAttribute('title', 'queued by ' + user.name);
@@ -425,7 +427,7 @@ export async function load() {
                 const div = row.querySelector('div')!;
                 const img = row.querySelector('img')!;
 
-                div.innerHTML = `${title} (${secondsToTime(duration / 1000)})`;
+                div.innerHTML = escapeHtml(`${title} (${secondsToTime(duration / 1000)})`);
                 img.src = thumbnail || '';
                 searchResults.appendChild(row);
             });
@@ -831,8 +833,8 @@ export async function load() {
             .filter((echo) => echo.position!.join(',') === objectCoords);
 
         const names = [
-            ...users.map((user) => formatName(user)),
-            ...echoes.map((echo) => 'echo of ' + formatName(echo)),
+            ...users.map((user) => formatNameHTML(user)),
+            ...echoes.map((echo) => 'echo of ' + formatNameHTML(echo)),
         ];
 
         tooltip.hidden = names.length === 0;
@@ -866,7 +868,7 @@ function setupEntrySplash() {
         users.forEach(({ name, avatar }) => {
             const element = document.createElement('div');
             const label = document.createElement('div');
-            label.innerHTML = name || 'anonymous';
+            label.innerHTML = escapeHtml(name || 'anonymous');
             element.appendChild(createAvatarElement(avatar || 'GBgYPH69JCQ='));
             element.appendChild(label);
             entryUsers.appendChild(element);
