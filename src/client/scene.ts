@@ -150,21 +150,34 @@ export class SceneRenderer extends EventEmitter {
                 }
 
                 context.save();
-                context.font = `${2 * scale}px ascii_small_simple`;
-                context.fillStyle = 'gray';
-                context.textAlign = 'center';
-                subtitles.forEach((line, i) => {
-                    context.fillText(
-                        line,
-                        margin + (8 + 1) * scale + screenWidth * scale * 0.5,
-                        margin + (8 + 3) * scale + (screenHeight - 1) * scale - 2 * scale * i,
-                    );
-                });
+                context.globalCompositeOperation = 'screen';
+                context.drawImage(this.mediaElement, inset + ox, inset + oy, rw, rh);
                 context.restore();
 
                 context.save();
-                context.globalCompositeOperation = 'screen';
-                context.drawImage(this.mediaElement, inset + ox, inset + oy, rw, rh);
+                context.globalCompositeOperation = 'source-over'
+                context.font = `${2 * scale}px ascii_small_simple`;
+                context.textAlign = 'center';
+                context.fillStyle = 'black';
+                subtitles.forEach((line, i) => {
+                    const measure = context.measureText(line);
+                    const tx = margin + (8 + 1) * scale + screenWidth * scale * 0.5;
+                    const ty = margin + (8 + 3) * scale + (screenHeight - 1) * scale - 2 * scale * i;
+
+                    const border = scale * .5;
+                    const xMin = tx - measure.actualBoundingBoxLeft - border;
+                    const xMax = tx + measure.actualBoundingBoxRight + border;
+                    const yMin = ty - measure.actualBoundingBoxAscent - border;
+                    const yMax = ty - measure.actualBoundingBoxDescent + border;
+
+                    context.fillRect(xMin, yMin, xMax - xMin, yMax - yMin);
+                });
+                context.fillStyle = 'gray';
+                subtitles.forEach((line, i) => {
+                    const tx = margin + (8 + 1) * scale + screenWidth * scale * 0.5;
+                    const ty = margin + (8 + 3) * scale + (screenHeight - 1) * scale - 2 * scale * i;
+                    context.fillText(line, tx, ty);
+                });
                 context.restore();
             }
         };
