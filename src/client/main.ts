@@ -599,8 +599,8 @@ export async function load() {
         saveToAvatarSlot(activeAvatarSlot, data);
     });
 
-    let lastSearchResults: YoutubeVideo[] | undefined = undefined;
-    let lastSearchLibraryResults: Media[] | undefined = undefined;
+    let lastSearchResults: YoutubeVideo[] | undefined;
+    let lastSearchLibraryResults: Media[] | undefined;
 
     const skipButton = document.getElementById('skip-button') as HTMLButtonElement;
     skipButton.addEventListener('click', () => client.skip());
