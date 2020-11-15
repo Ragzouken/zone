@@ -95,6 +95,7 @@ async function run() {
     }
 
     function mediaSearchRank(media: Media, fragments: string[]) {
+        console.log(media, fragments);
         if (!media.shortcut) return 0;
         const searchable = media.shortcut.replace('-', ' ') + media.title;
         const counts = fragments.map((fragment) => searchable.includes(fragment) ? 1+0 : 0);
