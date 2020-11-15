@@ -2,7 +2,7 @@ import Messaging from './messaging';
 import { EventEmitter } from 'events';
 import { YoutubeVideo } from '../server/youtube';
 import { specifically } from './utility';
-import { ZoneState, UserState, QueueItem, UserEcho } from './zone';
+import { ZoneState, UserState, QueueItem, UserEcho, Media } from './zone';
 import fetch from 'node-fetch';
 
 export type StatusMesage = { text: string };
@@ -183,6 +183,14 @@ export class ZoneClient extends EventEmitter {
 
     async search(query: string): Promise<YoutubeVideo[]> {
         const url = this.options.urlRoot + '/youtube?q=' + encodeURIComponent(query);
+        return fetch(url).then(async (res) => {
+            if (res.ok) return res.json();
+            throw new Error(await res.text());
+        });
+    }
+
+    async searchLibrary(query: string): Promise<Media[]> {
+        const url = this.options.urlRoot + '/local?q=' + encodeURIComponent(query);
         return fetch(url).then(async (res) => {
             if (res.ok) return res.json();
             throw new Error(await res.text());

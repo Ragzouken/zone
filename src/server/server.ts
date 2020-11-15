@@ -373,6 +373,8 @@ export function host(
         }),
     );
 
+    
+
     function tryQueueMedia(user: UserState, media: Media, userIp: unknown, banger = false) {
         if (eventMode && !user.tags.includes('dj')) {
             status('zone is currently in event mode, only djs may queue', user);
