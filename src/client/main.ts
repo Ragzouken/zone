@@ -6,7 +6,7 @@ import { ChatPanel } from './chat';
 import ZoneClient from '../common/client';
 import { YoutubeVideo } from '../server/youtube';
 import { Player } from './player';
-import { UserState } from '../common/zone';
+import { Media, UserState } from '../common/zone';
 import { HTMLUI } from './html-ui';
 import { createContext2D } from 'blitsy';
 import { menusFromDataAttributes, indexByDataAttribute } from './menus';
@@ -518,11 +518,12 @@ export async function load() {
 
     function playFromSearchResult(args: string) {
         const index = parseInt(args, 10) - 1;
+        const results = lastSearchResults || lastSearchLibraryResults;
 
         if (isNaN(index)) chat.status(`did not understand '${args}' as a number`);
-        else if (!lastSearchResults || index < 0 || index >= lastSearchResults.length)
+        else if (!results || index < 0 || index >= results.length)
             chat.status(`there is no #${index + 1} search result`);
-        else client.youtube(lastSearchResults[index].videoId);
+        else client.youtube(results[index].videoId);
     }
 
     document.getElementById('play-banger')?.addEventListener('click', () => client.messaging.send('banger', {}));
@@ -598,15 +599,25 @@ export async function load() {
         saveToAvatarSlot(activeAvatarSlot, data);
     });
 
-    let lastSearchResults: YoutubeVideo[] = [];
+    let lastSearchResults: YoutubeVideo[] | undefined = undefined;
+    let lastSearchLibraryResults: Media[] | undefined = undefined;
 
     const skipButton = document.getElementById('skip-button') as HTMLButtonElement;
     skipButton.addEventListener('click', () => client.skip());
     document.getElementById('resync-button')?.addEventListener('click', () => player.forceRetry('reload button'));
 
     const chatCommands = new Map<string, (args: string) => void>();
+    chatCommands.set('library', async (query) => {
+        lastSearchResults = undefined;
+        lastSearchLibraryResults = await client.searchLibrary(query);
+        const lines = lastSearchLibraryResults
+            .slice(0, 5)
+            .map(({ title, duration }, i) => `${i + 1}. ${title} (${secondsToTime(duration / 1000)})`);
+        chat.log('{clr=#FFFF00}? queue Search result with /result n\n{clr=#00FFFF}' + lines.join('\n'));
+    });
     chatCommands.set('search', async (query) => {
         lastSearchResults = await client.search(query);
+        lastSearchLibraryResults = undefined;
         const lines = lastSearchResults
             .slice(0, 5)
             .map(({ title, duration }, i) => `${i + 1}. ${title} (${secondsToTime(duration / 1000)})`);
