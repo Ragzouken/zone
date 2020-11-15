@@ -286,7 +286,7 @@ export class ZoneClient extends EventEmitter {
             const prev = { ...user };
             const { userId, ...changes } = message;
 
-            if (local && prev.position) delete changes.position;
+            if (local && prev.position && changes.position) delete changes.position;
 
             Object.assign(user, changes);
 
@@ -295,8 +295,8 @@ export class ZoneClient extends EventEmitter {
             } else if (prev.name !== user.name) {
                 this.emit('rename', { user, local, previous: prev.name });
             }
-
-            if (changes.position) this.emit('move', { user, local, position: changes.position });
+            
+            if (changes.position !== undefined) this.emit('move', { user, local, position: changes.position });
             if (changes.emotes) this.emit('emotes', { user, local, emotes: changes.emotes });
             if (changes.avatar) this.emit('avatar', { user, local, data: changes.avatar });
             if (changes.tags) this.emit('tags', { user, local, tags: changes.tags });

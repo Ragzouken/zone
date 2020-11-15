@@ -360,6 +360,18 @@ export function host(
             }
         }),
     );
+    authCommands.set('despawn', (admin, name: string) => 
+        ifUser(name, (user) => {
+            if (!user.position) {
+                status(`${user.name} isn't spawned`, admin);
+            } else {
+                user.position = undefined;
+                sendAll('user', { userId: user.userId, position: null });
+                status('you were despawned by an admin', user);
+                statusAuthed(`${user.name} has been despawned`);
+            }
+        }),
+    );
 
     function tryQueueMedia(user: UserState, media: Media, userIp: unknown, banger = false) {
         if (eventMode && !user.tags.includes('dj')) {
