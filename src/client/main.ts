@@ -334,6 +334,9 @@ export async function load() {
     document.getElementById('del-dj-button')!.addEventListener('click', () => {
         client.command('dj-del', [userSelect.value]);
     });
+    document.getElementById('despawn-button')!.addEventListener('click', () => {
+        client.command('despawn', [userSelect.value]);
+    });
     document.getElementById('event-mode-on')!.addEventListener('click', () => client.command('mode', ['event']));
     document.getElementById('event-mode-off')!.addEventListener('click', () => client.command('mode', ['']));
     document.getElementById('refresh-library')!.addEventListener('click', () => client.command('refresh-videos'));
