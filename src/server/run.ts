@@ -91,13 +91,13 @@ async function run() {
     app.use('/media', express.static('media'));
 
     function splitTitle(title: string) {
-        return title.split(/-\s/).map((title) => title.trim());
+        return title.split(/-\s/).map((title) => title.trim().toLowerCase());
     }
 
     function mediaSearchRank(media: Media, fragments: string[]) {
         console.log(media, fragments);
         if (!media.shortcut) return 0;
-        const searchable = media.shortcut.replace('-', ' ') + media.title;
+        const searchable = media.shortcut.replace('-', ' ').toLowerCase() + media.title.toLowerCase();
         const counts = fragments.map((fragment) => searchable.includes(fragment) ? 1+0 : 0);
         const count = counts.reduce((a, b) => a + b);
         return count;
