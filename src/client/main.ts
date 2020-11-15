@@ -518,12 +518,13 @@ export async function load() {
 
     function playFromSearchResult(args: string) {
         const index = parseInt(args, 10) - 1;
-        const results = lastSearchResults || lastSearchLibraryResults;
+        const results = lastYoutubeSearchResults || lastSearchLibraryResults;
 
         if (isNaN(index)) chat.status(`did not understand '${args}' as a number`);
         else if (!results || index < 0 || index >= results.length)
             chat.status(`there is no #${index + 1} search result`);
-        else client.youtube(results[index].videoId);
+        else if (lastYoutubeSearchResults) client.youtube(results[index].videoId);
+        else client.local(results[index].shortcut!);
     }
 
     document.getElementById('play-banger')?.addEventListener('click', () => client.messaging.send('banger', {}));
@@ -599,7 +600,7 @@ export async function load() {
         saveToAvatarSlot(activeAvatarSlot, data);
     });
 
-    let lastSearchResults: YoutubeVideo[] | undefined;
+    let lastYoutubeSearchResults: YoutubeVideo[] | undefined;
     let lastSearchLibraryResults: Media[] | undefined;
 
     const skipButton = document.getElementById('skip-button') as HTMLButtonElement;
@@ -608,7 +609,7 @@ export async function load() {
 
     const chatCommands = new Map<string, (args: string) => void>();
     chatCommands.set('library', async (query) => {
-        lastSearchResults = undefined;
+        lastYoutubeSearchResults = undefined;
         lastSearchLibraryResults = await client.searchLibrary(query);
         const lines = lastSearchLibraryResults
             .slice(0, 5)
@@ -616,9 +617,9 @@ export async function load() {
         chat.log('{clr=#FFFF00}? queue Search result with /result n\n{clr=#00FFFF}' + lines.join('\n'));
     });
     chatCommands.set('search', async (query) => {
-        lastSearchResults = await client.search(query);
+        lastYoutubeSearchResults = await client.search(query);
         lastSearchLibraryResults = undefined;
-        const lines = lastSearchResults
+        const lines = lastYoutubeSearchResults
             .slice(0, 5)
             .map(({ title, duration }, i) => `${i + 1}. ${title} (${secondsToTime(duration / 1000)})`);
         chat.log('{clr=#FFFF00}? queue Search result with /result n\n{clr=#00FFFF}' + lines.join('\n'));
