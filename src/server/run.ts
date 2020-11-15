@@ -95,7 +95,6 @@ async function run() {
     }
 
     function mediaSearchRank(media: Media, fragments: string[]) {
-        console.log(media, fragments);
         if (!media.shortcut) return 0;
         const searchable = media.shortcut.replace('-', ' ').toLowerCase() + media.title.toLowerCase();
         const counts = fragments.map((fragment) => searchable.includes(fragment) ? 1+0 : 0);
@@ -242,6 +241,8 @@ async function run() {
                 media = { title: parsed.name, duration, source: path };
             }
 
+            media.shortcut = media.shortcut || parsed.name;
+
             if (!media.subtitle) {
                 fs.access(subtitlePath, F_OK).then(
                     () => (media.subtitle = subtitlePath),
@@ -249,7 +250,7 @@ async function run() {
                 );
             }
 
-            localLibrary.set(media.shortcut || parsed.name, media);
+            localLibrary.set(media.shortcut, media);
         } catch (e) {
             console.log(`LOCAL FAILED "${path}": ${e}`);
         }
