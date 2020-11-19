@@ -497,7 +497,7 @@ export async function load() {
     });
     client.on('chat', (message) => {
         const { user, text } = message;
-        const h = (parseInt(user.userId, 10) % 31) / 31.;
+        const h = (parseInt(user.userId, 10) % 23) / 23.;
 
         const color = rgb2hex(hslToRgb(h, 1, .5) as any);
         console.log(h, hslToRgb(h, 1, .5), color);
