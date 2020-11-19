@@ -495,12 +495,18 @@ export async function load() {
     client.on('avatar', ({ local, data }) => {
         if (local) localStorage.setItem('avatar', data);
     });
+    
+    const colorCount = 16;
+    const colors: string[] = [];
+    for (let i = 0; i < colorCount; ++i) {
+        const color = rgb2hex(hslToRgb(i / colorCount, 1, .5) as any);
+        colors.push(color);
+    }
+
     client.on('chat', (message) => {
         const { user, text } = message;
-        const h = (parseInt(user.userId, 10) % 23) / 23.;
-
-        const color = rgb2hex(hslToRgb(h, 1, .5) as any);
-        console.log(h, hslToRgb(h, 1, .5), color);
+        const i = parseInt(user.userId, 10) % colors.length;
+        const color = colors[i];
         chat.log(`{clr=${color}}${user.name} {icon:${user.userId}}{-clr} ${text}`);
         if (!message.local) {
             notify(user.name || 'anonymous', text, 'chat');
