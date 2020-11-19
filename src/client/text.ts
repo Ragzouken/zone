@@ -220,7 +220,7 @@ export function commandsToPages(
     }
 
     function addIcon(command: IconCommand, offset: number): number {
-        const pos = makeVector2(offset, currLine * (layout.font.lineHeight + 4));
+        const pos = makeVector2(offset+1, currLine * (layout.font.lineHeight + 4));
         const glyph = makeGlyph(pos, makeSprite(command.icon, makeRect(0, 0, 8, 8)));
         glyph.styles = new Map(styles.entries());
 
