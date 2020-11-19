@@ -12,6 +12,7 @@ import { createContext2D } from 'blitsy';
 import { menusFromDataAttributes, indexByDataAttribute } from './menus';
 import { SceneRenderer, avatarImage } from './scene';
 import { Context } from 'vm';
+import { icons } from './text';
 
 window.addEventListener('load', () => load());
 
@@ -298,6 +299,10 @@ export async function load() {
             userAvatars.set(user, context);
         });
 
+        userAvatars.forEach((rendering, user) => {
+            icons.set(user.userId, rendering.canvas);
+        });
+
         userItemContainer.innerHTML = '';
         userSelect.innerHTML = '';
         users.forEach((user, index) => {
@@ -492,7 +497,7 @@ export async function load() {
     });
     client.on('chat', (message) => {
         const { user, text } = message;
-        chat.log(`{clr=#FF0000}${user.name}:{-clr} ${text}`);
+        chat.log(`{icon:${user.userId}}{clr=#FF0000}${user.name}:{-clr} ${text}`);
         if (!message.local) {
             notify(user.name || 'anonymous', text, 'chat');
         }
