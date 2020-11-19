@@ -492,22 +492,13 @@ export async function load() {
     client.on('leave', (event) => chat.status(`{clr=#FF0000}${event.user.name}{clr=#FF00FF} left`));
     client.on('status', (event) => chat.status(event.text));
 
-    function hash(text: string) {
-        var hash = 0, i, chr;
-        for (i = 0; i < text.length; i++) {
-          chr   = text.charCodeAt(i);
-          hash  = ((hash << 5) - hash) + chr;
-          hash |= 0; // Convert to 32bit integer
-        }
-        return hash;
-    }
-
     client.on('avatar', ({ local, data }) => {
         if (local) localStorage.setItem('avatar', data);
     });
     client.on('chat', (message) => {
         const { user, text } = message;
-        const h = ((hash(user.name || "none") % 31) + 31) % 31 / 31.;
+        const h = (parseInt(user.userId, 10) % 31) / 31.;
+
         const color = rgb2hex(hslToRgb(h, 1, .5) as any);
         console.log(h, hslToRgb(h, 1, .5), color);
         chat.log(`{clr=${color}}${user.name} {icon:${user.userId}}{-clr} ${text}`);
