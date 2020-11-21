@@ -112,7 +112,8 @@ html
         #entry-splash
             audio#entry-sound(hidden src="buddy-in.mp3")
             #entry-panel
-                img#entry-logo(src="./zone-logo.png")
+                #entry-logo-container
+                    img#entry-logo(src="./zone-logo.png")
                 #entry-users.user-container ...
                 form#entry
                     input#join-name(type="text" placeholder="your name..." minlength="1" maxlength="16" required)
