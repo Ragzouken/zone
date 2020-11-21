@@ -1,4 +1,5 @@
-import { Vector2, Sprite, Font, makeVector2, createContext2D, drawSprite } from 'blitsy';
+import { Vector2, Sprite, Font, makeVector2, createContext2D, drawSprite, makeSprite, makeRect } from 'blitsy';
+import { addListener } from 'process';
 import { num2hex } from './utility';
 
 const FALLBACK_CODEPOINT = '?'.codePointAt(0)!;
@@ -91,12 +92,13 @@ export function scriptToPages(script: string, context: LayoutContext, styleHandl
 export type Token = [TokenType, ...string[]];
 export type TokenType = 'text' | 'markup';
 
-export type Command = GlyphCommand | BreakCommand | StyleCommand;
-export type CommandType = 'glyph' | 'break' | 'style';
+export type Command = GlyphCommand | BreakCommand | StyleCommand | IconCommand;
+export type CommandType = 'glyph' | 'break' | 'style' | 'icon';
 
 export type GlyphCommand = { type: 'glyph'; char: string; breakable: boolean };
 export type BreakCommand = { type: 'break'; target: BreakTarget };
 export type StyleCommand = { type: 'style'; style: string };
+export type IconCommand = { type: 'icon'; icon: HTMLCanvasElement };
 export type BreakTarget = 'line' | 'page';
 
 export type LayoutContext = { font: Font; lineWidth: number; lineCount: number };
@@ -191,7 +193,11 @@ export function commandsToPages(
             if (command.type === 'break') return i;
             if (command.type === 'style') continue;
 
-            width += computeLineWidth(layout.font, command.char);
+            const size = command.type === 'icon'
+                       ? command.icon.width
+                       : computeLineWidth(layout.font, command.char);
+
+            width += size;
             // if we overshot, look backward for last possible breakable glyph
             if (width > layout.lineWidth) {
                 const result = find(commands, i, -1, isBreakableGlyph);
@@ -213,12 +219,23 @@ export function commandsToPages(
         return char.spacing;
     }
 
+    function addIcon(command: IconCommand, offset: number): number {
+        const pos = makeVector2(offset+1, currLine * (layout.font.lineHeight + 4));
+        const glyph = makeGlyph(pos, makeSprite(command.icon, makeRect(0, 0, 8, 8)));
+        glyph.styles = new Map(styles.entries());
+
+        page.push(glyph);
+        return command.icon.width+1;
+    }
+
     // tslint:disable-next-line:no-shadowed-variable
     function generateGlyphLine(commands: Command[]) {
         let offset = 0;
         for (const command of commands) {
             if (command.type === 'glyph') {
                 offset += addGlyph(command, offset);
+            } else if (command.type === 'icon') {
+                offset += addIcon(command, offset);
             } else if (command.type === 'style') {
                 styleHandler(styles, command.style);
             }
@@ -270,6 +287,8 @@ export function commandsBreakLongSpans(commands: Command[], context: LayoutConte
     }
 }
 
+export const icons = new Map<string, HTMLCanvasElement>();
+
 export function tokensToCommands(tokens: Token[]): Command[] {
     const commands: Command[] = [];
 
@@ -288,7 +307,11 @@ export function tokensToCommands(tokens: Token[]): Command[] {
     function handleMarkup(buffer: string) {
         if (buffer === 'ep') commands.push({ type: 'break', target: 'page' });
         else if (buffer === 'el') commands.push({ type: 'break', target: 'line' });
-        else commands.push({ type: 'style', style: buffer });
+        else if (buffer.startsWith('icon:')) {
+            const id = buffer.split(':')[1];
+            const icon = icons.get(id) || createContext2D(32, 4).canvas;
+            commands.push({ type: 'icon', icon });
+        } else commands.push({ type: 'style', style: buffer });
     }
 
     tokens.forEach(handleToken);

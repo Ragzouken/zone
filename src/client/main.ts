@@ -1,5 +1,5 @@
 import * as blitsy from 'blitsy';
-import { secondsToTime, fakedownToTag, eventToElementPixel, withPixels, escapeHtml } from './utility';
+import { secondsToTime, fakedownToTag, eventToElementPixel, withPixels, escapeHtml, hslToRgb, rgb2hex } from './utility';
 import { sleep } from '../common/utility';
 import { ChatPanel } from './chat';
 
@@ -12,6 +12,7 @@ import { createContext2D } from 'blitsy';
 import { menusFromDataAttributes, indexByDataAttribute } from './menus';
 import { SceneRenderer, avatarImage } from './scene';
 import { Context } from 'vm';
+import { icons } from './text';
 
 window.addEventListener('load', () => load());
 
@@ -20,6 +21,19 @@ export const htmlui = new HTMLUI();
 
 const avatarTiles = new Map<string | undefined, CanvasRenderingContext2D>();
 avatarTiles.set(undefined, avatarImage);
+   
+const colorCount = 16;
+const colors: string[] = [];
+for (let i = 0; i < colorCount; ++i) {
+    const color = rgb2hex(hslToRgb(i / colorCount, 1, .5) as any);
+    colors.push(color);
+}
+
+function getUserColor(user: UserState) {
+    const i = parseInt(user.userId, 10) % colors.length;
+    const color = colors[i];
+    return color;
+}
 
 function decodeBase64(data: string) {
     const texture: blitsy.TextureData = {
@@ -270,14 +284,18 @@ export async function load() {
 
     function formatNameHTML(user: UserState) {
         const name = escapeHtml(user.name || '');
+        const color = getUserColor(user);
+        const clas = user.tags.includes('admin') ? 'user-admin'
+                   : user.tags.includes('dj') ? 'user-dj'
+                   : 'user-normal';
 
-        if (user.tags.includes('admin')) {
-            return `<span class="user-admin">${name}</span>`;
-        } else if (user.tags.includes('dj')) {
-            return `<span class="user-dj">${name}</span>`;
-        } else {
-            return name;
-        }
+        return `<span class="${clas}" style="color: ${color}">${name}</span>`;
+    }
+
+    function formatNameChat(user: UserState, icon=false) {
+        const color = getUserColor(user);
+        const ico = icon ? ` {icon:${user.userId}}` : "";
+        return `{clr=${color}}${user.name}${ico}{-clr}`;
     }
 
     const iconTest = createContext2D(8, 8);
@@ -296,6 +314,10 @@ export async function load() {
             const context = createContext2D(8, 8);
             context.drawImage(getTile(user.avatar).canvas, 0, 0);
             userAvatars.set(user, context);
+        });
+
+        userAvatars.forEach((rendering, user) => {
+            icons.set(user.userId, rendering.canvas);
         });
 
         userItemContainer.innerHTML = '';
@@ -490,9 +512,17 @@ export async function load() {
     client.on('avatar', ({ local, data }) => {
         if (local) localStorage.setItem('avatar', data);
     });
+
+    function getUserColor(user: UserState) {
+        const i = parseInt(user.userId, 10) % colors.length;
+        const color = colors[i];
+        return color;
+    }
+
     client.on('chat', (message) => {
         const { user, text } = message;
-        chat.log(`{clr=#FF0000}${user.name}:{-clr} ${text}`);
+        const name = formatNameChat(user, true);
+        chat.log(`${name} ${text}`);
         if (!message.local) {
             notify(user.name || 'anonymous', text, 'chat');
         }
@@ -878,13 +908,14 @@ function setupEntrySplash() {
     const entryButton = document.getElementById('entry-button') as HTMLInputElement;
     const entryForm = document.getElementById('entry') as HTMLFormElement;
 
-    function refreshUsers(users: { name?: string; avatar?: string }[]) {
+    function refreshUsers(users: { name?: string; avatar?: string, userId: string }[]) {
         entryUsers.innerHTML = '';
-        users.forEach(({ name, avatar }) => {
+        users.forEach((user) => {
             const element = document.createElement('div');
             const label = document.createElement('div');
-            label.innerHTML = escapeHtml(name || 'anonymous');
-            element.appendChild(createAvatarElement(avatar || 'GBgYPH69JCQ='));
+            const hex = getUserColor(user as any);
+            label.innerHTML = `<span style="color: ${hex}">` + escapeHtml(user.name || 'anonymous') + "</span>";
+            element.appendChild(createAvatarElement(user.avatar || 'GBgYPH69JCQ='));
             element.appendChild(label);
             entryUsers.appendChild(element);
         });
@@ -895,7 +926,7 @@ function setupEntrySplash() {
 
         fetch('./users')
             .then((res) => res.json())
-            .then((users: { name?: string; avatar?: string }[]) => {
+            .then((users: { name?: string; avatar?: string, userId: string }[]) => {
                 if (users.length === 0) {
                     entryUsers.innerHTML = 'zone is currenty empty';
                 } else {

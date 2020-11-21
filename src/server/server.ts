@@ -86,7 +86,7 @@ export function host(
 
     xws.app.get('/users', (req, res) => {
         const users = Array.from(zone.users.values());
-        const names = users.map(({ name, avatar }) => ({ name, avatar }));
+        const names = users.map(({ name, avatar, userId }) => ({ name, avatar, userId }));
         res.json(names);
     });
 
@@ -420,7 +420,7 @@ export function host(
 
             if (!media) {
                 status('video unloadable', user);
-            } else if (media.duration > HALFHOUR && !privileged) {
+            } else if (media.duration > HALFHOUR * 3 && !privileged) {
                 status('video too long', user);
             } else if (yts.getVideoState(videoId) !== 'broken') {
                 yts.queueVideoDownload(videoId);
