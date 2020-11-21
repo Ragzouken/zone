@@ -272,11 +272,11 @@ button.active {
 }
 
 .user-dj {
-    color: #00FFFF;
+    text-decoration: underline 2px #00FFFF;
 }
 
 .user-admin {
-    color: #FF00FF;
+    text-decoration: underline 2px #FF00FF;
 }
 
 #commands {
