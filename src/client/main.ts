@@ -638,6 +638,10 @@ export async function load() {
     skipButton.addEventListener('click', () => client.skip());
     document.getElementById('resync-button')?.addEventListener('click', () => player.forceRetry('reload button'));
 
+    const quickResync = document.getElementById('resync-button2')!;
+    quickResync.addEventListener('click', () => player.forceRetry('resync button'));
+    quickResync.hidden = true;
+
     const chatCommands = new Map<string, (args: string) => void>();
     chatCommands.set('library', async (query) => {
         lastYoutubeSearchResults = undefined;
@@ -813,6 +817,8 @@ export async function load() {
 
     function redraw() {
         window.requestAnimationFrame(redraw);
+
+        quickResync.hidden = !player.problem;
 
         refreshCurrentItem();
         clearContext(chatContext2);

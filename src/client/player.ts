@@ -91,6 +91,12 @@ export class Player extends EventEmitter {
         }
     }
 
+    get problem() {
+        return this.status !== 'done'
+            && this.status !== 'ready'
+            && this.status !== 'playing';
+    }
+
     get volume() {
         return this.element.volume;
     }
