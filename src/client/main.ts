@@ -1,6 +1,6 @@
 import * as blitsy from 'blitsy';
 import { secondsToTime, fakedownToTag, eventToElementPixel, withPixels, escapeHtml, hslToRgb, rgb2hex } from './utility';
-import { sleep } from '../common/utility';
+import { randomInt, sleep } from '../common/utility';
 import { ChatPanel } from './chat';
 
 import ZoneClient from '../common/client';
@@ -25,7 +25,7 @@ avatarTiles.set(undefined, avatarImage);
 const colorCount = 16;
 const colors: string[] = [];
 for (let i = 0; i < colorCount; ++i) {
-    const color = rgb2hex(hslToRgb(i / colorCount, 1, .5) as any);
+    const color = rgb2hex(hslToRgb(i / colorCount, 1, .65) as any);
     colors.push(color);
 }
 
@@ -160,9 +160,9 @@ function listUsers() {
     if (named.length === 0) {
         chat.status('no other users');
     } else {
-        const names = named.map((user) => user.name);
-        const line = names.join('{clr=#FF00FF}, {clr=#FF0000}');
-        chat.status(`${names.length} users: {clr=#FF0000}${line}`);
+        const names = named.map((user) => `{clr=${getUserColor(user)}}${user.name}`);
+        const line = names.join('{clr=#FF00FF}, ');
+        chat.status(`${names.length} users: ${line}{-clr}`);
     }
 }
 
@@ -292,7 +292,7 @@ export async function load() {
         return `<span class="${clas}" style="color: ${color}">${name}</span>`;
     }
 
-    function formatNameChat(user: UserState, icon=false) {
+    function formatNameChat(user: UserState, icon=true) {
         const color = getUserColor(user);
         const ico = icon ? ` {icon:${user.userId}}` : "";
         return `{clr=${color}}${user.name}${ico}{-clr}`;
@@ -477,14 +477,14 @@ export async function load() {
     client.on('queue', ({ item }) => {
         const { title, duration } = item.media;
         const user = item.info.userId ? client.zone.users.get(item.info.userId) : undefined;
-        const username = user?.name || 'server';
+        const username = user ? formatNameChat(user) : 'server';
         const time = secondsToTime(duration / 1000);
         if (item.info.banger) {
             chat.log(
-                `{clr=#00FFFF}+ ${title} (${time}) rolled from {clr=#FF00FF}bangers{clr=#00FFFF} by {clr=#FF0000}${username}`,
+                `{clr=#00FFFF}+ ${title} (${time}) rolled from {clr=#FF00FF}bangers{clr=#00FFFF} by ${username}`,
             );
         } else {
-            chat.log(`{clr=#00FFFF}+ ${title} (${time}) added by {clr=#FF0000}${username}`);
+            chat.log(`{clr=#00FFFF}+ ${title} (${time}) added by ${username}`);
         }
 
         refreshQueue();
@@ -505,8 +505,8 @@ export async function load() {
         }
     });
 
-    client.on('join', (event) => chat.status(`{clr=#FF0000}${event.user.name} {clr=#FF00FF}joined`));
-    client.on('leave', (event) => chat.status(`{clr=#FF0000}${event.user.name}{clr=#FF00FF} left`));
+    client.on('join', (event) => chat.status(`${formatNameChat(event.user)} {clr=#FF00FF}joined`));
+    client.on('leave', (event) => chat.status(`${formatNameChat(event.user)}{clr=#FF00FF} left`));
     client.on('status', (event) => chat.status(event.text));
 
     client.on('avatar', ({ local, data }) => {
@@ -516,6 +516,7 @@ export async function load() {
     function getUserColor(user: UserState) {
         const i = parseInt(user.userId, 10) % colors.length;
         const color = colors[i];
+        return colors[randomInt(0, 15)];
         return color;
     }
 
@@ -529,7 +530,7 @@ export async function load() {
     });
     client.on('rename', (message) => {
         if (message.local) {
-            chat.status(`you are {clr=#FF0000}${message.user.name}`);
+            chat.status(`you are ${formatNameChat(message.user)}`);
         } else {
             chat.status(`{clr=#FF0000}${message.previous}{clr=#FF00FF} is now {clr=#FF0000}${message.user.name}`);
         }
