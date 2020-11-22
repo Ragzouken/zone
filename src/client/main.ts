@@ -516,7 +516,6 @@ export async function load() {
     function getUserColor(user: UserState) {
         const i = parseInt(user.userId, 10) % colors.length;
         const color = colors[i];
-        return colors[randomInt(0, 15)];
         return color;
     }
 
