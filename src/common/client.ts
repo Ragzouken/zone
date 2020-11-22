@@ -2,7 +2,7 @@ import Messaging from './messaging';
 import { EventEmitter } from 'events';
 import { YoutubeVideo } from '../server/youtube';
 import { specifically } from './utility';
-import { ZoneState, UserState, QueueItem, UserEcho } from './zone';
+import { ZoneState, UserState, QueueItem, UserEcho, Media } from './zone';
 import fetch from 'node-fetch';
 
 export type StatusMesage = { text: string };
@@ -189,6 +189,14 @@ export class ZoneClient extends EventEmitter {
         });
     }
 
+    async searchLibrary(query: string): Promise<Media[]> {
+        const url = this.options.urlRoot + '/local?q=' + encodeURIComponent(query);
+        return fetch(url).then(async (res) => {
+            if (res.ok) return res.json();
+            throw new Error(await res.text());
+        });
+    }
+
     async lucky(query: string) {
         return new Promise<QueueMessage>((resolve, reject) => {
             this.expect('queue', this.options.slowResponseTimeout).then(resolve, reject);
@@ -286,7 +294,7 @@ export class ZoneClient extends EventEmitter {
             const prev = { ...user };
             const { userId, ...changes } = message;
 
-            if (local && prev.position) delete changes.position;
+            if (local && prev.position && changes.position) delete changes.position;
 
             Object.assign(user, changes);
 
@@ -295,8 +303,8 @@ export class ZoneClient extends EventEmitter {
             } else if (prev.name !== user.name) {
                 this.emit('rename', { user, local, previous: prev.name });
             }
-
-            if (changes.position) this.emit('move', { user, local, position: changes.position });
+            
+            if (changes.position !== undefined) this.emit('move', { user, local, position: changes.position });
             if (changes.emotes) this.emit('emotes', { user, local, emotes: changes.emotes });
             if (changes.avatar) this.emit('avatar', { user, local, data: changes.avatar });
             if (changes.tags) this.emit('tags', { user, local, tags: changes.tags });

@@ -1,17 +1,18 @@
 import * as blitsy from 'blitsy';
-import { secondsToTime, fakedownToTag, eventToElementPixel, withPixels, escapeHtml } from './utility';
-import { sleep } from '../common/utility';
+import { secondsToTime, fakedownToTag, eventToElementPixel, withPixels, escapeHtml, hslToRgb, rgb2hex } from './utility';
+import { randomInt, sleep } from '../common/utility';
 import { ChatPanel } from './chat';
 
 import ZoneClient from '../common/client';
 import { YoutubeVideo } from '../server/youtube';
 import { Player } from './player';
-import { UserState } from '../common/zone';
+import { Media, UserState } from '../common/zone';
 import { HTMLUI } from './html-ui';
 import { createContext2D } from 'blitsy';
 import { menusFromDataAttributes, indexByDataAttribute } from './menus';
 import { SceneRenderer, avatarImage } from './scene';
 import { Context } from 'vm';
+import { icons } from './text';
 
 window.addEventListener('load', () => load());
 
@@ -20,6 +21,19 @@ export const htmlui = new HTMLUI();
 
 const avatarTiles = new Map<string | undefined, CanvasRenderingContext2D>();
 avatarTiles.set(undefined, avatarImage);
+   
+const colorCount = 16;
+const colors: string[] = [];
+for (let i = 0; i < colorCount; ++i) {
+    const color = rgb2hex(hslToRgb(i / colorCount, 1, .65) as any);
+    colors.push(color);
+}
+
+function getUserColor(user: UserState) {
+    const i = parseInt(user.userId, 10) % colors.length;
+    const color = colors[i];
+    return color;
+}
 
 function decodeBase64(data: string) {
     const texture: blitsy.TextureData = {
@@ -146,9 +160,9 @@ function listUsers() {
     if (named.length === 0) {
         chat.status('no other users');
     } else {
-        const names = named.map((user) => user.name);
-        const line = names.join('{clr=#FF00FF}, {clr=#FF0000}');
-        chat.status(`${names.length} users: {clr=#FF0000}${line}`);
+        const names = named.map((user) => `{clr=${getUserColor(user)}}${user.name}`);
+        const line = names.join('{clr=#FF00FF}, ');
+        chat.status(`${names.length} users: ${line}{-clr}`);
     }
 }
 
@@ -270,14 +284,18 @@ export async function load() {
 
     function formatNameHTML(user: UserState) {
         const name = escapeHtml(user.name || '');
+        const color = getUserColor(user);
+        const clas = user.tags.includes('admin') ? 'user-admin'
+                   : user.tags.includes('dj') ? 'user-dj'
+                   : 'user-normal';
 
-        if (user.tags.includes('admin')) {
-            return `<span class="user-admin">${name}</span>`;
-        } else if (user.tags.includes('dj')) {
-            return `<span class="user-dj">${name}</span>`;
-        } else {
-            return name;
-        }
+        return `<span class="${clas}" style="color: ${color}">${name}</span>`;
+    }
+
+    function formatNameChat(user: UserState, icon=true) {
+        const color = getUserColor(user);
+        const ico = icon ? ` {icon:${user.userId}}` : "";
+        return `{clr=${color}}${user.name}${ico}{-clr}`;
     }
 
     const iconTest = createContext2D(8, 8);
@@ -296,6 +314,10 @@ export async function load() {
             const context = createContext2D(8, 8);
             context.drawImage(getTile(user.avatar).canvas, 0, 0);
             userAvatars.set(user, context);
+        });
+
+        userAvatars.forEach((rendering, user) => {
+            icons.set(user.userId, rendering.canvas);
         });
 
         userItemContainer.innerHTML = '';
@@ -333,6 +355,9 @@ export async function load() {
     });
     document.getElementById('del-dj-button')!.addEventListener('click', () => {
         client.command('dj-del', [userSelect.value]);
+    });
+    document.getElementById('despawn-button')!.addEventListener('click', () => {
+        client.command('despawn', [userSelect.value]);
     });
     document.getElementById('event-mode-on')!.addEventListener('click', () => client.command('mode', ['event']));
     document.getElementById('event-mode-off')!.addEventListener('click', () => client.command('mode', ['']));
@@ -452,14 +477,14 @@ export async function load() {
     client.on('queue', ({ item }) => {
         const { title, duration } = item.media;
         const user = item.info.userId ? client.zone.users.get(item.info.userId) : undefined;
-        const username = user?.name || 'server';
+        const username = user ? formatNameChat(user) : 'server';
         const time = secondsToTime(duration / 1000);
         if (item.info.banger) {
             chat.log(
-                `{clr=#00FFFF}+ ${title} (${time}) rolled from {clr=#FF00FF}bangers{clr=#00FFFF} by {clr=#FF0000}${username}`,
+                `{clr=#00FFFF}+ ${title} (${time}) rolled from {clr=#FF00FF}bangers{clr=#00FFFF} by ${username}`,
             );
         } else {
-            chat.log(`{clr=#00FFFF}+ ${title} (${time}) added by {clr=#FF0000}${username}`);
+            chat.log(`{clr=#00FFFF}+ ${title} (${time}) added by ${username}`);
         }
 
         refreshQueue();
@@ -480,23 +505,31 @@ export async function load() {
         }
     });
 
-    client.on('join', (event) => chat.status(`{clr=#FF0000}${event.user.name} {clr=#FF00FF}joined`));
-    client.on('leave', (event) => chat.status(`{clr=#FF0000}${event.user.name}{clr=#FF00FF} left`));
+    client.on('join', (event) => chat.status(`${formatNameChat(event.user)} {clr=#FF00FF}joined`));
+    client.on('leave', (event) => chat.status(`${formatNameChat(event.user)}{clr=#FF00FF} left`));
     client.on('status', (event) => chat.status(event.text));
 
     client.on('avatar', ({ local, data }) => {
         if (local) localStorage.setItem('avatar', data);
     });
+
+    function getUserColor(user: UserState) {
+        const i = parseInt(user.userId, 10) % colors.length;
+        const color = colors[i];
+        return color;
+    }
+
     client.on('chat', (message) => {
         const { user, text } = message;
-        chat.log(`{clr=#FF0000}${user.name}:{-clr} ${text}`);
+        const name = formatNameChat(user, true);
+        chat.log(`${name} ${text}`);
         if (!message.local) {
             notify(user.name || 'anonymous', text, 'chat');
         }
     });
     client.on('rename', (message) => {
         if (message.local) {
-            chat.status(`you are {clr=#FF0000}${message.user.name}`);
+            chat.status(`you are ${formatNameChat(message.user)}`);
         } else {
             chat.status(`{clr=#FF0000}${message.previous}{clr=#FF00FF} is now {clr=#FF0000}${message.user.name}`);
         }
@@ -522,11 +555,13 @@ export async function load() {
 
     function playFromSearchResult(args: string) {
         const index = parseInt(args, 10) - 1;
+        const results = lastYoutubeSearchResults || lastSearchLibraryResults;
 
         if (isNaN(index)) chat.status(`did not understand '${args}' as a number`);
-        else if (!lastSearchResults || index < 0 || index >= lastSearchResults.length)
+        else if (!results || index < 0 || index >= results.length)
             chat.status(`there is no #${index + 1} search result`);
-        else client.youtube(lastSearchResults[index].videoId);
+        else if (lastYoutubeSearchResults) client.youtube(results[index].videoId);
+        else client.local(results[index].shortcut!);
     }
 
     document.getElementById('play-banger')?.addEventListener('click', () => client.messaging.send('banger', {}));
@@ -602,16 +637,30 @@ export async function load() {
         saveToAvatarSlot(activeAvatarSlot, data);
     });
 
-    let lastSearchResults: YoutubeVideo[] = [];
+    let lastYoutubeSearchResults: YoutubeVideo[] | undefined;
+    let lastSearchLibraryResults: Media[] | undefined;
 
     const skipButton = document.getElementById('skip-button') as HTMLButtonElement;
     skipButton.addEventListener('click', () => client.skip());
     document.getElementById('resync-button')?.addEventListener('click', () => player.forceRetry('reload button'));
 
+    const quickResync = document.getElementById('resync-button2')!;
+    quickResync.addEventListener('click', () => player.forceRetry('resync button'));
+    quickResync.hidden = true;
+
     const chatCommands = new Map<string, (args: string) => void>();
+    chatCommands.set('library', async (query) => {
+        lastYoutubeSearchResults = undefined;
+        lastSearchLibraryResults = await client.searchLibrary(query);
+        const lines = lastSearchLibraryResults
+            .slice(0, 5)
+            .map(({ title, duration }, i) => `${i + 1}. ${title} (${secondsToTime(duration / 1000)})`);
+        chat.log('{clr=#FFFF00}? queue Search result with /result n\n{clr=#00FFFF}' + lines.join('\n'));
+    });
     chatCommands.set('search', async (query) => {
-        lastSearchResults = await client.search(query);
-        const lines = lastSearchResults
+        lastYoutubeSearchResults = await client.search(query);
+        lastSearchLibraryResults = undefined;
+        const lines = lastYoutubeSearchResults
             .slice(0, 5)
             .map(({ title, duration }, i) => `${i + 1}. ${title} (${secondsToTime(duration / 1000)})`);
         chat.log('{clr=#FFFF00}? queue Search result with /result n\n{clr=#00FFFF}' + lines.join('\n'));
@@ -766,6 +815,8 @@ export async function load() {
     function redraw() {
         window.requestAnimationFrame(redraw);
 
+        quickResync.hidden = !player.problem;
+
         refreshCurrentItem();
         clearContext(chatContext2);
 
@@ -863,13 +914,14 @@ function setupEntrySplash() {
     const entryButton = document.getElementById('entry-button') as HTMLInputElement;
     const entryForm = document.getElementById('entry') as HTMLFormElement;
 
-    function refreshUsers(users: { name?: string; avatar?: string }[]) {
+    function refreshUsers(users: { name?: string; avatar?: string, userId: string }[]) {
         entryUsers.innerHTML = '';
-        users.forEach(({ name, avatar }) => {
+        users.forEach((user) => {
             const element = document.createElement('div');
             const label = document.createElement('div');
-            label.innerHTML = escapeHtml(name || 'anonymous');
-            element.appendChild(createAvatarElement(avatar || 'GBgYPH69JCQ='));
+            const hex = getUserColor(user as any);
+            label.innerHTML = `<span style="color: ${hex}">` + escapeHtml(user.name || 'anonymous') + "</span>";
+            element.appendChild(createAvatarElement(user.avatar || 'GBgYPH69JCQ='));
             element.appendChild(label);
             entryUsers.appendChild(element);
         });
@@ -880,7 +932,7 @@ function setupEntrySplash() {
 
         fetch('./users')
             .then((res) => res.json())
-            .then((users: { name?: string; avatar?: string }[]) => {
+            .then((users: { name?: string; avatar?: string, userId: string }[]) => {
                 if (users.length === 0) {
                     entryUsers.innerHTML = 'zone is currenty empty';
                 } else {

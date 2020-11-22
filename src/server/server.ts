@@ -86,7 +86,7 @@ export function host(
 
     xws.app.get('/users', (req, res) => {
         const users = Array.from(zone.users.values());
-        const names = users.map(({ name, avatar }) => ({ name, avatar }));
+        const names = users.map(({ name, avatar, userId }) => ({ name, avatar, userId }));
         res.json(names);
     });
 
@@ -360,6 +360,20 @@ export function host(
             }
         }),
     );
+    authCommands.set('despawn', (admin, name: string) => 
+        ifUser(name, (user) => {
+            if (!user.position) {
+                status(`${user.name} isn't spawned`, admin);
+            } else {
+                user.position = undefined;
+                sendAll('user', { userId: user.userId, position: null });
+                status('you were despawned by an admin', user);
+                statusAuthed(`${user.name} has been despawned`);
+            }
+        }),
+    );
+
+    
 
     function tryQueueMedia(user: UserState, media: Media, userIp: unknown, banger = false) {
         if (eventMode && !user.tags.includes('dj')) {
@@ -406,7 +420,7 @@ export function host(
 
             if (!media) {
                 status('video unloadable', user);
-            } else if (media.duration > HALFHOUR && !privileged) {
+            } else if (media.duration > HALFHOUR * 3 && !privileged) {
                 status('video too long', user);
             } else if (yts.getVideoState(videoId) !== 'broken') {
                 yts.queueVideoDownload(videoId);

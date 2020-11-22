@@ -40,7 +40,7 @@ export function hslToRgb(h: number, s: number, l: number) {
         b = hue2rgb(p, q, h - 1 / 3);
     }
 
-    return [r * 255, g * 255, b * 255];
+    return [(r * 255)|0, (g * 255)|0, (b * 255)|0];
 }
 
 export function withPixels(context: CanvasRenderingContext2D, action: (pixels: Uint32Array) => void) {
