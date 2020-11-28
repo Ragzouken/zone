@@ -347,6 +347,12 @@ export async function load() {
         authContent.hidden = !auth;
     }
 
+    function logPlaying() {
+        if (!player.playingItem) return;
+        const { title, duration } = player.playingItem.media;
+        chat.log(`{clr=#00FFFF}> ${title} (${secondsToTime(duration / 1000)})`);
+    }
+
     document.getElementById('ban-ip-button')!.addEventListener('click', () => {
         client.command('ban', [userSelect.value]);
     });
@@ -499,9 +505,7 @@ export async function load() {
             player.stopPlaying();
         } else {
             player.setPlaying(item, time || 0);
-
-            const { title, duration } = item.media;
-            chat.log(`{clr=#00FFFF}> ${title} (${secondsToTime(duration / 1000)})`);
+            logPlaying();
         }
     });
 
