@@ -689,6 +689,7 @@ export async function load() {
         client.avatar(data);
     });
     chatCommands.set('volume', (args) => setVolume(parseInt(args.trim(), 10)));
+    chatCommands.set('playing', logPlaying);
     chatCommands.set('resync', () => player.forceRetry('user request'));
     chatCommands.set('notify', async () => {
         const permission = await Notification.requestPermission();
