@@ -41,6 +41,9 @@
     flex-direction: column;
 
     background: var(--menu-background);
+
+    max-height: 512px;
+    overflow-y: auto;
 }
 
 .menu-panel-tab-body {
@@ -197,6 +200,7 @@
 
 .queue-item-title {
     flex: 1;
+    overflow-wrap: anywhere;
 }
 
 .queue-item-time {
