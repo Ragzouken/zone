@@ -1,6 +1,6 @@
 import * as blitsy from 'blitsy';
 import { secondsToTime, fakedownToTag, eventToElementPixel, withPixels, escapeHtml, hslToRgb, rgb2hex } from './utility';
-import { randomInt, sleep } from '../common/utility';
+import { sleep } from '../common/utility';
 import { ChatPanel } from './chat';
 
 import ZoneClient from '../common/client';
@@ -11,7 +11,6 @@ import { HTMLUI } from './html-ui';
 import { createContext2D } from 'blitsy';
 import { menusFromDataAttributes, indexByDataAttribute } from './menus';
 import { SceneRenderer, avatarImage } from './scene';
-import { Context } from 'vm';
 import { icons } from './text';
 
 window.addEventListener('load', () => load());
