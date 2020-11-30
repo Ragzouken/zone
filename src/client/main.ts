@@ -143,6 +143,12 @@ async function connect(): Promise<void> {
         return;
     }
 
+    // reload page after 30 minutes of idling
+    detectIdle(30 * 60 * 1000).then(() => {
+        client.messaging.close();
+        location.reload();
+    });
+
     chat.log('{clr=#00FF00}*** connected ***');
     if (!joined) listHelp();
     listUsers();
@@ -957,5 +963,18 @@ function setupEntrySplash() {
         localName = nameInput.value;
         localStorage.setItem('name', localName);
         await connect();
+    });
+}
+
+async function detectIdle(limit: number) {
+    return new Promise((resolve, reject) => {
+        let t = 0;
+        window.addEventListener('pointermove', resetTimer);
+        window.addEventListener('keydown', resetTimer);
+
+        function resetTimer() {
+            clearTimeout(t);
+            t = window.setTimeout(resolve, limit);
+        }
     });
 }
