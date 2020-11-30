@@ -143,8 +143,8 @@ async function connect(): Promise<void> {
         return;
     }
 
-    // reload page after 30 minutes of idling
-    detectIdle(30 * 60 * 1000).then(() => {
+    // reload page after 2 hours of idling
+    detectIdle(2 * 60 * 60 * 1000).then(() => {
         client.messaging.close();
         location.reload();
     });
