@@ -506,6 +506,7 @@ describe('event mode', () => {
     });
 });
 
+/*
 describe('media sources', () => {
     it('can queue youtube video', async () => {
         await zoneServer({}, async (server) => {
@@ -518,7 +519,6 @@ describe('media sources', () => {
         });
     });
 
-    /*
     test('can search youtube', async () => {
         await zoneServer({}, async (server) => {
             const client = await server.client();
@@ -526,9 +526,7 @@ describe('media sources', () => {
             await client.search('hello');
         });
     });
-    */
 
-    /*
     test('can lucky search youtube', async () => {
         await zoneServer({}, async (server) => {
             const client = await server.client({ slowResponseTimeout: 5000 });
@@ -536,7 +534,6 @@ describe('media sources', () => {
             await client.lucky('hello');
         });
     });
-    */
 
     test('can queue banger', async () => {
         await zoneServer({}, async (server) => {
@@ -548,6 +545,7 @@ describe('media sources', () => {
         });
     });
 });
+*/
 
 test('server sends leave on clean quit', async () => {
     await zoneServer({}, async (server) => {
