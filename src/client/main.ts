@@ -246,6 +246,11 @@ export async function load() {
     popoutPanel.appendChild(video);
     document.getElementById('popout-button')?.addEventListener('click', () => (popoutPanel.hidden = false));
 
+    const openButton = document.getElementById('external-button') as HTMLButtonElement;
+    openButton.addEventListener('click', () => {
+        window.open(player.playingItem?.media.source);
+    });
+
     const player = new Player(video);
     const zoneLogo = document.createElement('img');
     zoneLogo.src = 'zone-logo.png';
