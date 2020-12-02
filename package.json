@@ -43,7 +43,7 @@
     "node-fetch": "^2.6.1",
     "request": "^2.88.2",
     "tmp": "^0.2.1",
-    "ytdl-core": "^4.0.3",
+    "ytdl-core": "^4.1.1",
     "ytpl": "^0.2.3",
     "ytsr": "^2.0.0-alpha.3"
   },
