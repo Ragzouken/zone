@@ -1,6 +1,6 @@
 import * as blitsy from 'blitsy';
 import { secondsToTime, fakedownToTag, eventToElementPixel, withPixels, escapeHtml, hslToRgb, rgb2hex } from './utility';
-import { randomInt, sleep } from '../common/utility';
+import { sleep } from '../common/utility';
 import { ChatPanel } from './chat';
 
 import ZoneClient from '../common/client';
@@ -11,7 +11,6 @@ import { HTMLUI } from './html-ui';
 import { createContext2D } from 'blitsy';
 import { menusFromDataAttributes, indexByDataAttribute } from './menus';
 import { SceneRenderer, avatarImage } from './scene';
-import { Context } from 'vm';
 import { icons } from './text';
 
 window.addEventListener('load', () => load());
@@ -144,6 +143,12 @@ async function connect(): Promise<void> {
         return;
     }
 
+    // reload page after 2 hours of idling
+    detectIdle(2 * 60 * 60 * 1000).then(() => {
+        client.messaging.close();
+        location.reload();
+    });
+
     chat.log('{clr=#00FF00}*** connected ***');
     if (!joined) listHelp();
     listUsers();
@@ -246,6 +251,11 @@ export async function load() {
     const video = document.createElement('video');
     popoutPanel.appendChild(video);
     document.getElementById('popout-button')?.addEventListener('click', () => (popoutPanel.hidden = false));
+
+    const openButton = document.getElementById('external-button') as HTMLButtonElement;
+    openButton.addEventListener('click', () => {
+        window.open(player.playingItem?.media.source);
+    });
 
     const player = new Player(video);
     const zoneLogo = document.createElement('img');
@@ -956,5 +966,18 @@ function setupEntrySplash() {
         localName = nameInput.value;
         localStorage.setItem('name', localName);
         await connect();
+    });
+}
+
+async function detectIdle(limit: number) {
+    return new Promise((resolve, reject) => {
+        let t = 0;
+        window.addEventListener('pointermove', resetTimer);
+        window.addEventListener('keydown', resetTimer);
+
+        function resetTimer() {
+            clearTimeout(t);
+            t = window.setTimeout(resolve, limit);
+        }
     });
 }
