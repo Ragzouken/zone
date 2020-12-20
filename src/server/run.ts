@@ -24,6 +24,8 @@ process.on('uncaughtException', (err) => console.log('uncaught exception:', err,
 process.on('unhandledRejection', (err) => console.log('uncaught reject:', err));
 
 async function run() {
+    process.title = "zone server";
+
     const app = express();
     let server: http.Server | https.Server;
     let redirectServer: http.Server;
