@@ -660,6 +660,14 @@ export async function load() {
             .map(({ title, duration }, i) => `${i + 1}. ${title} (${secondsToTime(duration / 1000)})`);
         chat.log('{clr=#FFFF00}? queue Search result with /result n\n{clr=#00FFFF}' + lines.join('\n'));
     });
+    chatCommands.set('library2', async (query) => {
+        lastYoutubeSearchResults = undefined;
+        lastSearchLibraryResults = await client.searchLibrary(query);
+        const lines = lastSearchLibraryResults
+            .slice(0, 5)
+            .map(({ title, duration }, i) => `${i + 1}. ${title} (${secondsToTime(duration / 1000)})`);
+        chat.log('{clr=#FFFF00}? queue Search result with /result n\n{clr=#00FFFF}' + lines.join('\n'));
+    });
     chatCommands.set('search', async (query) => {
         lastYoutubeSearchResults = await client.search(query);
         lastSearchLibraryResults = undefined;
