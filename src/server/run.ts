@@ -4,8 +4,8 @@ import * as http from 'http';
 import * as https from 'https';
 import * as request from 'request';
 import * as glob from 'glob';
-import { promises as fs, mkdir, writeFile } from 'fs';
-import { basename, extname, parse, join } from 'path';
+import { promises as fs } from 'fs';
+import { parse, join } from 'path';
 import { host } from './server';
 import { exec } from 'child_process';
 import FileSync = require('lowdb/adapters/FileSync');
@@ -13,8 +13,6 @@ import { Media } from '../common/zone';
 import path = require('path');
 import { YoutubeService, search } from './youtube';
 import * as expressFileUpload from 'express-fileupload';
-import { isArray } from 'util';
-import { nanoid } from 'nanoid';
 import { F_OK } from 'constants';
 
 import ffprobe = require('ffprobe');
@@ -62,22 +60,7 @@ async function run() {
         authPassword: process.env.AUTH_PASSWORD || 'riverdale',
     });
 
-    function update() {
-        exec('zone-update', () => {
-            save();
-            sendAll('status', { text: 'restarting server' });
-            exec('zone-restart');
-        });
-    }
-
-    function relisten() {
-        if (server.listening) server.close(console.log);
-        server.listen(process.env.PORT || 4000, () => console.log('listening...'));
-    }
-
-    authCommands.set('update', update);
     authCommands.set('refresh-videos', refreshLocalVideos);
-    authCommands.set('relisten', relisten);
 
     app.use(
         expressFileUpload({
@@ -174,56 +157,12 @@ async function run() {
         }
     });
 
-    /*
-    app.use('/uploads', express.static('uploads'));
-    app.post('/upload', async (req, res) => {
-        if (!process.env.UPLOAD_PASSWORD || req.body.password !== process.env.UPLOAD_PASSWORD) {
-            res.status(400).send('WRONG PASSWORD');
-        } else if (req.files && req.files.file) {
-            if (isArray(req.files.file)) {
-                res.status(400).send('ONE FILE ONLY PLEASE');
-            } else {
-                try {
-                    const shortcut: string = req.body.shortcut;
-                    const title: string = req.body.title;
-                    const type = extname(req.files.file.name);
-                    const id = nanoid();
-                    const filepath = path.join('uploads', id + type);
-
-                    await fs.mkdir('uploads').catch(() => {});
-                    await req.files.file.mv(filepath);
-
-                    const media = {
-                        title,
-                        duration: (await getDurationInSeconds(filepath)) * 1000,
-                        source: filepath,
-                        shortcut,
-                    };
-
-                    localLibrary.set(shortcut, media);
-                    writeFile(path.join('uploads', id + '.json'), JSON.stringify(media), () => {});
-
-                    res.status(201).send(`THANKS, play with /local ${shortcut}`);
-                } catch (e) {
-                    console.log('UPLOAD ERROR', e);
-                    res.status(500).send('UPLOAD ERROR, ASK CANDLE');
-                }
-            }
-        } else {
-            res.status(400).send('NO FILE?');
-        }
-    });
-    */
-
     process.on('SIGINT', () => {
         console.log('exiting due to SIGINT');
         save();
         sendAll('status', { text: 'manual shutdown' });
         process.exit();
     });
-
-    const durationCommand =
-        'ffprobe -v error -select_streams a:0 -show_entries stream=duration -of default=noprint_wrappers=1:nokey=1';
 
     async function getDurationInSeconds(file: string): Promise<number> {
         const info = await ffprobe(file, { path: ffprobeStatic.path });
