@@ -262,10 +262,7 @@ async function run() {
 
     function refreshLocalVideos() {
         localLibrary.clear();
-        glob('media/**/*.mp4', (error, matches) => matches.forEach(addLocal));
-        glob('media/**/*.mp3', (error, matches) => matches.forEach(addLocal));
-        glob('uploads/**/*.mp3', (error, matches) => matches.forEach(addLocal));
-        glob('uploads/**/*.mp4', (error, matches) => matches.forEach(addLocal));
+        glob('media/**/*.{mp4,mp3}', (error, matches) => matches.forEach(addLocal));
     }
 
     refreshLocalVideos();
