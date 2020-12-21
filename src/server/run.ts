@@ -174,6 +174,7 @@ async function run() {
         }
     });
 
+    /*
     app.use('/uploads', express.static('uploads'));
     app.post('/upload', async (req, res) => {
         if (!process.env.UPLOAD_PASSWORD || req.body.password !== process.env.UPLOAD_PASSWORD) {
@@ -212,6 +213,7 @@ async function run() {
             res.status(400).send('NO FILE?');
         }
     });
+    */
 
     process.on('SIGINT', () => {
         console.log('exiting due to SIGINT');
