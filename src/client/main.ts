@@ -663,6 +663,7 @@ export async function load() {
     chatCommands.set('library2', async (query) => {
         lastYoutubeSearchResults = undefined;
         lastSearchLibraryResults = await client.searchLibrary2(query);
+        lastSearchLibraryResults.forEach((entry: any) => entry.shortcut = "library2:" + entry.id);
         const lines = lastSearchLibraryResults
             .slice(0, 5)
             .map(({ title, duration }, i) => `${i + 1}. ${title} (${secondsToTime(duration / 1000)})`);

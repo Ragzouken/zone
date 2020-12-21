@@ -10,6 +10,7 @@ import { getDefault, randomInt } from '../common/utility';
 import { MESSAGE_SCHEMAS } from './protocol';
 import { JoinMessage, SendAuth, SendCommand, EchoMessage } from '../common/client';
 import { YoutubeService, search } from './youtube';
+import fetch from 'node-fetch';
 
 const SECONDS = 1000;
 
@@ -410,8 +411,14 @@ export function host(
         });
 
         async function tryQueueLocalByPath(path: string) {
-            const media = localLibrary.get(path);
-            if (media) tryUserQueueMedia(media);
+            if (path.startsWith("library2:")) {
+                const id = path.substr(9);
+                const media = await (await fetch("http://localhost:4000/library/" + id)).json();
+                if (media) tryUserQueueMedia(media);
+            } else {
+                const media = localLibrary.get(path);
+                if (media) tryUserQueueMedia(media);
+            }
         }
 
         async function tryQueueYoutubeById(videoId: string) {
