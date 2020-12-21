@@ -783,7 +783,7 @@ export async function load() {
 
     function sendChat() {
         const line = chatInput.value;
-        const slash = line.match(/^\/([^\s]+)\s+(.*)/);
+        const slash = line.match(/^\/([^\s]+)\s*(.*)/);
 
         if (slash) {
             const command = chatCommands.get(slash[1]);
