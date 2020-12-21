@@ -441,7 +441,8 @@ export function host(
         messaging.messages.on('local', (message: any) => tryQueueLocalByPath(message.path));
         messaging.messages.on('banger', async () => {
             const EIGHT_MINUTES = 8 * 60 * SECONDS;
-            const extras = Array.from(localLibrary.values()).filter((media) => media.duration <= EIGHT_MINUTES);
+            const library = await (await fetch("http://localhost:4000/library")).json();
+            const extras = library.filter((media: any) => media.duration <= EIGHT_MINUTES);
             const banger = extras[randomInt(0, extras.length - 1)];
             tryUserQueueMedia(banger, true);
         });
