@@ -671,7 +671,7 @@ export async function load() {
     });
     chatCommands.set('tagged', async (tag) => {
         lastYoutubeSearchResults = undefined;
-        lastSearchLibraryResults = await client.searchLibrary2(tag);
+        lastSearchLibraryResults = await client.searchLibraryTag(tag);
         lastSearchLibraryResults.forEach((entry: any) => entry.shortcut = "library2:" + entry.id);
         shuffleArray(lastSearchLibraryResults);
         const lines = lastSearchLibraryResults
