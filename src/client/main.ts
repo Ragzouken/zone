@@ -1,5 +1,5 @@
 import * as blitsy from 'blitsy';
-import { secondsToTime, fakedownToTag, eventToElementPixel, withPixels, escapeHtml, hslToRgb, rgb2hex } from './utility';
+import { secondsToTime, fakedownToTag, eventToElementPixel, withPixels, escapeHtml, hslToRgb, rgb2hex, shuffleArray } from './utility';
 import { sleep } from '../common/utility';
 import { ChatPanel } from './chat';
 
@@ -664,6 +664,16 @@ export async function load() {
         lastYoutubeSearchResults = undefined;
         lastSearchLibraryResults = await client.searchLibrary2(query);
         lastSearchLibraryResults.forEach((entry: any) => entry.shortcut = "library2:" + entry.id);
+        const lines = lastSearchLibraryResults
+            .slice(0, 5)
+            .map(({ title, duration }, i) => `${i + 1}. ${title} (${secondsToTime(duration / 1000)})`);
+        chat.log('{clr=#FFFF00}? queue Search result with /result n\n{clr=#00FFFF}' + lines.join('\n'));
+    });
+    chatCommands.set('tagged', async (tag) => {
+        lastYoutubeSearchResults = undefined;
+        lastSearchLibraryResults = await client.searchLibrary2(tag);
+        lastSearchLibraryResults.forEach((entry: any) => entry.shortcut = "library2:" + entry.id);
+        shuffleArray(lastSearchLibraryResults);
         const lines = lastSearchLibraryResults
             .slice(0, 5)
             .map(({ title, duration }, i) => `${i + 1}. ${title} (${secondsToTime(duration / 1000)})`);
