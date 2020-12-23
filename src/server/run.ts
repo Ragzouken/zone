@@ -46,7 +46,7 @@ async function run() {
     }
 
     const xws = expressWs(app, server);
-    relisten();
+    server.listen(process.env.PORT || 4000, () => console.log('listening...'));
     server.on('error', (error) => console.log('server error', error));
 
     const dataPath = process.env.ZONE_DATA_PATH || '.data/db.json';
