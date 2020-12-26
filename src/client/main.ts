@@ -567,7 +567,7 @@ export async function load() {
         else client.local(results[index].shortcut!);
     }
 
-    document.getElementById('play-banger')?.addEventListener('click', () => client.messaging.send('banger', {}));
+    document.getElementById('play-banger')?.addEventListener('click', () => client.banger());
 
     const menu = menusFromDataAttributes(document.documentElement);
     menu.on('show:avatar', openAvatarEditor);
@@ -720,7 +720,7 @@ export async function load() {
         chat.status(`notifications ${permission}`);
     });
     chatCommands.set('name', rename);
-    chatCommands.set('banger', (tag) => client.messaging.send('banger', { tag }));
+    chatCommands.set('banger', (tag) => client.banger(tag));
 
     chatCommands.set('auth', (password) => client.auth(password));
     chatCommands.set('admin', (args) => {

@@ -213,6 +213,10 @@ export class ZoneClient extends EventEmitter {
         });
     }
 
+    async banger(tag?: string) {
+        this.messaging.send("banger", { tag });
+    }
+
     async lucky(query: string) {
         return new Promise<QueueMessage>((resolve, reject) => {
             this.expect('queue', this.options.slowResponseTimeout).then(resolve, reject);
