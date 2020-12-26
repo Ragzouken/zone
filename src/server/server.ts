@@ -11,6 +11,7 @@ import { MESSAGE_SCHEMAS } from './protocol';
 import { JoinMessage, SendAuth, SendCommand, EchoMessage } from '../common/client';
 import { YoutubeService, search } from './youtube';
 import fetch from 'node-fetch';
+import { MessagePort } from 'worker_threads';
 
 const SECONDS = 1000;
 
@@ -439,9 +440,12 @@ export function host(
 
         messaging.messages.on('youtube', (message: any) => tryQueueYoutubeById(message.videoId));
         messaging.messages.on('local', (message: any) => tryQueueLocalByPath(message.path));
-        messaging.messages.on('banger', async () => {
+        messaging.messages.on('banger', async (message: any) => {
+            const url = "http://localhost:4000/library"; 
+            const query = message.tag ? "?tag=" + message.tag : "";
+
             const EIGHT_MINUTES = 8 * 60 * SECONDS;
-            const library = await (await fetch("http://localhost:4000/library")).json();
+            const library = await (await fetch(url + query)).json();
             const extras = library.filter((media: any) => media.duration <= EIGHT_MINUTES);
             const banger = extras[randomInt(0, extras.length - 1)];
             tryUserQueueMedia(banger, true);

@@ -720,7 +720,7 @@ export async function load() {
         chat.status(`notifications ${permission}`);
     });
     chatCommands.set('name', rename);
-    chatCommands.set('banger', () => client.messaging.send('banger', {}));
+    chatCommands.set('banger', (tag) => client.messaging.send('banger', { tag }));
 
     chatCommands.set('auth', (password) => client.auth(password));
     chatCommands.set('admin', (args) => {
