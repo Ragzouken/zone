@@ -11,7 +11,6 @@ import { MESSAGE_SCHEMAS } from './protocol';
 import { JoinMessage, SendAuth, SendCommand, EchoMessage } from '../common/client';
 import { YoutubeService, search } from './youtube';
 import fetch from 'node-fetch';
-import { MessagePort } from 'worker_threads';
 
 const SECONDS = 1000;
 
@@ -31,6 +30,7 @@ export type HostOptions = {
     uploadPassword?: string;
 
     playbackStartDelay: number;
+    libraryOrigin?: string;
 };
 
 export const DEFAULT_OPTIONS: HostOptions = {
@@ -412,9 +412,9 @@ export function host(
         });
 
         async function tryQueueLocalByPath(path: string) {
-            if (path.startsWith("library2:")) {
+            if (path.startsWith("library2:") && options.libraryOrigin) {
                 const id = path.substr(9);
-                const media = await (await fetch("http://localhost:4000/library/" + id)).json();
+                const media = await fetch(options.libraryOrigin + "/library/" + id).then(r => r.json());
                 if (media) tryUserQueueMedia(media);
             } else {
                 const media = localLibrary.get(path);
@@ -441,7 +441,8 @@ export function host(
         messaging.messages.on('youtube', (message: any) => tryQueueYoutubeById(message.videoId));
         messaging.messages.on('local', (message: any) => tryQueueLocalByPath(message.path));
         messaging.messages.on('banger', async (message: any) => {
-            const url = "http://localhost:4000/library"; 
+            if (!options.libraryOrigin) return; 
+            const url = options.libraryOrigin + "/library"; 
             const query = message.tag ? "?tag=" + message.tag : "";
 
             const EIGHT_MINUTES = 8 * 60 * SECONDS;

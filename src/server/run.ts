@@ -7,7 +7,6 @@ import * as glob from 'glob';
 import { promises as fs } from 'fs';
 import { parse, join } from 'path';
 import { host } from './server';
-import { exec } from 'child_process';
 import FileSync = require('lowdb/adapters/FileSync');
 import { Media } from '../common/zone';
 import path = require('path');
@@ -58,6 +57,7 @@ async function run() {
     const { save, sendAll, authCommands, localLibrary } = host(xws, adapter, yts, {
         joinPassword: process.env.JOIN_PASSWORD,
         authPassword: process.env.AUTH_PASSWORD || 'riverdale',
+        libraryOrigin: process.env.LIBRARY_ORIGIN,
     });
 
     authCommands.set('refresh-videos', refreshLocalVideos);
