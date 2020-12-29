@@ -197,6 +197,26 @@ export class ZoneClient extends EventEmitter {
         });
     }
 
+    async searchLibrary2(query: string): Promise<Media[]> {
+        const url = this.options.urlRoot + '/library?q=' + encodeURIComponent(query);
+        return fetch(url).then(async (res) => {
+            if (res.ok) return res.json();
+            throw new Error(await res.text());
+        });
+    }
+
+    async searchLibraryTag(tag: string): Promise<Media[]> {
+        const url = this.options.urlRoot + '/library?tag=' + encodeURIComponent(tag);
+        return fetch(url).then(async (res) => {
+            if (res.ok) return res.json();
+            throw new Error(await res.text());
+        });
+    }
+
+    async banger(tag?: string) {
+        this.messaging.send("banger", { tag });
+    }
+
     async lucky(query: string) {
         return new Promise<QueueMessage>((resolve, reject) => {
             this.expect('queue', this.options.slowResponseTimeout).then(resolve, reject);

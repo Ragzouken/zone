@@ -1,5 +1,5 @@
 import * as blitsy from 'blitsy';
-import { secondsToTime, fakedownToTag, eventToElementPixel, withPixels, escapeHtml, hslToRgb, rgb2hex } from './utility';
+import { secondsToTime, fakedownToTag, eventToElementPixel, withPixels, escapeHtml, hslToRgb, rgb2hex, shuffleArray } from './utility';
 import { sleep } from '../common/utility';
 import { ChatPanel } from './chat';
 
@@ -567,7 +567,7 @@ export async function load() {
         else client.local(results[index].shortcut!);
     }
 
-    document.getElementById('play-banger')?.addEventListener('click', () => client.messaging.send('banger', {}));
+    document.getElementById('play-banger')?.addEventListener('click', () => client.banger());
 
     const menu = menusFromDataAttributes(document.documentElement);
     menu.on('show:avatar', openAvatarEditor);
@@ -652,9 +652,28 @@ export async function load() {
     quickResync.hidden = true;
 
     const chatCommands = new Map<string, (args: string) => void>();
-    chatCommands.set('library', async (query) => {
+    chatCommands.set('library-old', async (query) => {
         lastYoutubeSearchResults = undefined;
         lastSearchLibraryResults = await client.searchLibrary(query);
+        const lines = lastSearchLibraryResults
+            .slice(0, 5)
+            .map(({ title, duration }, i) => `${i + 1}. ${title} (${secondsToTime(duration / 1000)})`);
+        chat.log('{clr=#FFFF00}? queue Search result with /result n\n{clr=#00FFFF}' + lines.join('\n'));
+    });
+    chatCommands.set('library', async (query) => {
+        lastYoutubeSearchResults = undefined;
+        lastSearchLibraryResults = await client.searchLibrary2(query);
+        lastSearchLibraryResults.forEach((entry: any) => entry.shortcut = "library2:" + entry.id);
+        const lines = lastSearchLibraryResults
+            .slice(0, 5)
+            .map(({ title, duration }, i) => `${i + 1}. ${title} (${secondsToTime(duration / 1000)})`);
+        chat.log('{clr=#FFFF00}? queue Search result with /result n\n{clr=#00FFFF}' + lines.join('\n'));
+    });
+    chatCommands.set('tagged', async (tag) => {
+        lastYoutubeSearchResults = undefined;
+        lastSearchLibraryResults = await client.searchLibraryTag(tag);
+        lastSearchLibraryResults.forEach((entry: any) => entry.shortcut = "library2:" + entry.id);
+        shuffleArray(lastSearchLibraryResults);
         const lines = lastSearchLibraryResults
             .slice(0, 5)
             .map(({ title, duration }, i) => `${i + 1}. ${title} (${secondsToTime(duration / 1000)})`);
@@ -701,7 +720,7 @@ export async function load() {
         chat.status(`notifications ${permission}`);
     });
     chatCommands.set('name', rename);
-    chatCommands.set('banger', () => client.messaging.send('banger', {}));
+    chatCommands.set('banger', (tag) => client.banger(tag));
 
     chatCommands.set('auth', (password) => client.auth(password));
     chatCommands.set('admin', (args) => {
@@ -774,7 +793,7 @@ export async function load() {
 
     function sendChat() {
         const line = chatInput.value;
-        const slash = line.match(/^\/(\w+)(.*)/);
+        const slash = line.match(/^\/([^\s]+)\s*(.*)/);
 
         if (slash) {
             const command = chatCommands.get(slash[1]);
