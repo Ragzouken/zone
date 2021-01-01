@@ -40,8 +40,6 @@ export async function echoServer(options: Partial<{}>, callback: (server: EchoSe
 
 export async function zoneServer(options: Partial<HostOptions>, callback: (server: ZoneServer) => Promise<void>) {
     const server = new ZoneServer(options);
-    server.hosting.localLibrary.set('DAY_MEDIA', DAY_MEDIA);
-    server.hosting.localLibrary.set('TINY_MEDIA', TINY_MEDIA);
     try {
         await once(server.hosting.server, 'listening');
         await callback(server);
@@ -51,7 +49,7 @@ export async function zoneServer(options: Partial<HostOptions>, callback: (serve
 }
 
 export class ZoneServer {
-    public hosting: { server: Server; playback: Playback; localLibrary: Map<string, Media> };
+    public hosting: { server: Server; playback: Playback; };
     private readonly sockets: WebSocket[] = [];
 
     public get host() {

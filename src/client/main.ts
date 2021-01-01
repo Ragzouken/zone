@@ -371,7 +371,6 @@ export async function load() {
     });
     document.getElementById('event-mode-on')!.addEventListener('click', () => client.command('mode', ['event']));
     document.getElementById('event-mode-off')!.addEventListener('click', () => client.command('mode', ['']));
-    document.getElementById('refresh-library')!.addEventListener('click', () => client.command('refresh-videos'));
 
     const queueItemContainer = document.getElementById('queue-items')!;
     const queueItemTemplate = document.getElementById('queue-item-template')!;
@@ -652,14 +651,6 @@ export async function load() {
     quickResync.hidden = true;
 
     const chatCommands = new Map<string, (args: string) => void>();
-    chatCommands.set('library-old', async (query) => {
-        lastYoutubeSearchResults = undefined;
-        lastSearchLibraryResults = await client.searchLibrary(query);
-        const lines = lastSearchLibraryResults
-            .slice(0, 5)
-            .map(({ title, duration }, i) => `${i + 1}. ${title} (${secondsToTime(duration / 1000)})`);
-        chat.log('{clr=#FFFF00}? queue Search result with /result n\n{clr=#00FFFF}' + lines.join('\n'));
-    });
     chatCommands.set('library', async (query) => {
         lastYoutubeSearchResults = undefined;
         lastSearchLibraryResults = await client.searchLibrary2(query);

@@ -189,14 +189,6 @@ export class ZoneClient extends EventEmitter {
         });
     }
 
-    async searchLibrary(query: string): Promise<Media[]> {
-        const url = this.options.urlRoot + '/local?q=' + encodeURIComponent(query);
-        return fetch(url).then(async (res) => {
-            if (res.ok) return res.json();
-            throw new Error(await res.text());
-        });
-    }
-
     async searchLibrary2(query: string): Promise<Media[]> {
         const url = this.options.urlRoot + '/library?q=' + encodeURIComponent(query);
         return fetch(url).then(async (res) => {

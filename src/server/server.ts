@@ -127,8 +127,6 @@ export function host(
 
     let eventMode = false;
 
-    const localLibrary = new Map<string, Media>();
-
     load();
 
     playback.on('queue', (item: QueueItem) => sendAll('queue', { items: [item] }));
@@ -416,9 +414,6 @@ export function host(
                 const id = path.substr(9);
                 const media = await fetch(options.libraryOrigin + "/library/" + id).then(r => r.json());
                 if (media) tryUserQueueMedia(media);
-            } else {
-                const media = localLibrary.get(path);
-                if (media) tryUserQueueMedia(media);
             }
         }
 
@@ -549,5 +544,5 @@ export function host(
         connections.get(userId)!.send(type, message);
     }
 
-    return { zone, playback, save, sendAll, authCommands, localLibrary };
+    return { zone, playback, save, sendAll, authCommands };
 }
