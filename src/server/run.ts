@@ -1,16 +1,11 @@
 import * as express from 'express';
 import * as expressWs from 'express-ws';
-import * as http from 'http';
-import * as https from 'https';
 import * as request from 'request';
 import { promises as fs } from 'fs';
 import { host } from './server';
 import FileSync = require('lowdb/adapters/FileSync');
 import path = require('path');
 import { YoutubeService, search } from './youtube';
-
-import ffprobe = require('ffprobe');
-import ffprobeStatic = require('ffprobe-static');
 
 process.on('uncaughtException', (err) => console.log('uncaught exception:', err, err.stack));
 process.on('unhandledRejection', (err) => console.log('uncaught reject:', err));
@@ -19,28 +14,8 @@ async function run() {
     process.title = "zone server";
 
     const app = express();
-    let server: http.Server | https.Server;
-    let redirectServer: http.Server;
-
-    const secure = process.env.CERT_PATH && process.env.KEY_PATH;
-
-    if (secure) {
-        const key = await fs.readFile(process.env.KEY_PATH!);
-        const cert = await fs.readFile(process.env.CERT_PATH!);
-        server = https.createServer({ key, cert }, app);
-
-        const redirectApp = express();
-        redirectServer = http.createServer(redirectApp);
-        redirectServer.listen(80, () => console.log('listening for http...'));
-        redirectApp.get('*', (req, res) => {
-            res.redirect(301, `https://${req.headers.host}${req.url}`);
-        });
-    } else {
-        server = http.createServer(app);
-    }
-
-    const xws = expressWs(app, server);
-    server.listen(process.env.PORT || 4000, () => console.log('listening...'));
+    const xws = expressWs(app);
+    const server = app.listen(process.env.PORT || 4000, () => console.log('listening...'));
     server.on('error', (error) => console.log('server error', error));
 
     const dataPath = process.env.ZONE_DATA_PATH || '.data/db.json';
