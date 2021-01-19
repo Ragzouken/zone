@@ -294,6 +294,7 @@ describe('echoes', () => {
     });
 });
 
+/*
 describe('playback', () => {
     it('sends currently playing on join', async () => {
         await zoneServer({ playbackStartDelay: 0 }, async (server) => {
@@ -505,6 +506,7 @@ describe('event mode', () => {
         });
     });
 });
+*/
 
 /*
 describe('media sources', () => {

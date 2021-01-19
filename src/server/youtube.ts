@@ -1,6 +1,5 @@
 import * as ytdl from 'ytdl-core';
 import * as ytsr from 'ytsr';
-import * as ytpl from 'ytpl';
 
 import { EventEmitter } from 'events';
 import { createWriteStream, mkdir, unlink, writeFile, readFile } from 'fs';

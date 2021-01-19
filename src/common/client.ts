@@ -189,12 +189,24 @@ export class ZoneClient extends EventEmitter {
         });
     }
 
-    async searchLibrary(query: string): Promise<Media[]> {
-        const url = this.options.urlRoot + '/local?q=' + encodeURIComponent(query);
+    async searchLibrary2(query: string): Promise<Media[]> {
+        const url = this.options.urlRoot + '/library?q=' + encodeURIComponent(query);
         return fetch(url).then(async (res) => {
             if (res.ok) return res.json();
             throw new Error(await res.text());
         });
+    }
+
+    async searchLibraryTag(tag: string): Promise<Media[]> {
+        const url = this.options.urlRoot + '/library?tag=' + encodeURIComponent(tag);
+        return fetch(url).then(async (res) => {
+            if (res.ok) return res.json();
+            throw new Error(await res.text());
+        });
+    }
+
+    async banger(tag?: string) {
+        this.messaging.send("banger", { tag });
     }
 
     async lucky(query: string) {

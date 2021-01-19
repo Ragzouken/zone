@@ -10,6 +10,7 @@ import { getDefault, randomInt } from '../common/utility';
 import { MESSAGE_SCHEMAS } from './protocol';
 import { JoinMessage, SendAuth, SendCommand, EchoMessage } from '../common/client';
 import { YoutubeService, search } from './youtube';
+import fetch from 'node-fetch';
 
 const SECONDS = 1000;
 
@@ -29,6 +30,7 @@ export type HostOptions = {
     uploadPassword?: string;
 
     playbackStartDelay: number;
+    libraryOrigin?: string;
 };
 
 export const DEFAULT_OPTIONS: HostOptions = {
@@ -124,8 +126,6 @@ export function host(
     const playback = new Playback(opts.playbackStartDelay);
 
     let eventMode = false;
-
-    const localLibrary = new Map<string, Media>();
 
     load();
 
@@ -410,8 +410,11 @@ export function host(
         });
 
         async function tryQueueLocalByPath(path: string) {
-            const media = localLibrary.get(path);
-            if (media) tryUserQueueMedia(media);
+            if (path.startsWith("library2:") && options.libraryOrigin) {
+                const id = path.substr(9);
+                const media = await fetch(options.libraryOrigin + "/library/" + id).then(r => r.json());
+                if (media) tryUserQueueMedia(media);
+            }
         }
 
         async function tryQueueYoutubeById(videoId: string) {
@@ -432,9 +435,14 @@ export function host(
 
         messaging.messages.on('youtube', (message: any) => tryQueueYoutubeById(message.videoId));
         messaging.messages.on('local', (message: any) => tryQueueLocalByPath(message.path));
-        messaging.messages.on('banger', async () => {
+        messaging.messages.on('banger', async (message: any) => {
+            if (!options.libraryOrigin) return; 
+            const url = options.libraryOrigin + "/library"; 
+            const query = message.tag ? "?tag=" + message.tag : "";
+
             const EIGHT_MINUTES = 8 * 60 * SECONDS;
-            const extras = Array.from(localLibrary.values()).filter((media) => media.duration <= EIGHT_MINUTES);
+            const library = await (await fetch(url + query)).json();
+            const extras = library.filter((media: any) => media.duration <= EIGHT_MINUTES);
             const banger = extras[randomInt(0, extras.length - 1)];
             tryUserQueueMedia(banger, true);
         });
@@ -536,5 +544,5 @@ export function host(
         connections.get(userId)!.send(type, message);
     }
 
-    return { zone, playback, save, sendAll, authCommands, localLibrary };
+    return { zone, playback, save, sendAll, authCommands };
 }
