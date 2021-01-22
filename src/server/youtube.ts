@@ -13,14 +13,19 @@ const INFO_LIFESPAN = 8 * 60 * 60 * 1000;
 
 export type YoutubeVideo = MediaMeta & { videoId: string };
 
+async function getFilteredSearch(query: string) {
+    return (await ytsr.getFilters(query))?.get('Type')?.get('Video')?.url || query;
+}
+
 export async function search(query: string): Promise<YoutubeVideo[]> {
-    const results = await ytsr(query, { limit: 15 });
-    const videos = results.items.filter((item) => item.type === 'video' && !(item as any).live && item.duration).slice(0, 5);
+    const filteredQuery = await getFilteredSearch(query);
+    const { items } = await ytsr(filteredQuery, { limit: 15 });
+    const videos = items.filter((item) => item.type === 'video' && !item.isLive && item.duration).slice(0, 5) as ytsr.Video[];
     return videos.map((item: any) => {
-        const videoId = ytdl.getVideoID(item.link);
+        const videoId = ytdl.getVideoID(item.url);
         const duration = timeToSeconds(item.duration) * 1000;
         const title = item.title;
-        const thumbnail = item.thumbnail;
+        const thumbnail = item.bestThumbnail.url;
 
         return { videoId, title, duration, thumbnail };
     });
