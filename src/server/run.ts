@@ -15,7 +15,8 @@ async function run() {
 
     const app = express();
     const xws = expressWs(app);
-    const server = app.listen(process.env.PORT || 4000, () => console.log('listening...'));
+    const port = process.env.PORT || 4000;
+    const server = app.listen(port, () => console.log(`listening on http://localhost:${port}...`));
     server.on('error', (error) => console.log('server error', error));
 
     const dataPath = process.env.ZONE_DATA_PATH || '.data/db.json';
