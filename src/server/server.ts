@@ -444,7 +444,7 @@ export function host(
             const library = await (await fetch(url + query)).json();
             const extras = library.filter((media: any) => media.duration <= EIGHT_MINUTES);
             const banger = extras[randomInt(0, extras.length - 1)];
-            tryUserQueueMedia(banger, true);
+            if (banger) tryUserQueueMedia(banger, true);
         });
 
         messaging.messages.on('lucky', (message: any) => {
