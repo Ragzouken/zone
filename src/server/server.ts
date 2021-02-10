@@ -31,6 +31,7 @@ export type HostOptions = {
 
     playbackStartDelay: number;
     libraryOrigin?: string;
+    youtubeOrigin?: string;
 };
 
 export const DEFAULT_OPTIONS: HostOptions = {
@@ -414,6 +415,11 @@ export function host(
                 const id = path.substr(9);
                 const media = await fetch(options.libraryOrigin + "/library/" + id).then(r => r.json());
                 if (media) tryUserQueueMedia(media);
+            } else if (path.startsWith("youtube2:")) {
+                const youtubeId = path.substr(9);
+                const media = await fetch(`${options.youtubeOrigin}/youtube/${youtubeId}/info`).then(r => r.json());
+                media.youtube2 = true;
+                if (media) tryUserQueueMedia(media);
             }
         }
 
@@ -452,7 +458,7 @@ export function host(
                 results = results.filter((result) => result.duration < HALFHOUR);
 
                 if (results.length === 0) {
-                    status('no loadable results, user');
+                    status('no loadable results', user);
                 } else {
                     tryQueueYoutubeById(results[0].videoId);
                 }

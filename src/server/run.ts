@@ -29,6 +29,7 @@ async function run() {
         joinPassword: process.env.JOIN_PASSWORD,
         authPassword: process.env.AUTH_PASSWORD || 'riverdale',
         libraryOrigin: process.env.LIBRARY_ORIGIN,
+        youtubeOrigin: process.env.YOUTUBE_ORIGIN,
     });
 
     // trust glitch's proxy to give us socket ips
