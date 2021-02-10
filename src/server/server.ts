@@ -32,6 +32,7 @@ export type HostOptions = {
     playbackStartDelay: number;
     libraryOrigin?: string;
     youtubeOrigin?: string;
+    youtubePassword?: string;
 };
 
 export const DEFAULT_OPTIONS: HostOptions = {
@@ -417,7 +418,15 @@ export function host(
                 if (media) tryUserQueueMedia(media);
             } else if (path.startsWith("youtube2:")) {
                 const youtubeId = path.substr(9);
-                const media = await fetch(`${options.youtubeOrigin}/youtube/${youtubeId}/info`).then(r => r.json());
+                const media = await fetch(
+                    `${options.youtubeOrigin}/youtube/${youtubeId}/request`,
+                    { 
+                        method: "POST",
+                        headers: {
+                            "Authorization": "Bearer " + options.youtubePassword,
+                        }
+                    }
+                ).then(r => r.json());
                 media.youtube2 = true;
                 if (media) tryUserQueueMedia(media);
             }
