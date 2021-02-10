@@ -135,6 +135,7 @@ export function host(
     playback.on('play', (item: QueueItem) => sendAll('play', { item, time: playback.currentTime }));
     playback.on('stop', () => sendAll('play', {}));
     playback.on('unqueue', ({ itemId }) => sendAll('unqueue', { itemId }));
+    playback.on('failed', (item: QueueItem) => skip("video failed to load"));
 
     playback.on('finish', (item) => {
         const videoId = sourceToVideoId(item.media.source);
@@ -428,6 +429,7 @@ export function host(
                     }
                 ).then(r => r.json());
                 media.youtube2 = true;
+                media.getStatus = async () => fetch(`${options.youtubeOrigin}/youtube/${youtubeId}/status`).then(r => r.json());
                 if (media) tryUserQueueMedia(media);
             }
         }

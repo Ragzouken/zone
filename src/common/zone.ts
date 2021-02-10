@@ -18,6 +18,7 @@ export type Media = {
     subtitle?: string;
     thumbnail?: string;
     shortcut?: string;
+    getStatus?: () => Promise<string>;
 };
 
 export type UserEcho = UserState & {
