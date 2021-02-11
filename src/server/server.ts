@@ -187,6 +187,8 @@ export function host(
         const user = request.user!;
         const source = request.body.source;
         
+        console.log("SKIP", source);
+        
         if (!playback.currentItem || playback.currentItem.media.source !== source) return;
 
         if (!eventMode) {
@@ -203,6 +205,8 @@ export function host(
     xws.app.delete('/queue/:itemId', requireUserToken, async (request, response) => {
         const user = request.user!;
         const itemId = request.body.itemId;
+        
+        console.log("UNQUEUE", itemId);
 
         const item = playback.queue.find((item) => item.itemId === itemId);
         if (!item) return;
