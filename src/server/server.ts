@@ -206,7 +206,7 @@ export function host(
             response.status(204).send();
         } else {
             status(`can't skip during event mode`, user);
-            response.status(403).send();
+            response.status(403).send("can't skip during event mode");
         }
 
         response.status(202).send();

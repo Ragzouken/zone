@@ -2,7 +2,8 @@ import Messaging from './messaging';
 import { EventEmitter } from 'events';
 import { specifically } from './utility';
 import { ZoneState, UserState, QueueItem, UserEcho, Media } from './zone';
-import fetch from 'node-fetch';
+import fetch, { Headers, HeadersInit } from 'node-fetch';
+import { timeStamp } from 'console';
 
 export type StatusMesage = { text: string };
 export type JoinMessage = { name: string; token?: string; password?: string };
@@ -180,6 +181,20 @@ export class ZoneClient extends EventEmitter {
         this.messaging.send('echo', { position, text });
     }
 
+    async request(method: string, url: string, body?: any): Promise<unknown> {
+        const headers: HeadersInit = {};
+
+        if (this.assignation) {
+            headers["Authorization"] = "Bearer " + this.assignation.token;
+        }
+
+        if (body) {
+            headers["Content-Type"] = "application/json";
+        }
+
+        return fetch(url, { method, headers, body: JSON.stringify(body) });
+    }
+
     async searchYoutube(query: string): Promise<Media[]> {
         const url = this.options.urlRoot + '/youtube?q=' + encodeURIComponent(query);
         return fetch(url).then(async (res) => {
@@ -205,48 +220,22 @@ export class ZoneClient extends EventEmitter {
     }
 
     async banger(tag?: string) {
-        return fetch("/queue/banger", {
-            method: "POST",
-            headers: { 
-                "Authorization": "Bearer " + this.assignation!.token,
-                "Content-Type": "application/json",
-            },
-            body: JSON.stringify({ tag }),
-        });
+        return this.request("POST", "/queue/banger", { tag });
     }
 
     async queue(path: string) {
-        return fetch("/queue", {
-            method: "POST",
-            headers: { 
-                "Authorization": "Bearer " + this.assignation!.token,
-                "Content-Type": "application/json",
-            },
-            body: JSON.stringify({ path }),
-        });
+        return this.request("POST", "/queue", { path });
     }
 
     async unqueue(item: QueueItem) {
-        return fetch("/queue/" + item.itemId, {
-            method: "DELETE",
-            headers: { 
-                "Authorization": "Bearer " + this.assignation!.token,
-            },
-        });
+        return this.request("DELETE", "/queue/" + item.itemId);
     }
 
     async skip() {
         if (!this.zone.lastPlayedItem) return;
         const source = this.zone.lastPlayedItem.media.source;
 
-        return fetch("/queue/skip", {
-            method: "POST",
-            headers: { 
-                "Authorization": "Bearer " + this.assignation!.token,
-                "Content-Type": "application/json",
-            },
-            body: JSON.stringify({ source }),
-        });
+        return this.request("POST", "/queue/skip", { source });
     }
 
     private addStandardListeners() {
