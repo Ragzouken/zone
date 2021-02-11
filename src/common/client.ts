@@ -217,13 +217,8 @@ export class ZoneClient extends EventEmitter {
     }
 
     async youtube(videoId: string) {
-        return new Promise<QueueItem>((resolve, reject) => {
-            setTimeout(() => reject('timeout'), this.options.slowResponseTimeout);
-            this.on('queue', ({ item }) => {
-                if (item.media.source === 'youtube/' + videoId) resolve(item);
-            });
-            this.messaging.send('youtube', { videoId });
-        });
+        //this.messaging.send('youtube', { videoId });
+        this.messaging.send('local', { path: 'youtube2:' + videoId });
     }
 
     async local(path: string) {

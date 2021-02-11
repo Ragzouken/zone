@@ -683,7 +683,7 @@ export async function load() {
     chatCommands.set('r', chatCommands.get('result')!);
     chatCommands.set('youtube', (args) => {
         const videoId = textToYoutubeVideoId(args)!;
-        client.youtube(videoId).catch(() => chat.status("couldn't queue video :("));
+        client.youtube(videoId);
     });
     chatCommands.set('local', (path) => client.local(path));
     chatCommands.set('skip', () => client.skip());
