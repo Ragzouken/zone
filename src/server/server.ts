@@ -26,7 +26,6 @@ export type HostOptions = {
 
     joinPassword?: string;
     authPassword?: string;
-    uploadPassword?: string;
 
     playbackStartDelay: number;
     libraryOrigin?: string;
@@ -47,8 +46,6 @@ export const DEFAULT_OPTIONS: HostOptions = {
 
     playbackStartDelay: 1 * SECONDS,
 };
-
-const HALFHOUR = 30 * 60 * SECONDS;
 
 const bans = new Map<unknown, Ban>();
 
