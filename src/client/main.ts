@@ -562,7 +562,7 @@ export async function load() {
         if (isNaN(index)) chat.status(`did not understand '${args}' as a number`);
         else if (!results || index < 0 || index >= results.length)
             chat.status(`there is no #${index + 1} search result`);
-        else if (lastYoutubeSearchResults) client.youtube(results[index].videoId);
+        else if (lastYoutubeSearchResults) client.youtube(results[index].youtubeId);
         else client.local(results[index].shortcut!);
     }
 

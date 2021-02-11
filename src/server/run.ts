@@ -1,6 +1,5 @@
 import * as express from 'express';
 import * as expressWs from 'express-ws';
-import * as request from 'request';
 import { promises as fs } from 'fs';
 import { host } from './server';
 import FileSync = require('lowdb/adapters/FileSync');
