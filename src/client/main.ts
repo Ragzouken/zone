@@ -4,7 +4,6 @@ import { sleep } from '../common/utility';
 import { ChatPanel } from './chat';
 
 import ZoneClient from '../common/client';
-import { YoutubeVideo } from '../server/youtube';
 import { Player } from './player';
 import { Media, UserState } from '../common/zone';
 import { HTMLUI } from './html-ui';
@@ -454,7 +453,7 @@ export async function load() {
             results.forEach(({ title, duration, youtubeId, thumbnail }) => {
                 const row = searchResultTemplate.cloneNode(true) as HTMLElement;
                 row.addEventListener('click', () => {
-                    client.youtube(youtubeId);
+                    client.youtube(youtubeId!);
                     menu.open('playback/playlist');
                 });
 
@@ -562,7 +561,7 @@ export async function load() {
         if (isNaN(index)) chat.status(`did not understand '${args}' as a number`);
         else if (!results || index < 0 || index >= results.length)
             chat.status(`there is no #${index + 1} search result`);
-        else if (lastYoutubeSearchResults) client.youtube(results[index].youtubeId);
+        else if (lastYoutubeSearchResults) client.youtube(results[index].youtubeId!);
         else client.local(results[index].shortcut!);
     }
 
@@ -639,7 +638,7 @@ export async function load() {
         saveToAvatarSlot(activeAvatarSlot, data);
     });
 
-    let lastYoutubeSearchResults: YoutubeVideo[] | undefined;
+    let lastYoutubeSearchResults: Media[] | undefined;
     let lastSearchLibraryResults: Media[] | undefined;
 
     const skipButton = document.getElementById('skip-button') as HTMLButtonElement;
