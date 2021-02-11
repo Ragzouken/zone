@@ -451,10 +451,10 @@ export async function load() {
         searchResults.innerText = 'searching...';
         client.search(searchInput.value).then((results) => {
             searchResults.innerHTML = '';
-            results.forEach(({ title, duration, videoId, thumbnail }) => {
+            results.forEach(({ title, duration, youtubeId, thumbnail }) => {
                 const row = searchResultTemplate.cloneNode(true) as HTMLElement;
                 row.addEventListener('click', () => {
-                    client.youtube(videoId);
+                    client.youtube(youtubeId);
                     menu.open('playback/playlist');
                 });
 
