@@ -667,7 +667,7 @@ export async function load() {
     });
     chatCommands.set('search', async (query) => {
         lastSearchResults = await client.searchYoutube(query);
-        lastSearchResults.forEach((entry: any) => entry.path = "youtube:" + entry.id);
+        lastSearchResults.forEach((entry: any) => entry.path = "youtube:" + entry.youtubeId);
         const lines = lastSearchResults
             .slice(0, 5)
             .map(({ title, duration }, i) => `${i + 1}. ${title} (${secondsToTime(duration / 1000)})`);
