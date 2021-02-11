@@ -212,6 +212,19 @@ export class ZoneClient extends EventEmitter {
         this.messaging.send('queue', { path });
     }
 
+    async queue2(path: string) {
+        return fetch("/queue", {
+            method: "POST",
+            headers: { 
+                "Authorization": "Bearer " + this.assignation!.token,
+                "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+                path,
+            }),
+        });
+    }
+
     async unqueue(item: QueueItem) {
         return new Promise<QueueItem>((resolve, reject) => {
             setTimeout(() => reject('timeout'), this.options.quickResponseTimeout);

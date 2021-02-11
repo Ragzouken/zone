@@ -10,8 +10,17 @@ import { getDefault, randomInt } from '../common/utility';
 import { MESSAGE_SCHEMAS } from './protocol';
 import { JoinMessage, SendAuth, SendCommand, EchoMessage } from '../common/client';
 import fetch from 'node-fetch';
+import { json, NextFunction, Request, Response } from 'express';
 
 const SECONDS = 1000;
+
+declare global {
+    namespace Express {
+        interface Request {
+            user?: UserState;
+        }
+    }
+}
 
 export type HostOptions = {
     pingInterval: number;
@@ -123,6 +132,42 @@ export function host(
     const playback = new Playback(opts.playbackStartDelay);
 
     let eventMode = false;
+
+    function requireUserToken(
+        request: Request, 
+        response: Response, 
+        next: NextFunction,
+    ) {
+        const auth = request.headers.authorization || "";
+        const token = auth.startsWith("Bearer ") ? auth.substr(7) : "";
+        request.user = tokenToUser.get(token);
+
+        if (request.user) {
+            next();
+        } else {
+            response.status(401).json({ title: "Invalid user." });
+        }
+    }
+
+    xws.app.use(json());
+    xws.app.post('/queue', requireUserToken, async (request, response) => {
+        status("you tested the command", request.user!);
+        response.status(202).send();
+
+        const user = request.user!;
+        const ip = userToIp.get(user);
+        const path = request.body.path;
+
+        if (path.startsWith("library:") && options.libraryOrigin) {
+            const id = path.substr(8);
+            const media = await libraryToMedia(id);
+            if (media) tryQueueMedia(user, media, ip);
+        } else if (path.startsWith("youtube:") && options.youtubeOrigin) {
+            const youtubeId = path.substr(8);
+            const media = await youtubeToMedia(youtubeId);
+            if (media) tryQueueMedia(user, media, ip);
+        }
+    });
 
     load();
 
