@@ -9,7 +9,6 @@ import { nanoid } from 'nanoid';
 import { getDefault, randomInt } from '../common/utility';
 import { MESSAGE_SCHEMAS } from './protocol';
 import { JoinMessage, SendAuth, SendCommand, EchoMessage } from '../common/client';
-import { YoutubeService } from './youtube';
 import fetch from 'node-fetch';
 
 const SECONDS = 1000;
@@ -73,7 +72,6 @@ interface Ban {
 export function host(
     xws: expressWs.Instance,
     adapter: low.AdapterSync,
-    yts: YoutubeService,
     options: Partial<HostOptions> = {},
 ) {
     const opts = Object.assign({}, DEFAULT_OPTIONS, options);
@@ -137,16 +135,6 @@ export function host(
     playback.on('unqueue', ({ itemId }) => sendAll('unqueue', { itemId }));
     playback.on('failed', (item: QueueItem) => skip("video failed to load"));
 
-    playback.on('finish', (item) => {
-        const videoId = sourceToVideoId(item.media.source);
-        if (videoId) yts.deleteVideo(videoId);
-    });
-
-    playback.on('unqueue', (item) => {
-        const videoId = sourceToVideoId(item.media.source);
-        if (videoId) yts.deleteVideo(videoId);
-    });
-
     function sourceToVideoId(source: string) {
         return source.startsWith('youtube/') ? source.slice(8) : undefined;
     }
@@ -156,16 +144,6 @@ export function host(
 
     function load() {
         playback.loadState(db.get('playback').value());
-
-        if (playback.currentItem) {
-            const videoId = sourceToVideoId(playback.currentItem.media.source);
-            if (videoId) yts.queueVideoDownload(videoId);
-        }
-
-        playback.queue.forEach((item) => {
-            const videoId = sourceToVideoId(item.media.source);
-            if (videoId) yts.queueVideoDownload(videoId);
-        });
 
         const banlist = db.get('bans').value() as Ban[];
         banlist.forEach((ban) => bans.set(ban.ip, ban));
@@ -435,19 +413,7 @@ export function host(
         }
 
         async function tryQueueYoutubeById(videoId: string) {
-            const media = await yts.getVideoMedia(videoId);
-            const privileged = user.tags.includes('dj') || user.tags.includes('admin');
-
-            if (!media) {
-                status('video unloadable', user);
-            } else if (media.duration > HALFHOUR * 3 && !privileged) {
-                status('video too long', user);
-            } else if (yts.getVideoState(videoId) !== 'broken') {
-                yts.queueVideoDownload(videoId);
-                tryUserQueueMedia(media);
-            } else {
-                status('video unloadable (broken)', user);
-            }
+            return tryQueueLocalByPath("youtube2:" + videoId);
         }
 
         messaging.messages.on('youtube', (message: any) => tryQueueYoutubeById(message.videoId));

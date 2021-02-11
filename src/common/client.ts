@@ -1,6 +1,5 @@
 import Messaging from './messaging';
 import { EventEmitter } from 'events';
-import { YoutubeVideo } from '../server/youtube';
 import { specifically } from './utility';
 import { ZoneState, UserState, QueueItem, UserEcho, Media } from './zone';
 import fetch from 'node-fetch';
@@ -181,7 +180,7 @@ export class ZoneClient extends EventEmitter {
         this.messaging.send('echo', { position, text });
     }
 
-    async search(query: string): Promise<YoutubeVideo[]> {
+    async search(query: string): Promise<Media[]> {
         const url = this.options.urlRoot + '/youtube2/youtube?q=' + encodeURIComponent(query);
         return fetch(url).then(async (res) => {
             if (res.ok) return res.json();
