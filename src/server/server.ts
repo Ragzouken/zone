@@ -189,9 +189,9 @@ export function host(
         
         console.log("SKIP", source);
         
-        if (!playback.currentItem || playback.currentItem.media.source !== source) return;
-
-        if (!eventMode) {
+        if (!playback.currentItem || playback.currentItem.media.source !== source) {
+            console.log("nothing")
+        } else if (!eventMode) {
             voteSkip(source, user);
         } else if (user.tags.includes('dj')) {
             skip(`${user.name} skipped ${playback.currentItem!.media.title}`);
@@ -204,7 +204,7 @@ export function host(
 
     xws.app.delete('/queue/:itemId', requireUserToken, async (request, response) => {
         const user = request.user!;
-        const itemId = request.body.itemId;
+        const itemId = parseInt(request.params.itemId, 10);
         
         console.log("UNQUEUE", itemId);
 
