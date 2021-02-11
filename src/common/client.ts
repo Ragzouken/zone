@@ -217,7 +217,6 @@ export class ZoneClient extends EventEmitter {
 
     async youtube(videoId: string) {
         this.messaging.send('youtube', { videoId });
-        //this.messaging.send('local', { path: 'youtube2:' + videoId });
     }
 
     async local(path: string) {
