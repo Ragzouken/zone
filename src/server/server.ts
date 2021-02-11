@@ -152,16 +152,21 @@ export function host(
     xws.app.use(json());
     xws.app.post('/queue', requireUserToken, async (request, response) => {
         status("you tested the command", request.user!);
-        response.status(202).send();
-
+        
         const user = request.user!;
         const path = request.body.path;
 
         if (path.startsWith("library:") && options.libraryOrigin) {
             const id = path.substr(8);
             const media = await libraryToMedia(id);
-            if (media) tryQueueMedia(user, media);
+            if (media) {
+                tryQueueMedia(user, media);
+                response.status(202).send();
+            } else {
+                response.status(404).send();
+            }
         } else if (path.startsWith("youtube:") && options.youtubeOrigin) {
+            response.status(202).send();
             const youtubeId = path.substr(8);
             const media = await youtubeToMedia(youtubeId);
             if (media) tryQueueMedia(user, media);
@@ -174,13 +179,17 @@ export function host(
         const url = options.libraryOrigin + "/library";
         const query = tag ? "?tag=" + tag : "";
 
-        response.status(202).send();
-
         const EIGHT_MINUTES = 8 * 60 * SECONDS;
         const library = await (await fetch(url + query)).json();
         const extras = library.filter((media: any) => media.duration <= EIGHT_MINUTES);
         const banger = extras[randomInt(0, extras.length - 1)];
-        if (banger) tryQueueMedia(request.user!, banger, true);
+        
+        if (banger) {
+            tryQueueMedia(request.user!, banger, true);
+            response.status(202).send();
+        } else {
+            response.status(503).send();
+        }
     });
 
     xws.app.post('/queue/skip', requireUserToken, async (request, response) => {
@@ -188,13 +197,16 @@ export function host(
         const source = request.body.source;
 
         if (!playback.currentItem || playback.currentItem.media.source !== source) {
-            // invalid
+            response.status(404).send();
         } else if (!eventMode) {
             voteSkip(source, user);
+            response.status(202).send();
         } else if (user.tags.includes('dj')) {
             skip(`${user.name} skipped ${playback.currentItem!.media.title}`);
+            response.status(204).send();
         } else {
             status(`can't skip during event mode`, user);
+            response.status(403).send();
         }
 
         response.status(202).send();
@@ -206,16 +218,19 @@ export function host(
         
         const item = playback.queue.find((item) => item.itemId === itemId);
         if (!item) {
-            // invalid
+            response.status(404).send();
         } else {
             const dj = eventMode && user.tags.includes('dj');
             const own = item.info.userId === user.userId;
             const auth = user.tags.includes('admin');
     
-            if (dj || own || auth) playback.unqueue(item);
+            if (dj || own || auth) {
+                playback.unqueue(item);
+                response.status(204).send();
+            } else {
+                response.status(403).send();
+            }
         }
-
-        response.status(202).send();
     });
 
     load();
