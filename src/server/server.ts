@@ -9,7 +9,7 @@ import { nanoid } from 'nanoid';
 import { getDefault, randomInt } from '../common/utility';
 import { MESSAGE_SCHEMAS } from './protocol';
 import { JoinMessage, SendAuth, SendCommand, EchoMessage } from '../common/client';
-import { YoutubeService, search } from './youtube';
+import { YoutubeService } from './youtube';
 import fetch from 'node-fetch';
 
 const SECONDS = 1000;
@@ -462,18 +462,6 @@ export function host(
             const extras = library.filter((media: any) => media.duration <= EIGHT_MINUTES);
             const banger = extras[randomInt(0, extras.length - 1)];
             if (banger) tryUserQueueMedia(banger, true);
-        });
-
-        messaging.messages.on('lucky', (message: any) => {
-            search(message.query).then(async (results) => {
-                results = results.filter((result) => result.duration < HALFHOUR);
-
-                if (results.length === 0) {
-                    status('no loadable results', user);
-                } else {
-                    tryQueueYoutubeById(results[0].videoId);
-                }
-            });
         });
 
         messaging.messages.on('skip', (message: any) => {

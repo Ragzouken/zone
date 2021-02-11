@@ -5,7 +5,7 @@ import { promises as fs } from 'fs';
 import { host } from './server';
 import FileSync = require('lowdb/adapters/FileSync');
 import path = require('path');
-import { YoutubeService, search } from './youtube';
+import { YoutubeService } from './youtube';
 
 process.on('uncaughtException', (err) => console.log('uncaught exception:', err, err.stack));
 process.on('unhandledRejection', (err) => console.log('uncaught reject:', err));
@@ -37,17 +37,6 @@ async function run() {
     app.set('trust proxy', true);
     app.use('/', express.static('public'));
 
-    app.get('/youtube', (req, res) => {
-        const query = req.query.q;
-        if (!query || typeof query !== 'string') {
-            res.status(400).send('bad query');
-        } else {
-            search(query).then(
-                (results) => res.json(results),
-                (reason) => res.status(500).send(`search failed ${reason}`),
-            );
-        }
-    });
     app.get('/youtube/:videoId', async (req, res) => {
         // desperation
         req.on('error', (e) => console.log('req:', e));

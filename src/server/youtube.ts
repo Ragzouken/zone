@@ -6,30 +6,11 @@ import { createWriteStream, mkdir, unlink, writeFile, readFile } from 'fs';
 import path = require('path');
 import * as glob from 'glob';
 import { Media, MediaMeta } from '../common/zone';
-import { timeToSeconds } from '../common/utility';
 import { performance } from 'perf_hooks';
 
 const INFO_LIFESPAN = 8 * 60 * 60 * 1000;
 
 export type YoutubeVideo = MediaMeta & { videoId: string };
-
-async function getFilteredSearch(query: string) {
-    return (await ytsr.getFilters(query))?.get('Type')?.get('Video')?.url || query;
-}
-
-export async function search(query: string): Promise<YoutubeVideo[]> {
-    const filteredQuery = await getFilteredSearch(query);
-    const { items } = await ytsr(filteredQuery, { limit: 15 });
-    const videos = items.filter((item) => item.type === 'video' && !item.isLive && item.duration).slice(0, 5) as ytsr.Video[];
-    return videos.map((item: any) => {
-        const videoId = ytdl.getVideoID(item.url);
-        const duration = timeToSeconds(item.duration) * 1000;
-        const title = item.title;
-        const thumbnail = item.bestThumbnail.url;
-
-        return { videoId, title, duration, thumbnail };
-    });
-}
 
 export type VideoStatus = 'broken' | 'available' | 'queued' | 'ready';
 
