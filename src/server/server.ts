@@ -458,7 +458,6 @@ export function host(
             }
         }
 
-        messaging.messages.on('queue', (message: any) => tryQueueByPath(message.path));
         messaging.messages.on('banger', async (message: any) => {
             if (!options.libraryOrigin) return; 
             const url = options.libraryOrigin + "/library"; 

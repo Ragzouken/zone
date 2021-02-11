@@ -209,19 +209,13 @@ export class ZoneClient extends EventEmitter {
     }
 
     async queue(path: string) {
-        this.messaging.send('queue', { path });
-    }
-
-    async queue2(path: string) {
         return fetch("/queue", {
             method: "POST",
             headers: { 
                 "Authorization": "Bearer " + this.assignation!.token,
                 "Content-Type": "application/json",
             },
-            body: JSON.stringify({
-                path,
-            }),
+            body: JSON.stringify({ path }),
         });
     }
 
