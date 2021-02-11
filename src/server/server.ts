@@ -186,11 +186,9 @@ export function host(
     xws.app.post('/queue/skip', requireUserToken, async (request, response) => {
         const user = request.user!;
         const source = request.body.source;
-        
-        console.log("SKIP", source);
-        
+
         if (!playback.currentItem || playback.currentItem.media.source !== source) {
-            console.log("nothing")
+            // invalid
         } else if (!eventMode) {
             voteSkip(source, user);
         } else if (user.tags.includes('dj')) {
@@ -206,16 +204,16 @@ export function host(
         const user = request.user!;
         const itemId = parseInt(request.params.itemId, 10);
         
-        console.log("UNQUEUE", itemId);
-
         const item = playback.queue.find((item) => item.itemId === itemId);
-        if (!item) return;
-
-        const dj = eventMode && user.tags.includes('dj');
-        const own = item.info.userId === user.userId;
-        const auth = user.tags.includes('admin');
-
-        if (dj || own || auth) playback.unqueue(item);
+        if (!item) {
+            // invalid
+        } else {
+            const dj = eventMode && user.tags.includes('dj');
+            const own = item.info.userId === user.userId;
+            const auth = user.tags.includes('admin');
+    
+            if (dj || own || auth) playback.unqueue(item);
+        }
 
         response.status(202).send();
     });
