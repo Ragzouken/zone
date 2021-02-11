@@ -1,9 +1,6 @@
 import { once } from 'events';
 import { sleep } from '../utility';
-import { YOUTUBE_MEDIA, TINY_MEDIA, DAY_MEDIA } from './media.data';
 import { zoneServer } from './utilities';
-
-const IMMEDIATE_REPLY_TIMEOUT = 50;
 
 describe('connectivity', () => {
     test('heartbeat response', async () => {

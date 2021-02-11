@@ -11,7 +11,7 @@ export type PlaybackState = {
 };
 
 export interface Playback {
-    on(event: 'play' | 'queue' | 'unqueue' | 'finish', callback: (media: QueueItem) => void): this;
+    on(event: 'play' | 'queue' | 'unqueue' | 'finish' | 'failed' | 'waiting', callback: (media: QueueItem) => void): this;
     on(event: 'stop', callback: () => void): this;
 }
 
@@ -79,9 +79,32 @@ export class Playback extends EventEmitter {
 
     skip() {
         if (this.currentItem) this.emit('finish', this.currentItem);
-        const next = this.queue.shift();
-        if (next) this.playMedia(next);
-        else this.clearMedia();
+
+        if (this.queue.length === 0) {
+            this.clearMedia();
+        } else {
+            const next = this.queue[0];
+
+            if (next.media.getStatus) {
+                next.media.getStatus().then((status) => {
+                    if (status === 'available') {
+                        this.queue.shift();
+                        this.playMedia(next);
+                    } else if (status === 'failed') {
+                        this.queue.shift();
+                        this.playMedia(next);
+                        this.emit('failed', next);
+                    } else {
+                        if (this.checkTimeout) clearTimeout(this.checkTimeout);
+                        this.checkTimeout = setTimeout(() => this.check(), 500);
+                        this.emit('waiting', next);
+                    }
+                });
+            } else {
+                this.queue.shift();
+                this.playMedia(next);
+            }
+        }
     }
 
     private playMedia(media: QueueItem) {

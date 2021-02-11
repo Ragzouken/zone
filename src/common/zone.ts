@@ -18,6 +18,8 @@ export type Media = {
     subtitle?: string;
     thumbnail?: string;
     shortcut?: string;
+    getStatus?: () => Promise<string>;
+    youtubeId?: string;
 };
 
 export type UserEcho = UserState & {

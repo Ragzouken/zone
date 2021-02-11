@@ -9,7 +9,6 @@ import { nanoid } from 'nanoid';
 import { getDefault, randomInt } from '../common/utility';
 import { MESSAGE_SCHEMAS } from './protocol';
 import { JoinMessage, SendAuth, SendCommand, EchoMessage } from '../common/client';
-import { YoutubeService, search } from './youtube';
 import fetch from 'node-fetch';
 
 const SECONDS = 1000;
@@ -31,6 +30,8 @@ export type HostOptions = {
 
     playbackStartDelay: number;
     libraryOrigin?: string;
+    youtubeOrigin?: string;
+    youtubePassword?: string;
 };
 
 export const DEFAULT_OPTIONS: HostOptions = {
@@ -44,7 +45,7 @@ export const DEFAULT_OPTIONS: HostOptions = {
     voteSkipThreshold: 0.6,
     errorSkipThreshold: 0.4,
 
-    playbackStartDelay: 3 * SECONDS,
+    playbackStartDelay: 1 * SECONDS,
 };
 
 const HALFHOUR = 30 * 60 * SECONDS;
@@ -71,7 +72,6 @@ interface Ban {
 export function host(
     xws: expressWs.Instance,
     adapter: low.AdapterSync,
-    yts: YoutubeService,
     options: Partial<HostOptions> = {},
 ) {
     const opts = Object.assign({}, DEFAULT_OPTIONS, options);
@@ -133,16 +133,7 @@ export function host(
     playback.on('play', (item: QueueItem) => sendAll('play', { item, time: playback.currentTime }));
     playback.on('stop', () => sendAll('play', {}));
     playback.on('unqueue', ({ itemId }) => sendAll('unqueue', { itemId }));
-
-    playback.on('finish', (item) => {
-        const videoId = sourceToVideoId(item.media.source);
-        if (videoId) yts.deleteVideo(videoId);
-    });
-
-    playback.on('unqueue', (item) => {
-        const videoId = sourceToVideoId(item.media.source);
-        if (videoId) yts.deleteVideo(videoId);
-    });
+    playback.on('failed', (item: QueueItem) => skip("video failed to load"));
 
     function sourceToVideoId(source: string) {
         return source.startsWith('youtube/') ? source.slice(8) : undefined;
@@ -153,16 +144,6 @@ export function host(
 
     function load() {
         playback.loadState(db.get('playback').value());
-
-        if (playback.currentItem) {
-            const videoId = sourceToVideoId(playback.currentItem.media.source);
-            if (videoId) yts.queueVideoDownload(videoId);
-        }
-
-        playback.queue.forEach((item) => {
-            const videoId = sourceToVideoId(item.media.source);
-            if (videoId) yts.queueVideoDownload(videoId);
-        });
 
         const banlist = db.get('bans').value() as Ban[];
         banlist.forEach((ban) => bans.set(ban.ip, ban));
@@ -414,23 +395,25 @@ export function host(
                 const id = path.substr(9);
                 const media = await fetch(options.libraryOrigin + "/library/" + id).then(r => r.json());
                 if (media) tryUserQueueMedia(media);
+            } else if (path.startsWith("youtube2:")) {
+                const youtubeId = path.substr(9);
+                const media = await fetch(`${options.youtubeOrigin}/youtube/${youtubeId}/info`).then(r => r.json());
+                await fetch(
+                    `${options.youtubeOrigin}/youtube/${youtubeId}/request`,
+                    { 
+                        method: "POST",
+                        headers: {
+                            "Authorization": "Bearer " + options.youtubePassword,
+                        }
+                    }
+                );
+                media.getStatus = async () => fetch(`${options.youtubeOrigin}/youtube/${youtubeId}/status`).then(r => r.json());
+                if (media) tryUserQueueMedia(media);
             }
         }
 
         async function tryQueueYoutubeById(videoId: string) {
-            const media = await yts.getVideoMedia(videoId);
-            const privileged = user.tags.includes('dj') || user.tags.includes('admin');
-
-            if (!media) {
-                status('video unloadable', user);
-            } else if (media.duration > HALFHOUR * 3 && !privileged) {
-                status('video too long', user);
-            } else if (yts.getVideoState(videoId) !== 'broken') {
-                yts.queueVideoDownload(videoId);
-                tryUserQueueMedia(media);
-            } else {
-                status('video unloadable (broken)', user);
-            }
+            return tryQueueLocalByPath("youtube2:" + videoId);
         }
 
         messaging.messages.on('youtube', (message: any) => tryQueueYoutubeById(message.videoId));
@@ -445,18 +428,6 @@ export function host(
             const extras = library.filter((media: any) => media.duration <= EIGHT_MINUTES);
             const banger = extras[randomInt(0, extras.length - 1)];
             if (banger) tryUserQueueMedia(banger, true);
-        });
-
-        messaging.messages.on('lucky', (message: any) => {
-            search(message.query).then(async (results) => {
-                results = results.filter((result) => result.duration < HALFHOUR);
-
-                if (results.length === 0) {
-                    status('no loadable results, user');
-                } else {
-                    tryQueueYoutubeById(results[0].videoId);
-                }
-            });
         });
 
         messaging.messages.on('skip', (message: any) => {

@@ -1,6 +1,5 @@
 import Messaging from './messaging';
 import { EventEmitter } from 'events';
-import { YoutubeVideo } from '../server/youtube';
 import { specifically } from './utility';
 import { ZoneState, UserState, QueueItem, UserEcho, Media } from './zone';
 import fetch from 'node-fetch';
@@ -181,8 +180,8 @@ export class ZoneClient extends EventEmitter {
         this.messaging.send('echo', { position, text });
     }
 
-    async search(query: string): Promise<YoutubeVideo[]> {
-        const url = this.options.urlRoot + '/youtube?q=' + encodeURIComponent(query);
+    async search(query: string): Promise<Media[]> {
+        const url = this.options.urlRoot + '/youtube2/youtube?q=' + encodeURIComponent(query);
         return fetch(url).then(async (res) => {
             if (res.ok) return res.json();
             throw new Error(await res.text());
@@ -217,13 +216,7 @@ export class ZoneClient extends EventEmitter {
     }
 
     async youtube(videoId: string) {
-        return new Promise<QueueItem>((resolve, reject) => {
-            setTimeout(() => reject('timeout'), this.options.slowResponseTimeout);
-            this.on('queue', ({ item }) => {
-                if (item.media.source === 'youtube/' + videoId) resolve(item);
-            });
-            this.messaging.send('youtube', { videoId });
-        });
+        this.messaging.send('youtube', { videoId });
     }
 
     async local(path: string) {
