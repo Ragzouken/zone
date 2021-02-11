@@ -419,7 +419,8 @@ export function host(
                 if (media) tryUserQueueMedia(media);
             } else if (path.startsWith("youtube2:")) {
                 const youtubeId = path.substr(9);
-                const media = await fetch(
+                const media = await fetch(`${options.youtubeOrigin}/youtube/${youtubeId}/info`).then(r => r.json());
+                await fetch(
                     `${options.youtubeOrigin}/youtube/${youtubeId}/request`,
                     { 
                         method: "POST",
@@ -427,8 +428,7 @@ export function host(
                             "Authorization": "Bearer " + options.youtubePassword,
                         }
                     }
-                ).then(r => r.json());
-                media.youtube2 = true;
+                );
                 media.getStatus = async () => fetch(`${options.youtubeOrigin}/youtube/${youtubeId}/status`).then(r => r.json());
                 if (media) tryUserQueueMedia(media);
             }
