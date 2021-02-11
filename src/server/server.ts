@@ -45,7 +45,7 @@ export const DEFAULT_OPTIONS: HostOptions = {
     voteSkipThreshold: 0.6,
     errorSkipThreshold: 0.4,
 
-    playbackStartDelay: 3 * SECONDS,
+    playbackStartDelay: 1 * SECONDS,
 };
 
 const HALFHOUR = 30 * 60 * SECONDS;
