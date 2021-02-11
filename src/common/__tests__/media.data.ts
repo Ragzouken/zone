@@ -1,4 +1,3 @@
-import { YoutubeVideo } from '../../server/youtube';
 import { Media } from '../zone';
 
 export const TINY_MEDIA: Media = { title: 'tiny', duration: 100, source: 'local/TINY_MEDIA' };
@@ -17,5 +16,3 @@ export const YOUTUBE_MEDIA: YoutubeTest[] = [
         duration: 245000,
     },
 ];
-
-export const FAKE_YOUTUBE_VIDEO: YoutubeVideo = { videoId: '', title: 'fake video', duration: 1000 };
