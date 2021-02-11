@@ -205,7 +205,14 @@ export class ZoneClient extends EventEmitter {
     }
 
     async banger(tag?: string) {
-        this.messaging.send("banger", { tag });
+        return fetch("/queue/banger", {
+            method: "POST",
+            headers: { 
+                "Authorization": "Bearer " + this.assignation!.token,
+                "Content-Type": "application/json",
+            },
+            body: JSON.stringify({ tag }),
+        });
     }
 
     async queue(path: string) {
@@ -220,10 +227,11 @@ export class ZoneClient extends EventEmitter {
     }
 
     async unqueue(item: QueueItem) {
-        return new Promise<QueueItem>((resolve, reject) => {
-            setTimeout(() => reject('timeout'), this.options.quickResponseTimeout);
-            specifically(this, 'unqueue', (unqueued: QueueItem) => unqueued.itemId === unqueued.itemId, resolve);
-            this.messaging.send('unqueue', { itemId: item.itemId });
+        return fetch("/queue/" + item.itemId, {
+            method: "DELETE",
+            headers: { 
+                "Authorization": "Bearer " + this.assignation!.token,
+            },
         });
     }
 
