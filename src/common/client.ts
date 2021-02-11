@@ -238,7 +238,15 @@ export class ZoneClient extends EventEmitter {
     async skip() {
         if (!this.zone.lastPlayedItem) return;
         const source = this.zone.lastPlayedItem.media.source;
-        this.messaging.send('skip', { source });
+
+        return fetch("/queue/skip", {
+            method: "POST",
+            headers: { 
+                "Authorization": "Bearer " + this.assignation!.token,
+                "Content-Type": "application/json",
+            },
+            body: JSON.stringify({ source }),
+        });
     }
 
     private addStandardListeners() {
