@@ -26,7 +26,6 @@ export type HostOptions = {
 
     joinPassword?: string;
     authPassword?: string;
-    uploadPassword?: string;
 
     playbackStartDelay: number;
     libraryOrigin?: string;
@@ -47,8 +46,6 @@ export const DEFAULT_OPTIONS: HostOptions = {
 
     playbackStartDelay: 1 * SECONDS,
 };
-
-const HALFHOUR = 30 * 60 * SECONDS;
 
 const bans = new Map<unknown, Ban>();
 
@@ -134,10 +131,6 @@ export function host(
     playback.on('stop', () => sendAll('play', {}));
     playback.on('unqueue', ({ itemId }) => sendAll('unqueue', { itemId }));
     playback.on('failed', (item: QueueItem) => skip("video failed to load"));
-
-    function sourceToVideoId(source: string) {
-        return source.startsWith('youtube/') ? source.slice(8) : undefined;
-    }
 
     const skips = new Set<UserId>();
     playback.on('play', async (item) => skips.clear());
@@ -354,8 +347,6 @@ export function host(
         }),
     );
 
-    
-
     function tryQueueMedia(user: UserState, media: Media, userIp: unknown, banger = false) {
         if (eventMode && !user.tags.includes('dj')) {
             status('zone is currently in event mode, only djs may queue', user);
@@ -375,6 +366,26 @@ export function host(
         }
     }
 
+    async function youtubeToMedia(youtubeId: string) {
+        const media = await fetch(`${options.youtubeOrigin}/youtube/${youtubeId}/info`).then(r => r.json());
+        await fetch(
+            `${options.youtubeOrigin}/youtube/${youtubeId}/request`,
+            { 
+                method: "POST",
+                headers: {
+                    "Authorization": "Bearer " + options.youtubePassword,
+                }
+            }
+        );
+        media.getStatus = async () => fetch(`${options.youtubeOrigin}/youtube/${youtubeId}/status`).then(r => r.json());
+        return media;
+    }
+
+    async function libraryToMedia(libraryId: string) {
+        const media = await fetch(options.libraryOrigin + "/library/" + libraryId).then(r => r.json());
+        return media;
+    }
+
     function bindMessagingToUser(user: UserState, messaging: Messaging, userIp: unknown) {
         function sendUser(type: string, message: any = {}) {
             sendOnly(type, message, user.userId);
@@ -390,34 +401,19 @@ export function host(
             sendAll('chat', { text, userId: user.userId });
         });
 
-        async function tryQueueLocalByPath(path: string) {
-            if (path.startsWith("library2:") && options.libraryOrigin) {
-                const id = path.substr(9);
-                const media = await fetch(options.libraryOrigin + "/library/" + id).then(r => r.json());
+        async function tryQueueByPath(path: string) {
+            if (path.startsWith("library:") && options.libraryOrigin) {
+                const id = path.substr(8);
+                const media = await libraryToMedia(id);
                 if (media) tryUserQueueMedia(media);
-            } else if (path.startsWith("youtube2:")) {
-                const youtubeId = path.substr(9);
-                const media = await fetch(`${options.youtubeOrigin}/youtube/${youtubeId}/info`).then(r => r.json());
-                await fetch(
-                    `${options.youtubeOrigin}/youtube/${youtubeId}/request`,
-                    { 
-                        method: "POST",
-                        headers: {
-                            "Authorization": "Bearer " + options.youtubePassword,
-                        }
-                    }
-                );
-                media.getStatus = async () => fetch(`${options.youtubeOrigin}/youtube/${youtubeId}/status`).then(r => r.json());
+            } else if (path.startsWith("youtube:") && options.youtubeOrigin) {
+                const youtubeId = path.substr(8);
+                const media = await youtubeToMedia(youtubeId);
                 if (media) tryUserQueueMedia(media);
             }
         }
 
-        async function tryQueueYoutubeById(videoId: string) {
-            return tryQueueLocalByPath("youtube2:" + videoId);
-        }
-
-        messaging.messages.on('youtube', (message: any) => tryQueueYoutubeById(message.videoId));
-        messaging.messages.on('local', (message: any) => tryQueueLocalByPath(message.path));
+        messaging.messages.on('queue', (message: any) => tryQueueByPath(message.path));
         messaging.messages.on('banger', async (message: any) => {
             if (!options.libraryOrigin) return; 
             const url = options.libraryOrigin + "/library"; 

@@ -20,6 +20,7 @@ export type Media = {
     shortcut?: string;
     getStatus?: () => Promise<string>;
     youtubeId?: string;
+    path?: string;
 };
 
 export type UserEcho = UserState & {

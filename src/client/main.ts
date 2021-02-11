@@ -448,12 +448,12 @@ export async function load() {
         event.stopPropagation();
 
         searchResults.innerText = 'searching...';
-        client.search(searchInput.value).then((results) => {
+        client.searchYoutube(searchInput.value).then((results) => {
             searchResults.innerHTML = '';
             results.forEach(({ title, duration, youtubeId, thumbnail }) => {
                 const row = searchResultTemplate.cloneNode(true) as HTMLElement;
                 row.addEventListener('click', () => {
-                    client.youtube(youtubeId!);
+                    client.queue("youtube:" + youtubeId!);
                     menu.open('playback/playlist');
                 });
 
@@ -556,13 +556,12 @@ export async function load() {
 
     function playFromSearchResult(args: string) {
         const index = parseInt(args, 10) - 1;
-        const results = lastYoutubeSearchResults || lastSearchLibraryResults;
+        const results = lastSearchResults;
 
         if (isNaN(index)) chat.status(`did not understand '${args}' as a number`);
         else if (!results || index < 0 || index >= results.length)
             chat.status(`there is no #${index + 1} search result`);
-        else if (lastYoutubeSearchResults) client.youtube(results[index].youtubeId!);
-        else client.local(results[index].shortcut!);
+        else client.queue(results[index].path!);
     }
 
     document.getElementById('play-banger')?.addEventListener('click', () => client.banger());
@@ -638,8 +637,7 @@ export async function load() {
         saveToAvatarSlot(activeAvatarSlot, data);
     });
 
-    let lastYoutubeSearchResults: Media[] | undefined;
-    let lastSearchLibraryResults: Media[] | undefined;
+    let lastSearchResults: Media[] = [];
 
     const skipButton = document.getElementById('skip-button') as HTMLButtonElement;
     skipButton.addEventListener('click', () => client.skip());
@@ -651,28 +649,26 @@ export async function load() {
 
     const chatCommands = new Map<string, (args: string) => void>();
     chatCommands.set('library', async (query) => {
-        lastYoutubeSearchResults = undefined;
-        lastSearchLibraryResults = await client.searchLibrary2(query);
-        lastSearchLibraryResults.forEach((entry: any) => entry.shortcut = "library2:" + entry.id);
-        const lines = lastSearchLibraryResults
+        lastSearchResults = await client.searchLibrary(query);
+        lastSearchResults.forEach((entry: any) => entry.path = "library:" + entry.id);
+        const lines = lastSearchResults
             .slice(0, 5)
             .map(({ title, duration }, i) => `${i + 1}. ${title} (${secondsToTime(duration / 1000)})`);
         chat.log('{clr=#FFFF00}? queue Search result with /result n\n{clr=#00FFFF}' + lines.join('\n'));
     });
     chatCommands.set('tagged', async (tag) => {
-        lastYoutubeSearchResults = undefined;
-        lastSearchLibraryResults = await client.searchLibraryTag(tag);
-        lastSearchLibraryResults.forEach((entry: any) => entry.shortcut = "library2:" + entry.id);
-        shuffleArray(lastSearchLibraryResults);
-        const lines = lastSearchLibraryResults
+        lastSearchResults = await client.searchLibraryTag(tag);
+        lastSearchResults.forEach((entry: any) => entry.path = "library:" + entry.id);
+        shuffleArray(lastSearchResults);
+        const lines = lastSearchResults
             .slice(0, 5)
             .map(({ title, duration }, i) => `${i + 1}. ${title} (${secondsToTime(duration / 1000)})`);
         chat.log('{clr=#FFFF00}? queue Search result with /result n\n{clr=#00FFFF}' + lines.join('\n'));
     });
     chatCommands.set('search', async (query) => {
-        lastYoutubeSearchResults = await client.search(query);
-        lastSearchLibraryResults = undefined;
-        const lines = lastYoutubeSearchResults
+        lastSearchResults = await client.searchYoutube(query);
+        lastSearchResults.forEach((entry: any) => entry.path = "youtube:" + entry.id);
+        const lines = lastSearchResults
             .slice(0, 5)
             .map(({ title, duration }, i) => `${i + 1}. ${title} (${secondsToTime(duration / 1000)})`);
         chat.log('{clr=#FFFF00}? queue Search result with /result n\n{clr=#00FFFF}' + lines.join('\n'));
@@ -682,14 +678,12 @@ export async function load() {
     chatCommands.set('r', chatCommands.get('result')!);
     chatCommands.set('youtube', (args) => {
         const videoId = textToYoutubeVideoId(args)!;
-        client.youtube(videoId);
+        client.queue("youtube:" + videoId);
     });
-    chatCommands.set('local', (path) => client.local(path));
     chatCommands.set('skip', () => client.skip());
     chatCommands.set('password', (args) => (joinPassword = args));
     chatCommands.set('users', () => listUsers());
     chatCommands.set('help', () => listHelp());
-    chatCommands.set('lucky', (query) => client.lucky(query));
     chatCommands.set('avatar', (data) => {
         if (data.trim().length === 0) {
             openAvatarEditor();

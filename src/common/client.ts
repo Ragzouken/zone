@@ -180,15 +180,15 @@ export class ZoneClient extends EventEmitter {
         this.messaging.send('echo', { position, text });
     }
 
-    async search(query: string): Promise<Media[]> {
-        const url = this.options.urlRoot + '/youtube2/youtube?q=' + encodeURIComponent(query);
+    async searchYoutube(query: string): Promise<Media[]> {
+        const url = this.options.urlRoot + '/youtube?q=' + encodeURIComponent(query);
         return fetch(url).then(async (res) => {
             if (res.ok) return res.json();
             throw new Error(await res.text());
         });
     }
 
-    async searchLibrary2(query: string): Promise<Media[]> {
+    async searchLibrary(query: string): Promise<Media[]> {
         const url = this.options.urlRoot + '/library?q=' + encodeURIComponent(query);
         return fetch(url).then(async (res) => {
             if (res.ok) return res.json();
@@ -208,23 +208,8 @@ export class ZoneClient extends EventEmitter {
         this.messaging.send("banger", { tag });
     }
 
-    async lucky(query: string) {
-        return new Promise<QueueMessage>((resolve, reject) => {
-            this.expect('queue', this.options.slowResponseTimeout).then(resolve, reject);
-            this.messaging.send('lucky', { query });
-        });
-    }
-
-    async youtube(videoId: string) {
-        this.messaging.send('youtube', { videoId });
-    }
-
-    async local(path: string) {
-        return new Promise<QueueItem>((resolve, reject) => {
-            setTimeout(() => reject('timeout'), this.options.quickResponseTimeout);
-            this.once('queue', ({ item }) => resolve(item));
-            this.messaging.send('local', { path });
-        });
+    async queue(path: string) {
+        this.messaging.send('queue', { path });
     }
 
     async unqueue(item: QueueItem) {
