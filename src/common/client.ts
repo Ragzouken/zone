@@ -2,8 +2,7 @@ import Messaging from './messaging';
 import { EventEmitter } from 'events';
 import { specifically } from './utility';
 import { ZoneState, UserState, QueueItem, UserEcho, Media } from './zone';
-import fetch, { Headers, HeadersInit } from 'node-fetch';
-import { timeStamp } from 'console';
+import fetch, { HeadersInit } from 'node-fetch';
 
 export type StatusMesage = { text: string };
 export type JoinMessage = { name: string; token?: string; password?: string };
@@ -181,7 +180,7 @@ export class ZoneClient extends EventEmitter {
         this.messaging.send('echo', { position, text });
     }
 
-    async request(method: string, url: string, body?: any): Promise<unknown> {
+    async request(method: string, url: string, body?: any): Promise<any> {
         const headers: HeadersInit = {};
 
         if (this.assignation) {
@@ -190,33 +189,28 @@ export class ZoneClient extends EventEmitter {
 
         if (body) {
             headers["Content-Type"] = "application/json";
+            body = JSON.stringify(body);
         }
 
-        return fetch(url, { method, headers, body: JSON.stringify(body) });
+        return fetch(url, { method, headers, body }).then(async (response) => {
+            if (response.ok) return response.json();
+            throw new Error(await response.text());
+        });
     }
 
     async searchYoutube(query: string): Promise<Media[]> {
         const url = this.options.urlRoot + '/youtube?q=' + encodeURIComponent(query);
-        return fetch(url).then(async (res) => {
-            if (res.ok) return res.json();
-            throw new Error(await res.text());
-        });
+        return this.request("GET", url);
     }
 
     async searchLibrary(query: string): Promise<Media[]> {
         const url = this.options.urlRoot + '/library?q=' + encodeURIComponent(query);
-        return fetch(url).then(async (res) => {
-            if (res.ok) return res.json();
-            throw new Error(await res.text());
-        });
+        return this.request("GET", url);
     }
 
     async searchLibraryTag(tag: string): Promise<Media[]> {
         const url = this.options.urlRoot + '/library?tag=' + encodeURIComponent(tag);
-        return fetch(url).then(async (res) => {
-            if (res.ok) return res.json();
-            throw new Error(await res.text());
-        });
+        return this.request("GET", url);
     }
 
     async banger(tag?: string) {
