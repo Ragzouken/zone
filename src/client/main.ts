@@ -681,6 +681,7 @@ export async function load() {
         client.queue("youtube:" + videoId);
     });
     chatCommands.set('skip', () => client.skip());
+    chatCommands.set('banger', (tag) => client.banger(tag));
     chatCommands.set('password', (args) => (joinPassword = args));
     chatCommands.set('users', () => listUsers());
     chatCommands.set('help', () => listHelp());
@@ -704,7 +705,6 @@ export async function load() {
         chat.status(`notifications ${permission}`);
     });
     chatCommands.set('name', rename);
-    chatCommands.set('banger', (tag) => client.banger(tag));
 
     chatCommands.set('auth', (password) => client.auth(password));
     chatCommands.set('admin', (args) => {
@@ -782,7 +782,11 @@ export async function load() {
         if (slash) {
             const command = chatCommands.get(slash[1]);
             if (command) {
-                command(slash[2].trim());
+                try {
+                    command(slash[2].trim());
+                } catch (error) {
+                    chat.error(`${line} failed: ${error.message}`);
+                }
             } else {
                 chat.status(`no command /${slash[1]}`);
                 listHelp();
