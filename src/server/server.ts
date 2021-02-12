@@ -156,7 +156,7 @@ export function host(
             tryQueueMedia(request.user!, media);
             response.status(202).send();
         } catch (error) {
-            response.status(400).send(error);
+            response.status(400).send(error.message);
         }
     });
 
@@ -171,7 +171,7 @@ export function host(
                     tryQueueMedia(request.user!, banger, true);
                     response.status(202).send();
                 } catch (error) {
-                    response.status(403).send(error);
+                    response.status(403).send(error.message);
                 }
             } else {
                 response.status(503).send("no matching bangers");
@@ -227,7 +227,7 @@ export function host(
             const youtubeId = path.substr(8);
             return youtubeToMedia(youtubeId);
         } else {
-            throw `no media "${path}"`;
+            throw new Error(`no media "${path}"`);
         }
     }
 
@@ -466,7 +466,7 @@ export function host(
 
     function tryQueueMedia(user: UserState, media: Media, banger = false) {
         if (eventMode && !user.tags.includes('dj')) {
-            throw 'only djs may queue during event mode';
+            throw new Error('only djs may queue during event mode');
         }
 
         const userIp = userToIp.get(user);
@@ -475,9 +475,9 @@ export function host(
         const dj = eventMode && user.tags.includes('dj');
 
         if (existing) {
-            throw `'${existing.title}' is already queued`;
+            throw new Error(`'${existing.title}' is already queued`);
         } else if (!dj && count >= opts.perUserQueueLimit) {
-            throw `you already have ${count} videos in the queue`;
+            throw new Error(`you already have ${count} videos in the queue`);
         } else {
             playback.queueMedia(media, { userId: user.userId, ip: userIp, banger });
         }
