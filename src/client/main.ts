@@ -554,14 +554,14 @@ export async function load() {
         }
     }
 
-    function playFromSearchResult(args: string) {
+    async function playFromSearchResult(args: string) {
         const index = parseInt(args, 10) - 1;
         const results = lastSearchResults;
 
         if (isNaN(index)) chat.status(`did not understand '${args}' as a number`);
         else if (!results || index < 0 || index >= results.length)
             chat.status(`there is no #${index + 1} search result`);
-        else client.queue(results[index].path!);
+        else return client.queue(results[index].path!);
     }
 
     document.getElementById('play-banger')?.addEventListener('click', () => client.banger());
@@ -676,10 +676,7 @@ export async function load() {
     chatCommands.set('result', playFromSearchResult);
     chatCommands.set('s', chatCommands.get('search')!);
     chatCommands.set('r', chatCommands.get('result')!);
-    chatCommands.set('youtube', (args) => {
-        const videoId = textToYoutubeVideoId(args)!;
-        client.queue("youtube:" + videoId);
-    });
+    chatCommands.set('youtube', async (args) => client.queue("youtube:" + textToYoutubeVideoId(args)!));
     chatCommands.set('skip', () => client.skip());
     chatCommands.set('banger', (tag) => client.banger(tag));
     chatCommands.set('password', (args) => (joinPassword = args));
