@@ -647,7 +647,7 @@ export async function load() {
     quickResync.addEventListener('click', () => player.forceRetry('resync button'));
     quickResync.hidden = true;
 
-    const chatCommands = new Map<string, (args: string) => void>();
+    const chatCommands = new Map<string, (args: string) => void | Promise<void>>();
     chatCommands.set('library', async (query) => {
         lastSearchResults = await client.searchLibrary(query);
         lastSearchResults.forEach((entry: any) => entry.path = "library:" + entry.id);
@@ -782,11 +782,8 @@ export async function load() {
         if (slash) {
             const command = chatCommands.get(slash[1]);
             if (command) {
-                try {
-                    command(slash[2].trim());
-                } catch (error) {
-                    chat.error(`${line} failed: ${error.message}`);
-                }
+                const promise = command(slash[2].trim());
+                if (promise) promise.catch((error) => chat.error(`${line} failed: ${error.message}`));
             } else {
                 chat.status(`no command /${slash[1]}`);
                 listHelp();
