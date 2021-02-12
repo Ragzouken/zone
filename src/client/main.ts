@@ -783,7 +783,7 @@ export async function load() {
             const command = chatCommands.get(slash[1]);
             if (command) {
                 const promise = command(slash[2].trim());
-                if (promise) promise.catch((error) => chat.error(`${line} failed: ${error.message}`));
+                if (promise) promise.catch((error) => chat.status(`${line} failed: ${error.message}`));
             } else {
                 chat.status(`no command /${slash[1]}`);
                 listHelp();

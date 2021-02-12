@@ -151,30 +151,38 @@ export function host(
 
     xws.app.use(json());
     xws.app.post('/queue', requireUserToken, async (request, response) => {
-        status("you tested the command", request.user!);
-        
         const user = request.user!;
         const path = request.body.path;
 
+        let media: any;
+
         if (path.startsWith("library:") && options.libraryOrigin) {
             const id = path.substr(8);
-            const media = await libraryToMedia(id);
-            if (media) {
-                tryQueueMedia(user, media);
-                response.status(202).send();
-            } else {
-                response.status(404).send();
-            }
+            media = await libraryToMedia(id);
         } else if (path.startsWith("youtube:") && options.youtubeOrigin) {
             response.status(202).send();
             const youtubeId = path.substr(8);
-            const media = await youtubeToMedia(youtubeId);
-            if (media) tryQueueMedia(user, media);
+            media = await youtubeToMedia(youtubeId);
+        }
+
+        if (media) {
+            try {
+                tryQueueMedia(user, media);
+                response.status(202).send();
+            } catch (error) {
+                response.status(403).send(error);
+            }
+        } else {
+            response.status(404).send();
         }
     });
 
     xws.app.post('/queue/banger', requireUserToken, async (request, response) => {
-        if (!options.libraryOrigin) return;
+        if (!options.libraryOrigin) {
+            response.status(501).send();
+            return;
+        }
+
         const tag = request.body.tag;
         const url = options.libraryOrigin + "/library";
         const query = tag ? "?tag=" + tag : "";
@@ -185,10 +193,14 @@ export function host(
         const banger = extras[randomInt(0, extras.length - 1)];
         
         if (banger) {
-            tryQueueMedia(request.user!, banger, true);
-            response.status(202).send();
+            try {
+                tryQueueMedia(request.user!, banger, true);
+                response.status(202).send();
+            } catch (error) {
+                response.status(403).send(error);
+            }
         } else {
-            response.status(503).send();
+            response.status(503).send("no matching bangers");
         }
     });
 
@@ -197,7 +209,7 @@ export function host(
         const source = request.body.source;
 
         if (!playback.currentItem || playback.currentItem.media.source !== source) {
-            response.status(404).send();
+            response.status(404).send(`${source} is not playing`);
         } else if (!eventMode) {
             voteSkip(source, user);
             response.status(202).send();
@@ -205,7 +217,6 @@ export function host(
             skip(`${user.name} skipped ${playback.currentItem!.media.title}`);
             response.status(204).send();
         } else {
-            status(`can't skip during event mode`, user);
             response.status(403).send("can't skip during event mode");
         }
 
@@ -458,8 +469,7 @@ export function host(
 
     function tryQueueMedia(user: UserState, media: Media, banger = false) {
         if (eventMode && !user.tags.includes('dj')) {
-            status('zone is currently in event mode, only djs may queue', user);
-            return;
+            throw 'only djs may queue during event mode';
         }
 
         const userIp = userToIp.get(user);
@@ -468,9 +478,9 @@ export function host(
         const dj = eventMode && user.tags.includes('dj');
 
         if (existing) {
-            status(`'${existing.title}' is already queued`, user);
+            throw `'${existing.title}' is already queued`;
         } else if (!dj && count >= opts.perUserQueueLimit) {
-            status(`you already have ${count} videos in the queue`, user);
+            throw `you already have ${count} videos in the queue`;
         } else {
             playback.queueMedia(media, { userId: user.userId, ip: userIp, banger });
         }
