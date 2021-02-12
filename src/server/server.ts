@@ -145,62 +145,37 @@ export function host(
         if (request.user) {
             next();
         } else {
-            response.status(401).json({ title: "Invalid user." });
+            response.status(401).send("invalid user");
         }
     }
 
     xws.app.use(json());
     xws.app.post('/queue', requireUserToken, async (request, response) => {
-        const user = request.user!;
-        const path = request.body.path;
-
-        let media: any;
-
-        if (path.startsWith("library:") && options.libraryOrigin) {
-            const id = path.substr(8);
-            media = await libraryToMedia(id);
-        } else if (path.startsWith("youtube:") && options.youtubeOrigin) {
+        try {
+            const media = await pathToMedia(request.body.path);
+            tryQueueMedia(request.user!, media);
             response.status(202).send();
-            const youtubeId = path.substr(8);
-            media = await youtubeToMedia(youtubeId);
-        }
-
-        if (media) {
-            try {
-                tryQueueMedia(user, media);
-                response.status(202).send();
-            } catch (error) {
-                response.status(403).send(error);
-            }
-        } else {
-            response.status(404).send();
+        } catch (error) {
+            response.status(400).send(error);
         }
     });
 
     xws.app.post('/queue/banger', requireUserToken, async (request, response) => {
         if (!options.libraryOrigin) {
             response.status(501).send();
-            return;
-        }
-
-        const tag = request.body.tag;
-        const url = options.libraryOrigin + "/library";
-        const query = tag ? "?tag=" + tag : "";
-
-        const EIGHT_MINUTES = 8 * 60 * SECONDS;
-        const library = await (await fetch(url + query)).json();
-        const extras = library.filter((media: any) => media.duration <= EIGHT_MINUTES);
-        const banger = extras[randomInt(0, extras.length - 1)];
-        
-        if (banger) {
-            try {
-                tryQueueMedia(request.user!, banger, true);
-                response.status(202).send();
-            } catch (error) {
-                response.status(403).send(error);
-            }
         } else {
-            response.status(503).send("no matching bangers");
+            const banger = await libraryTagToBanger(request.body.tag);
+        
+            if (banger) {
+                try {
+                    tryQueueMedia(request.user!, banger, true);
+                    response.status(202).send();
+                } catch (error) {
+                    response.status(403).send(error);
+                }
+            } else {
+                response.status(503).send("no matching bangers");
+            }
         }
     });
 
@@ -219,8 +194,6 @@ export function host(
         } else {
             response.status(403).send("can't skip during event mode");
         }
-
-        response.status(202).send();
     });
 
     xws.app.delete('/queue/:itemId', requireUserToken, async (request, response) => {
@@ -245,6 +218,30 @@ export function host(
     });
 
     load();
+
+    async function pathToMedia(path: string) {
+        if (path.startsWith("library:") && options.libraryOrigin) {
+            const id = path.substr(8);
+            return libraryToMedia(id);
+        } else if (path.startsWith("youtube:") && options.youtubeOrigin) {
+            const youtubeId = path.substr(8);
+            return youtubeToMedia(youtubeId);
+        } else {
+            throw `no media "${path}"`;
+        }
+    }
+
+    async function libraryTagToBanger(tag: string | undefined) {
+        const url = options.libraryOrigin + "/library";
+        const query = tag ? "?tag=" + tag : "";
+
+        const EIGHT_MINUTES = 8 * 60 * SECONDS;
+        const library = await (await fetch(url + query)).json();
+        const extras = library.filter((media: any) => media.duration <= EIGHT_MINUTES);
+        const banger = extras[randomInt(0, extras.length - 1)];
+
+        return banger;
+    }
 
     playback.on('queue', (item: QueueItem) => sendAll('queue', { items: [item] }));
     playback.on('play', (item: QueueItem) => sendAll('play', { item, time: playback.currentTime }));
