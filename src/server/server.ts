@@ -485,9 +485,8 @@ export function host(
         }
     }
 
-    async function youtubeToMedia(youtubeId: string) {
-        const media = await fetch(`${options.youtubeOrigin}/youtube/${youtubeId}/info`).then(r => r.json());
-        await fetch(
+    async function requestYoutube(youtubeId: string) {
+        return fetch(
             `${options.youtubeOrigin}/youtube/${youtubeId}/request`,
             { 
                 method: "POST",
@@ -496,7 +495,13 @@ export function host(
                 }
             }
         );
+    }
+
+    async function youtubeToMedia(youtubeId: string) {
+        const media = await fetch(`${options.youtubeOrigin}/youtube/${youtubeId}/info`).then(r => r.json());
         media.getStatus = async () => fetch(`${options.youtubeOrigin}/youtube/${youtubeId}/status`).then(r => r.json());
+        media.request = () => requestYoutube(youtubeId);
+        await media.request();
         return media;
     }
 

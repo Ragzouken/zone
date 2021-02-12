@@ -94,6 +94,8 @@ export class Playback extends EventEmitter {
                         this.queue.shift();
                         this.playMedia(next);
                         this.emit('failed', next);
+                    } else if (status === 'none') {
+                        
                     } else {
                         if (this.checkTimeout) clearTimeout(this.checkTimeout);
                         this.checkTimeout = setTimeout(() => this.check(), 500);
