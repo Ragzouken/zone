@@ -150,6 +150,8 @@ export function host(
     }
 
     xws.app.use(json());
+
+    xws.app.get('/queue', (request, response) => response.json(playback.queue));
     xws.app.post('/queue', requireUserToken, async (request, response) => {
         try {
             const media = await pathToMedia(request.body.path);
