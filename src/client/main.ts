@@ -647,7 +647,7 @@ export async function load() {
     quickResync.addEventListener('click', () => player.forceRetry('resync button'));
     quickResync.hidden = true;
 
-    const chatCommands = new Map<string, (args: string) => void>();
+    const chatCommands = new Map<string, (args: string) => void | Promise<void>>();
     chatCommands.set('library', async (query) => {
         lastSearchResults = await client.searchLibrary(query);
         lastSearchResults.forEach((entry: any) => entry.path = "library:" + entry.id);
@@ -667,7 +667,7 @@ export async function load() {
     });
     chatCommands.set('search', async (query) => {
         lastSearchResults = await client.searchYoutube(query);
-        lastSearchResults.forEach((entry: any) => entry.path = "youtube:" + entry.id);
+        lastSearchResults.forEach((entry: any) => entry.path = "youtube:" + entry.youtubeId);
         const lines = lastSearchResults
             .slice(0, 5)
             .map(({ title, duration }, i) => `${i + 1}. ${title} (${secondsToTime(duration / 1000)})`);
@@ -681,6 +681,7 @@ export async function load() {
         client.queue("youtube:" + videoId);
     });
     chatCommands.set('skip', () => client.skip());
+    chatCommands.set('banger', (tag) => client.banger(tag));
     chatCommands.set('password', (args) => (joinPassword = args));
     chatCommands.set('users', () => listUsers());
     chatCommands.set('help', () => listHelp());
@@ -704,7 +705,6 @@ export async function load() {
         chat.status(`notifications ${permission}`);
     });
     chatCommands.set('name', rename);
-    chatCommands.set('banger', (tag) => client.banger(tag));
 
     chatCommands.set('auth', (password) => client.auth(password));
     chatCommands.set('admin', (args) => {
@@ -782,7 +782,8 @@ export async function load() {
         if (slash) {
             const command = chatCommands.get(slash[1]);
             if (command) {
-                command(slash[2].trim());
+                const promise = command(slash[2].trim());
+                if (promise) promise.catch((error) => chat.status(`${line} failed: ${error.message}`));
             } else {
                 chat.status(`no command /${slash[1]}`);
                 listHelp();

@@ -2,7 +2,7 @@ import Messaging from './messaging';
 import { EventEmitter } from 'events';
 import { specifically } from './utility';
 import { ZoneState, UserState, QueueItem, UserEcho, Media } from './zone';
-import fetch from 'node-fetch';
+import fetch, { HeadersInit } from 'node-fetch';
 
 export type StatusMesage = { text: string };
 export type JoinMessage = { name: string; token?: string; password?: string };
@@ -180,50 +180,56 @@ export class ZoneClient extends EventEmitter {
         this.messaging.send('echo', { position, text });
     }
 
+    async request(method: string, url: string, body?: any): Promise<any> {
+        const headers: HeadersInit = {};
+
+        if (this.assignation) {
+            headers["Authorization"] = "Bearer " + this.assignation.token;
+        }
+
+        if (body) {
+            headers["Content-Type"] = "application/json";
+            body = JSON.stringify(body);
+        }
+
+        return fetch(url, { method, headers, body }).then(async (response) => {
+            if (response.ok) return response.json().catch(() => {});
+            throw new Error(await response.text());
+        });
+    }
+
     async searchYoutube(query: string): Promise<Media[]> {
         const url = this.options.urlRoot + '/youtube?q=' + encodeURIComponent(query);
-        return fetch(url).then(async (res) => {
-            if (res.ok) return res.json();
-            throw new Error(await res.text());
-        });
+        return this.request("GET", url);
     }
 
     async searchLibrary(query: string): Promise<Media[]> {
         const url = this.options.urlRoot + '/library?q=' + encodeURIComponent(query);
-        return fetch(url).then(async (res) => {
-            if (res.ok) return res.json();
-            throw new Error(await res.text());
-        });
+        return this.request("GET", url);
     }
 
     async searchLibraryTag(tag: string): Promise<Media[]> {
         const url = this.options.urlRoot + '/library?tag=' + encodeURIComponent(tag);
-        return fetch(url).then(async (res) => {
-            if (res.ok) return res.json();
-            throw new Error(await res.text());
-        });
+        return this.request("GET", url);
     }
 
     async banger(tag?: string) {
-        this.messaging.send("banger", { tag });
+        return this.request("POST", "/queue/banger", { tag });
     }
 
     async queue(path: string) {
-        this.messaging.send('queue', { path });
+        return this.request("POST", "/queue", { path });
     }
 
     async unqueue(item: QueueItem) {
-        return new Promise<QueueItem>((resolve, reject) => {
-            setTimeout(() => reject('timeout'), this.options.quickResponseTimeout);
-            specifically(this, 'unqueue', (unqueued: QueueItem) => unqueued.itemId === unqueued.itemId, resolve);
-            this.messaging.send('unqueue', { itemId: item.itemId });
-        });
+        return this.request("DELETE", "/queue/" + item.itemId);
     }
 
     async skip() {
         if (!this.zone.lastPlayedItem) return;
         const source = this.zone.lastPlayedItem.media.source;
-        this.messaging.send('skip', { source });
+
+        return this.request("POST", "/queue/skip", { source });
     }
 
     private addStandardListeners() {

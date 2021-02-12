@@ -10,8 +10,17 @@ import { getDefault, randomInt } from '../common/utility';
 import { MESSAGE_SCHEMAS } from './protocol';
 import { JoinMessage, SendAuth, SendCommand, EchoMessage } from '../common/client';
 import fetch from 'node-fetch';
+import { json, NextFunction, Request, Response } from 'express';
 
 const SECONDS = 1000;
+
+declare global {
+    namespace Express {
+        interface Request {
+            user?: UserState;
+        }
+    }
+}
 
 export type HostOptions = {
     pingInterval: number;
@@ -124,7 +133,117 @@ export function host(
 
     let eventMode = false;
 
+    function requireUserToken(
+        request: Request, 
+        response: Response, 
+        next: NextFunction,
+    ) {
+        const auth = request.headers.authorization || "";
+        const token = auth.startsWith("Bearer ") ? auth.substr(7) : "";
+        request.user = tokenToUser.get(token);
+
+        if (request.user) {
+            next();
+        } else {
+            response.status(401).send("invalid user");
+        }
+    }
+
+    xws.app.use(json());
+
+    xws.app.get('/queue', (request, response) => response.json(playback.queue));
+    xws.app.post('/queue', requireUserToken, async (request, response) => {
+        try {
+            const media = await pathToMedia(request.body.path);
+            tryQueueMedia(request.user!, media);
+            response.status(202).send();
+        } catch (error) {
+            response.status(400).send(error.message);
+        }
+    });
+
+    xws.app.post('/queue/banger', requireUserToken, async (request, response) => {
+        if (!options.libraryOrigin) {
+            response.status(501).send();
+        } else {
+            const banger = await libraryTagToBanger(request.body.tag);
+        
+            if (banger) {
+                try {
+                    tryQueueMedia(request.user!, banger, true);
+                    response.status(202).send();
+                } catch (error) {
+                    response.status(403).send(error.message);
+                }
+            } else {
+                response.status(503).send("no matching bangers");
+            }
+        }
+    });
+
+    xws.app.post('/queue/skip', requireUserToken, async (request, response) => {
+        const user = request.user!;
+        const source = request.body.source;
+
+        if (!playback.currentItem || playback.currentItem.media.source !== source) {
+            response.status(404).send(`${source} is not playing`);
+        } else if (!eventMode) {
+            voteSkip(source, user);
+            response.status(202).send();
+        } else if (user.tags.includes('dj')) {
+            skip(`${user.name} skipped ${playback.currentItem!.media.title}`);
+            response.status(204).send();
+        } else {
+            response.status(403).send("can't skip during event mode");
+        }
+    });
+
+    xws.app.delete('/queue/:itemId', requireUserToken, async (request, response) => {
+        const user = request.user!;
+        const itemId = parseInt(request.params.itemId, 10);
+        
+        const item = playback.queue.find((item) => item.itemId === itemId);
+        if (!item) {
+            response.status(404).send();
+        } else {
+            const dj = eventMode && user.tags.includes('dj');
+            const own = item.info.userId === user.userId;
+            const auth = user.tags.includes('admin');
+    
+            if (dj || own || auth) {
+                playback.unqueue(item);
+                response.status(204).send();
+            } else {
+                response.status(403).send();
+            }
+        }
+    });
+
     load();
+
+    async function pathToMedia(path: string) {
+        if (path.startsWith("library:") && options.libraryOrigin) {
+            const id = path.substr(8);
+            return libraryToMedia(id);
+        } else if (path.startsWith("youtube:") && options.youtubeOrigin) {
+            const youtubeId = path.substr(8);
+            return youtubeToMedia(youtubeId);
+        } else {
+            throw new Error(`no media "${path}"`);
+        }
+    }
+
+    async function libraryTagToBanger(tag: string | undefined) {
+        const url = options.libraryOrigin + "/library";
+        const query = tag ? "?tag=" + tag : "";
+
+        const EIGHT_MINUTES = 8 * 60 * SECONDS;
+        const library = await (await fetch(url + query)).json();
+        const extras = library.filter((media: any) => media.duration <= EIGHT_MINUTES);
+        const banger = extras[randomInt(0, extras.length - 1)];
+
+        return banger;
+    }
 
     playback.on('queue', (item: QueueItem) => sendAll('queue', { items: [item] }));
     playback.on('play', (item: QueueItem) => sendAll('play', { item, time: playback.currentTime }));
@@ -347,20 +466,20 @@ export function host(
         }),
     );
 
-    function tryQueueMedia(user: UserState, media: Media, userIp: unknown, banger = false) {
+    function tryQueueMedia(user: UserState, media: Media, banger = false) {
         if (eventMode && !user.tags.includes('dj')) {
-            status('zone is currently in event mode, only djs may queue', user);
-            return;
+            throw new Error('only djs may queue during event mode');
         }
 
+        const userIp = userToIp.get(user);
         const existing = playback.queue.find((queued) => mediaEquals(queued.media, media))?.media;
         const count = playback.queue.filter((item) => item.info.ip === userIp).length;
         const dj = eventMode && user.tags.includes('dj');
 
         if (existing) {
-            status(`'${existing.title}' is already queued`, user);
+            throw new Error(`'${existing.title}' is already queued`);
         } else if (!dj && count >= opts.perUserQueueLimit) {
-            status(`you already have ${count} videos in the queue`, user);
+            throw new Error(`you already have ${count} videos in the queue`);
         } else {
             playback.queueMedia(media, { userId: user.userId, ip: userIp, banger });
         }
@@ -391,62 +510,12 @@ export function host(
             sendOnly(type, message, user.userId);
         }
 
-        const tryUserQueueMedia = (media: Media, banger = false) => tryQueueMedia(user, media, userIp, banger);
-
         messaging.messages.on('heartbeat', () => sendUser('heartbeat'));
 
         messaging.messages.on('chat', (message: any) => {
             let { text } = message;
             text = text.substring(0, opts.chatLengthLimit);
             sendAll('chat', { text, userId: user.userId });
-        });
-
-        async function tryQueueByPath(path: string) {
-            if (path.startsWith("library:") && options.libraryOrigin) {
-                const id = path.substr(8);
-                const media = await libraryToMedia(id);
-                if (media) tryUserQueueMedia(media);
-            } else if (path.startsWith("youtube:") && options.youtubeOrigin) {
-                const youtubeId = path.substr(8);
-                const media = await youtubeToMedia(youtubeId);
-                if (media) tryUserQueueMedia(media);
-            }
-        }
-
-        messaging.messages.on('queue', (message: any) => tryQueueByPath(message.path));
-        messaging.messages.on('banger', async (message: any) => {
-            if (!options.libraryOrigin) return; 
-            const url = options.libraryOrigin + "/library"; 
-            const query = message.tag ? "?tag=" + message.tag : "";
-
-            const EIGHT_MINUTES = 8 * 60 * SECONDS;
-            const library = await (await fetch(url + query)).json();
-            const extras = library.filter((media: any) => media.duration <= EIGHT_MINUTES);
-            const banger = extras[randomInt(0, extras.length - 1)];
-            if (banger) tryUserQueueMedia(banger, true);
-        });
-
-        messaging.messages.on('skip', (message: any) => {
-            if (!playback.currentItem || playback.currentItem.media.source !== message.source) return;
-
-            if (!eventMode) {
-                voteSkip(message.source, user);
-            } else if (user.tags.includes('dj')) {
-                skip(`${user.name} skipped ${playback.currentItem!.media.title}`);
-            } else {
-                status(`can't skip during event mode`, user);
-            }
-        });
-
-        messaging.messages.on('unqueue', ({ itemId }) => {
-            const item = playback.queue.find((item) => item.itemId === itemId);
-            if (!item) return;
-
-            const dj = eventMode && user.tags.includes('dj');
-            const own = item.info.userId === user.userId;
-            const auth = user.tags.includes('admin');
-
-            if (dj || own || auth) playback.unqueue(item);
         });
 
         messaging.messages.on('user', (changes: Partial<UserState>) => {
