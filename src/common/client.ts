@@ -193,7 +193,7 @@ export class ZoneClient extends EventEmitter {
         }
 
         return fetch(url, { method, headers, body }).then(async (response) => {
-            if (response.ok) return response.json();
+            if (response.ok) return response.json().catch(() => {});
             throw new Error(await response.text());
         });
     }
