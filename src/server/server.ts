@@ -516,7 +516,7 @@ export function host(
 
     async function libraryMediaStatus(origin: string, mediaId: string, auth?: string) {
         const headers = auth ? { "Authorization": auth } : undefined;
-        return fetch(`${origin}/${mediaId}/status`, { headers }).then((r) => r.text());
+        return fetch(`${origin}/${mediaId}/status`, { headers }).then((r) => r.json());
     }
 
     async function libraryToQueueableMedia(origin: string, videoId: string, auth?: string) {
