@@ -33,14 +33,28 @@ export YOUTUBE_AUTHORIZATION="Bearer some_token";
 zone relies on zone-library and zone-youtube repos for media
 
 # zone libraries api
+
+## search for items
+```
 GET /?q=search%20terms
+```
 list/search/filter library
 
+## item metadata
+```
 GET /:id
+```
 json metadata for a particular library item e.g `{ title: "demo song", duration: 30000, source: "https://example.com/demo-song.mp3" }`
 
+## item availability
+```
 GET /:id/status
+```
+
 json string for availability of a particular library item e.g `"available"` `"none"` `"failed"` `"requested"`
 
+## request item
+```
 POST /:id/request
+```
 request a particular library item be made available for playback
