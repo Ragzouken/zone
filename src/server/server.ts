@@ -236,13 +236,19 @@ export function host(
 
     load();
 
+    const libraries: Map<string, (id: string) => Promise<Media>> = new Map();
+    if (options.libraryOrigin) libraries.set("library", libraryToMedia);
+    if (options.youtubeOrigin) libraries.set("youtube", youtubeToMedia);
+
     async function pathToMedia(path: string) {
-        if (path.startsWith("library:") && options.libraryOrigin) {
-            const id = path.substr(8);
-            return libraryToMedia(id);
-        } else if (path.startsWith("youtube:") && options.youtubeOrigin) {
-            const youtubeId = path.substr(8);
-            return youtubeToMedia(youtubeId);
+        const parts = path.split(":");
+        const library = parts.shift()!;
+        const id = parts.join(":");
+
+        const toMedia = libraries.get(library);
+
+        if (toMedia) {
+            return toMedia(id);
         } else {
             throw new Error(`no media "${path}"`);
         }
@@ -513,7 +519,7 @@ export function host(
     }
 
     async function youtubeToMedia(youtubeId: string) {
-        const media = await fetch(`${options.youtubeOrigin}/youtube/${youtubeId}/info`).then(r => r.json());
+        const media = await fetch(`${options.youtubeOrigin}/youtube/${youtubeId}`).then(r => r.json());
         media.getStatus = async () => fetch(`${options.youtubeOrigin}/youtube/${youtubeId}/status`).then(r => r.json());
         media.request = () => requestYoutube(youtubeId);
         await media.request();
