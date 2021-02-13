@@ -24,7 +24,6 @@ declare global {
 
 export type HostOptions = {
     pingInterval: number;
-    saveInterval: number;
     userTimeout: number;
     nameLengthLimit: number;
     chatLengthLimit: number;
@@ -40,11 +39,12 @@ export type HostOptions = {
     libraryOrigin?: string;
     youtubeOrigin?: string;
     youtubePassword?: string;
+
+    queueCheckInterval: number;
 };
 
 export const DEFAULT_OPTIONS: HostOptions = {
     pingInterval: 10 * SECONDS,
-    saveInterval: 60 * SECONDS,
     userTimeout: 5 * SECONDS,
     nameLengthLimit: 16,
     chatLengthLimit: 160,
@@ -54,6 +54,7 @@ export const DEFAULT_OPTIONS: HostOptions = {
     errorSkipThreshold: 0.4,
 
     playbackStartDelay: 1 * SECONDS,
+    queueCheckInterval: 5 * SECONDS,
 };
 
 const bans = new Map<unknown, Ban>();
@@ -109,7 +110,21 @@ export function host(
     }
 
     setInterval(ping, opts.pingInterval);
-    // setInterval(save, opts.saveInterval);
+    setInterval(checkQueue, opts.queueCheckInterval);
+
+    async function getMediaStatus(media: Media) {
+        return media.getStatus ? await media.getStatus() : "available";
+    }
+
+    async function checkQueue() {
+        const checks = playback.queue.map(async (item) => {
+            if (await getMediaStatus(item.media) === 'failed') {
+                playback.unqueue(item);
+                status(`failed to load "${item.media.title}"`);
+            }
+        });
+        return Promise.all(checks);
+    }
 
     function addUserToken(user: UserState, token: string) {
         tokenToUser.set(token, user);
