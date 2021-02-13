@@ -90,14 +90,16 @@ export class Playback extends EventEmitter {
                     if (status === 'available') {
                         this.queue.shift();
                         this.playMedia(next);
-                    } else if (status === 'failed') {
-                        this.queue.shift();
-                        this.playMedia(next);
-                        this.emit('failed', next);
-                    } else {
+                    } else if (status === 'requested') {
                         if (this.checkTimeout) clearTimeout(this.checkTimeout);
                         this.checkTimeout = setTimeout(() => this.check(), 500);
                         this.emit('waiting', next);
+                    } else if (status === 'none' && next.media.request) {
+                        next.media.request();
+                    } else {
+                        this.queue.shift();
+                        this.playMedia(next);
+                        this.emit('failed', next);
                     }
                 });
             } else {

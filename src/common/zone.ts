@@ -19,6 +19,7 @@ export type Media = {
     thumbnail?: string;
     shortcut?: string;
     getStatus?: () => Promise<string>;
+    request?: () => Promise<any>;
     youtubeId?: string;
     path?: string;
 };

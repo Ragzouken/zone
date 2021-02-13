@@ -172,10 +172,6 @@ export class ZoneClient extends EventEmitter {
         this.messaging.send('user', { emotes });
     }
 
-    async setBlock(coords: number[], value: number) {
-        this.messaging.send('block', { coords, value });
-    }
-
     async echo(position: number[], text: string) {
         this.messaging.send('echo', { position, text });
     }
