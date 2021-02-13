@@ -18,16 +18,29 @@ npm start
 
 zone responds to interrupt by saving the current state (playlist, bans, blocks) and shutting down
 ```
-pkill -INT node
+pkill -INT -f "zone server"
 ```
 
 zone currently takes config via environmental variables:
 ```
 export PORT=443;
-export CERT_PATH=fullchain.pem
-export KEY_PATH=privkey.pem
-
 export AUTH_PASSWORD=scooter;
+export LIBRARY_ORIGIN=http://127.0.0.1:4000/library;
+export YOUTUBE_ORIGIN=http://127.0.0.1:4001/youtube;
+export YOUTUBE_AUTHORIZATION="Bearer some_token";
 ```
 
-zone looks for any .mp4 and .mp3 files in ./media/ and makes them available for local playback e.g `filename.mp4` can be played as `/local filename`. use `/admin refresh-videos` to refresh the list while zone is running.
+zone relies on zone-library and zone-youtube repos for media
+
+# zone libraries api
+GET /?q=search%20terms
+list/search/filter library
+
+GET /:id
+json metadata for a particular library item e.g `{ title: "demo song", duration: 30000, source: "https://example.com/demo-song.mp3" }`
+
+GET /:id/status
+json string for availability of a particular library item e.g `"available"` `"none"` `"failed"` `"requested"`
+
+POST /:id/request
+request a particular library item be made available for playback
