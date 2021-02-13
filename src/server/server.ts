@@ -32,7 +32,6 @@ export type HostOptions = {
     perUserQueueLimit: number;
     voteSkipThreshold: number;
 
-    joinPassword?: string;
     authPassword?: string;
 
     playbackStartDelay: number;
@@ -348,14 +347,6 @@ export function host(
 
         messaging.messages.once('join', (message: JoinMessage) => {
             const resume = message.token && tokenToUser.has(message.token);
-            const authorised = resume || !opts.joinPassword || message.password === opts.joinPassword;
-
-            if (!authorised) {
-                messaging.send('reject', { text: 'rejected: password required' });
-                websocket.close(4000);
-                return;
-            }
-
             const token = resume ? message.token! : nanoid();
             const user = resume ? tokenToUser.get(token)! : zone.getUser((++lastUserId).toString() as UserId);
             user.name = message.name;
