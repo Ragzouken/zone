@@ -26,7 +26,7 @@ async function run() {
         authPassword: process.env.AUTH_PASSWORD || 'riverdale',
         libraryOrigin: process.env.LIBRARY_ORIGIN,
         youtubeOrigin: process.env.YOUTUBE_ORIGIN,
-        youtubePassword: process.env.YOUTUBE_PASSWORD,
+        youtubeAuthorization: process.env.YOUTUBE_AUTHORIZATION,
     });
 
     // trust glitch's proxy to give us socket ips
