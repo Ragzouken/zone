@@ -508,7 +508,7 @@ export function host(
 
     async function libraryMediaMeta(origin: string, mediaId: string, auth?: string) {
         const headers = auth ? { "Authorization": auth } : undefined;
-        return fetch(`${origin}/${mediaId}`, { method: "POST", headers }).then((r) => r.json());
+        return fetch(`${origin}/${mediaId}`, { headers }).then((r) => r.json());
     }
 
     async function libraryRequestMedia(origin: string, mediaId: string, auth?: string) {
