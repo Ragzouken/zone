@@ -9,8 +9,9 @@ import { nanoid } from 'nanoid';
 import { getDefault, randomInt } from '../common/utility';
 import { MESSAGE_SCHEMAS } from './protocol';
 import { JoinMessage, SendAuth, SendCommand, EchoMessage } from '../common/client';
-import fetch, { RequestInit } from 'node-fetch';
+import fetch from 'node-fetch';
 import { json, NextFunction, Request, Response } from 'express';
+import { libraryMediaMeta, libraryMediaRequest, libraryToQueueableMedia } from './libraries';
 
 const SECONDS = 1000;
 
@@ -502,29 +503,6 @@ export function host(
         } else {
             playback.queueMedia(media, { userId: user.userId, ip: userIp, banger });
         }
-    }
-
-    async function libraryMediaMeta(origin: string, mediaId: string, auth?: string) {
-        const headers = auth ? { "Authorization": auth } : undefined;
-        return fetch(`${origin}/${mediaId}`, { headers }).then((r) => r.json());
-    }
-
-    async function libraryMediaRequest(origin: string, mediaId: string, auth?: string) {
-        const headers = auth ? { "Authorization": auth } : undefined;
-        return fetch(`${origin}/${mediaId}/request`, { method: "POST", headers });
-    }
-
-    async function libraryMediaStatus(origin: string, mediaId: string, auth?: string) {
-        const headers = auth ? { "Authorization": auth } : undefined;
-        return fetch(`${origin}/${mediaId}/status`, { headers }).then((r) => r.json());
-    }
-
-    async function libraryToQueueableMedia(origin: string, videoId: string, auth?: string) {
-        const media = await libraryMediaMeta(origin, videoId, auth);
-        media.getStatus = () => libraryMediaStatus(origin, videoId);
-        media.request = () => libraryMediaRequest(origin, videoId, auth);
-        await media.request();
-        return media;
     }
 
     function bindMessagingToUser(user: UserState, messaging: Messaging, userIp: unknown) {
