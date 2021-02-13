@@ -255,11 +255,9 @@ export function host(
     }
 
     async function libraryTagToBanger(tag: string | undefined) {
-        const url = options.libraryOrigin + "/library";
         const query = tag ? "?tag=" + tag : "";
-
         const EIGHT_MINUTES = 8 * 60 * SECONDS;
-        const library = await (await fetch(url + query)).json();
+        const library = await (await fetch(options.libraryOrigin + query)).json();
         const extras = library.filter((media: any) => media.duration <= EIGHT_MINUTES);
         const banger = extras[randomInt(0, extras.length - 1)];
 
@@ -533,7 +531,7 @@ export function host(
     }
 
     async function libraryToMedia(libraryId: string) {
-        return libraryMediaMeta(`${options.libraryOrigin}/library`, libraryId);
+        return libraryMediaMeta(options.libraryOrigin!, libraryId);
     }
 
     function bindMessagingToUser(user: UserState, messaging: Messaging, userIp: unknown) {
