@@ -237,8 +237,8 @@ export function host(
     load();
 
     const libraries: Map<string, (id: string) => Promise<Media>> = new Map();
-    if (options.libraryOrigin) libraries.set("library", libraryToMedia);
-    if (options.youtubeOrigin) libraries.set("youtube", youtubeToMedia);
+    if (options.libraryOrigin) libraries.set("library", (videoId) => libraryToQueueableMedia(options.libraryOrigin!, videoId));
+    if (options.youtubeOrigin) libraries.set("youtube", (videoId) => libraryToQueueableMedia(options.youtubeOrigin!, videoId, options.youtubeAuthorization));
 
     async function pathToMedia(path: string) {
         const parts = path.split(":");
@@ -509,29 +509,22 @@ export function host(
         return fetch(`${origin}/${mediaId}`, { headers }).then((r) => r.json());
     }
 
-    async function libraryRequestMedia(origin: string, mediaId: string, auth?: string) {
+    async function libraryMediaRequest(origin: string, mediaId: string, auth?: string) {
         const headers = auth ? { "Authorization": auth } : undefined;
         return fetch(`${origin}/${mediaId}/request`, { method: "POST", headers });
     }
 
-    async function requestYoutube(youtubeId: string) {
-        return libraryRequestMedia(
-            options.youtubeOrigin!,
-            youtubeId,
-            options.youtubeAuthorization,
-        );
+    async function libraryMediaStatus(origin: string, mediaId: string, auth?: string) {
+        const headers = auth ? { "Authorization": auth } : undefined;
+        return fetch(`${origin}/${mediaId}/status`, { headers }).then((r) => r.json());
     }
 
-    async function youtubeToMedia(youtubeId: string) {
-        const media = await libraryMediaMeta(options.youtubeOrigin!, youtubeId);
-        media.getStatus = async () => fetch(`${options.youtubeOrigin}/${youtubeId}/status`).then(r => r.json());
-        media.request = () => requestYoutube(youtubeId);
+    async function libraryToQueueableMedia(origin: string, videoId: string, auth?: string) {
+        const media = await libraryMediaMeta(origin, videoId, auth);
+        media.getStatus = () => libraryMediaStatus(origin, videoId);
+        media.request = () => libraryMediaRequest(origin, videoId, auth);
         await media.request();
         return media;
-    }
-
-    async function libraryToMedia(libraryId: string) {
-        return libraryMediaMeta(options.libraryOrigin!, libraryId);
     }
 
     function bindMessagingToUser(user: UserState, messaging: Messaging, userIp: unknown) {
