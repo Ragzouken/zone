@@ -11,7 +11,7 @@ import { MESSAGE_SCHEMAS } from './protocol';
 import { JoinMessage, SendAuth, SendCommand, EchoMessage } from '../common/client';
 import fetch from 'node-fetch';
 import { json, NextFunction, Request, Response } from 'express';
-import { libraryMediaMeta, libraryMediaRequest, libraryToQueueableMedia } from './libraries';
+import { libraryToQueueableMedia } from './libraries';
 
 const SECONDS = 1000;
 
@@ -31,7 +31,6 @@ export type HostOptions = {
 
     perUserQueueLimit: number;
     voteSkipThreshold: number;
-    errorSkipThreshold: number;
 
     joinPassword?: string;
     authPassword?: string;
@@ -52,7 +51,6 @@ export const DEFAULT_OPTIONS: HostOptions = {
 
     perUserQueueLimit: 3,
     voteSkipThreshold: 0.6,
-    errorSkipThreshold: 0.4,
 
     playbackStartDelay: 1 * SECONDS,
     queueCheckInterval: 5 * SECONDS,
