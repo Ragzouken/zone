@@ -9,7 +9,6 @@ import { nanoid } from 'nanoid';
 import { getDefault, randomInt } from '../common/utility';
 import { MESSAGE_SCHEMAS } from './protocol';
 import { JoinMessage, SendAuth, SendCommand, EchoMessage } from '../common/client';
-import fetch from 'node-fetch';
 import { json, NextFunction, Request, Response } from 'express';
 import { Library, libraryToQueueableMedia } from './libraries';
 import { URL } from 'url';
@@ -256,7 +255,6 @@ export function host(
         const parts = path.split(":");
         const prefix = parts.shift()!;
         const mediaId = parts.join(":");
-
         const library = libraries.get(prefix);
 
         if (library) {
@@ -267,9 +265,8 @@ export function host(
     }
 
     async function libraryTagToBanger(tag: string | undefined) {
-        const query = tag ? "?tag=" + tag : "";
         const EIGHT_MINUTES = 8 * 60 * SECONDS;
-        const library = await (await fetch(options.libraryOrigin + query)).json();
+        const library = await libraries.get("library")!.search(tag ? "?tag=" + tag : "");
         const extras = library.filter((media: any) => media.duration <= EIGHT_MINUTES);
         const banger = extras[randomInt(0, extras.length - 1)];
 
