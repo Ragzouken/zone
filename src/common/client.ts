@@ -3,7 +3,7 @@ import { EventEmitter } from 'events';
 import { specifically } from './utility';
 import { ZoneState, UserState, QueueItem, UserEcho, Media } from './zone';
 import fetch, { HeadersInit } from 'node-fetch';
-import { URL } from 'url';
+const URL = window?.URL || require('url').URL;
 
 export type StatusMesage = { text: string };
 export type JoinMessage = { name: string; token?: string; password?: string };
@@ -196,7 +196,7 @@ export class ZoneClient extends EventEmitter {
     }
 
     async searchLibrary(library: string, query?: string, tag?: string): Promise<Media[]> {
-        const url = new URL(`/libraries/${library}`, this.options.urlRoot);
+        const url = new URL(`/libraries/${library}`, this.options.urlRoot === "." ? document.location.origin : this.options.urlRoot);
         if (query) url.searchParams.set("q", query);
         if (tag) url.searchParams.set("tag", tag);
         const results = await this.request("GET", url.toString()) as Media[];
