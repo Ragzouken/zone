@@ -450,10 +450,10 @@ export async function load() {
         searchResults.innerText = 'searching...';
         client.searchYoutube(searchInput.value).then((results) => {
             searchResults.innerHTML = '';
-            results.forEach(({ title, duration, youtubeId, thumbnail }) => {
+            results.forEach(({ title, duration, mediaId, thumbnail }) => {
                 const row = searchResultTemplate.cloneNode(true) as HTMLElement;
                 row.addEventListener('click', () => {
-                    client.queue("youtube:" + youtubeId!);
+                    client.queue("youtube:" + mediaId!);
                     menu.open('playback/playlist');
                 });
 
@@ -650,7 +650,7 @@ export async function load() {
     const chatCommands = new Map<string, (args: string) => void | Promise<void>>();
     chatCommands.set('library', async (query) => {
         lastSearchResults = await client.searchLibrary(query);
-        lastSearchResults.forEach((entry: any) => entry.path = "library:" + entry.id);
+        lastSearchResults.forEach((entry: any) => entry.path = "library:" + entry.mediaId);
         const lines = lastSearchResults
             .slice(0, 5)
             .map(({ title, duration }, i) => `${i + 1}. ${title} (${secondsToTime(duration / 1000)})`);
@@ -658,7 +658,7 @@ export async function load() {
     });
     chatCommands.set('tagged', async (tag) => {
         lastSearchResults = await client.searchLibraryTag(tag);
-        lastSearchResults.forEach((entry: any) => entry.path = "library:" + entry.id);
+        lastSearchResults.forEach((entry: any) => entry.path = "library:" + entry.mediaId);
         shuffleArray(lastSearchResults);
         const lines = lastSearchResults
             .slice(0, 5)
@@ -667,7 +667,7 @@ export async function load() {
     });
     chatCommands.set('search', async (query) => {
         lastSearchResults = await client.searchYoutube(query);
-        lastSearchResults.forEach((entry: any) => entry.path = "youtube:" + entry.youtubeId);
+        lastSearchResults.forEach((entry: any) => entry.path = "youtube:" + entry.mediaId);
         const lines = lastSearchResults
             .slice(0, 5)
             .map(({ title, duration }, i) => `${i + 1}. ${title} (${secondsToTime(duration / 1000)})`);

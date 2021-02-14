@@ -12,6 +12,7 @@ export type UserState = {
 };
 
 export type Media = {
+    mediaId: string;
     title: string;
     duration: number;
     src: string;
@@ -20,7 +21,6 @@ export type Media = {
     shortcut?: string;
     getStatus?: () => Promise<string>;
     request?: () => Promise<any>;
-    youtubeId?: string;
     path?: string;
 };
 
