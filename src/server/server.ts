@@ -239,7 +239,7 @@ export function host(
     if (options.youtubeOrigin) libraries.set("youtube", new Library("/youtube", options.youtubeOrigin, options.youtubeAuthorization));
 
     xws.app.get('/libraries', async (request, response) => {
-        const results = Array.from(libraries).map(([prefix, { remote }]) => ({ prefix, remote }));
+        const results = Array.from(libraries).map(([prefix, { remote }]) => ({ prefix, endpoint: remote }));
         response.json(results);
     });
 
