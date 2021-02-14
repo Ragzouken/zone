@@ -253,7 +253,7 @@ export async function load() {
 
     const openButton = document.getElementById('external-button') as HTMLButtonElement;
     openButton.addEventListener('click', () => {
-        window.open(player.playingItem?.media.source);
+        window.open(player.playingItem?.media.src);
     });
 
     const player = new Player(video);

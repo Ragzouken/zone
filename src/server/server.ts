@@ -196,9 +196,9 @@ export function host(
 
     xws.app.post('/queue/skip', requireUserToken, async (request, response) => {
         const user = request.user!;
-        const source = request.body.source;
+        const source = request.body.src;
 
-        if (!playback.currentItem || playback.currentItem.media.source !== source) {
+        if (!playback.currentItem || playback.currentItem.media.src !== source) {
             response.status(404).send(`${source} is not playing`);
         } else if (!eventMode) {
             voteSkip(source, user);
@@ -328,7 +328,7 @@ export function host(
     }
 
     function voteSkip(source: string, user: UserState) {
-        if (!playback.currentItem || playback.currentItem.media.source !== source) return;
+        if (!playback.currentItem || playback.currentItem.media.src !== source) return;
 
         skips.add(user.userId);
         const current = skips.size;

@@ -223,7 +223,7 @@ export class ZoneClient extends EventEmitter {
 
     async skip() {
         if (!this.zone.lastPlayedItem) return;
-        const source = this.zone.lastPlayedItem.media.source;
+        const source = this.zone.lastPlayedItem.media.src;
 
         return this.request("POST", "/queue/skip", { source });
     }
