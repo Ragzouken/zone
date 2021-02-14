@@ -4,6 +4,7 @@ import { promises as fs } from 'fs';
 import { host } from './server';
 import FileSync = require('lowdb/adapters/FileSync');
 import path = require('path');
+import { Library } from './libraries';
 
 process.on('uncaughtException', (err) => console.log('uncaught exception:', err, err.stack));
 process.on('unhandledRejection', (err) => console.log('uncaught reject:', err));
@@ -21,11 +22,13 @@ async function run() {
     fs.mkdir(path.dirname(dataPath)).catch(() => {});
     const adapter = new FileSync(dataPath, { serialize: JSON.stringify, deserialize: JSON.parse });
 
+    const libraries: Map<string, Library> = new Map();
+    if (process.env.LIBRARY_ENDPOINT) libraries.set("library", new Library(process.env.LIBRARY_ENDPOINT));
+    if (process.env.YOUTUBE_ENDPOINT) libraries.set("youtube", new Library(process.env.YOUTUBE_ENDPOINT, process.env.YOUTUBE_AUTHORIZATION));
+
     const { save, sendAll } = host(xws, adapter, {
         authPassword: process.env.AUTH_PASSWORD || 'riverdale',
-        libraryOrigin: process.env.LIBRARY_ORIGIN,
-        youtubeOrigin: process.env.YOUTUBE_ORIGIN,
-        youtubeAuthorization: process.env.YOUTUBE_AUTHORIZATION,
+        libraries,
     });
 
     // trust glitch's proxy to give us socket ips

@@ -120,8 +120,6 @@ function socket(): Promise<WebSocket> {
     });
 }
 
-let joinPassword: string | undefined;
-
 async function connect(): Promise<void> {
     const joined = !!client.localUserId;
     const existing = client.localUser;
@@ -133,7 +131,7 @@ async function connect(): Promise<void> {
     }
 
     try {
-        const assign = await client.join({ name: localName, password: joinPassword });
+        const assign = await client.join({ name: localName });
         const data = getInitialAvatar();
         if (data) client.avatar(data);
     } catch (e) {
@@ -253,7 +251,7 @@ export async function load() {
 
     const openButton = document.getElementById('external-button') as HTMLButtonElement;
     openButton.addEventListener('click', () => {
-        window.open(player.playingItem?.media.source);
+        window.open(player.playingItem?.media.src);
     });
 
     const player = new Player(video);
@@ -448,12 +446,12 @@ export async function load() {
         event.stopPropagation();
 
         searchResults.innerText = 'searching...';
-        client.searchYoutube(searchInput.value).then((results) => {
+        client.searchLibrary("youtube", searchInput.value).then((results) => {
             searchResults.innerHTML = '';
-            results.forEach(({ title, duration, youtubeId, thumbnail }) => {
+            results.forEach(({ title, duration, thumbnail, path }) => {
                 const row = searchResultTemplate.cloneNode(true) as HTMLElement;
                 row.addEventListener('click', () => {
-                    client.queue("youtube:" + youtubeId!);
+                    client.queue(path!);
                     menu.open('playback/playlist');
                 });
 
@@ -647,39 +645,24 @@ export async function load() {
     quickResync.addEventListener('click', () => player.forceRetry('resync button'));
     quickResync.hidden = true;
 
+    async function chatSearch(library: string, query?: string, tag?: string) {
+        lastSearchResults = await client.searchLibrary(library, query, tag);
+        const lines = lastSearchResults
+            .slice(0, 5)
+            .map(({ title, duration }, i) => `${i + 1}. ${title} (${secondsToTime(duration / 1000)})`);
+        chat.log('{clr=#FFFF00}? queue Search result with /result n\n{clr=#00FFFF}' + lines.join('\n'));
+    }
+
     const chatCommands = new Map<string, (args: string) => void | Promise<void>>();
-    chatCommands.set('library', async (query) => {
-        lastSearchResults = await client.searchLibrary(query);
-        lastSearchResults.forEach((entry: any) => entry.path = "library:" + entry.id);
-        const lines = lastSearchResults
-            .slice(0, 5)
-            .map(({ title, duration }, i) => `${i + 1}. ${title} (${secondsToTime(duration / 1000)})`);
-        chat.log('{clr=#FFFF00}? queue Search result with /result n\n{clr=#00FFFF}' + lines.join('\n'));
-    });
-    chatCommands.set('tagged', async (tag) => {
-        lastSearchResults = await client.searchLibraryTag(tag);
-        lastSearchResults.forEach((entry: any) => entry.path = "library:" + entry.id);
-        shuffleArray(lastSearchResults);
-        const lines = lastSearchResults
-            .slice(0, 5)
-            .map(({ title, duration }, i) => `${i + 1}. ${title} (${secondsToTime(duration / 1000)})`);
-        chat.log('{clr=#FFFF00}? queue Search result with /result n\n{clr=#00FFFF}' + lines.join('\n'));
-    });
-    chatCommands.set('search', async (query) => {
-        lastSearchResults = await client.searchYoutube(query);
-        lastSearchResults.forEach((entry: any) => entry.path = "youtube:" + entry.youtubeId);
-        const lines = lastSearchResults
-            .slice(0, 5)
-            .map(({ title, duration }, i) => `${i + 1}. ${title} (${secondsToTime(duration / 1000)})`);
-        chat.log('{clr=#FFFF00}? queue Search result with /result n\n{clr=#00FFFF}' + lines.join('\n'));
-    });
+    chatCommands.set('library', (query) => chatSearch("library", query));
+    chatCommands.set('tagged', (tag) => chatSearch("library", undefined, tag));
+    chatCommands.set('search', (query) => chatSearch("youtube", query));
     chatCommands.set('result', playFromSearchResult);
     chatCommands.set('s', chatCommands.get('search')!);
     chatCommands.set('r', chatCommands.get('result')!);
     chatCommands.set('youtube', async (args) => client.queue("youtube:" + textToYoutubeVideoId(args)!));
     chatCommands.set('skip', () => client.skip());
     chatCommands.set('banger', (tag) => client.banger(tag));
-    chatCommands.set('password', (args) => (joinPassword = args));
     chatCommands.set('users', () => listUsers());
     chatCommands.set('help', () => listHelp());
     chatCommands.set('avatar', (data) => {

@@ -44,7 +44,7 @@ list/search/filter library
 ```
 GET /:id
 ```
-json metadata for a particular library item e.g `{ title: "demo song", duration: 30000, source: "https://example.com/demo-song.mp3" }`
+json metadata for a particular library item e.g `{ mediaId: "some_id" title: "demo song", duration: 30000, src: "https://example.com/demo-song.mp3" }`
 
 ## item availability
 ```

@@ -35,11 +35,8 @@ export type HostOptions = {
     authPassword?: string;
 
     playbackStartDelay: number;
-    libraryOrigin?: string;
-    youtubeOrigin?: string;
-    youtubeAuthorization?: string;
-
     queueCheckInterval: number;
+    libraries: Map<string, Library>;
 };
 
 export const DEFAULT_OPTIONS: HostOptions = {
@@ -53,6 +50,7 @@ export const DEFAULT_OPTIONS: HostOptions = {
 
     playbackStartDelay: 1 * SECONDS,
     queueCheckInterval: 5 * SECONDS,
+    libraries: new Map(),
 };
 
 const bans = new Map<unknown, Ban>();
@@ -176,7 +174,7 @@ export function host(
     });
 
     xws.app.post('/queue/banger', requireUserToken, async (request, response) => {
-        if (!options.libraryOrigin) {
+        if (!opts.libraries.has("library")) {
             response.status(501).send();
         } else {
             const banger = await libraryTagToBanger(request.body.tag);
@@ -196,12 +194,12 @@ export function host(
 
     xws.app.post('/queue/skip', requireUserToken, async (request, response) => {
         const user = request.user!;
-        const source = request.body.source;
+        const itemId = request.body.itemId;
 
-        if (!playback.currentItem || playback.currentItem.media.source !== source) {
-            response.status(404).send(`${source} is not playing`);
+        if (!playback.currentItem || playback.currentItem.itemId !== itemId) {
+            response.status(404).send(`queue item ${itemId} is not playing`);
         } else if (!eventMode) {
-            voteSkip(source, user);
+            voteSkip(itemId, user);
             response.status(202).send();
         } else if (user.tags.includes('dj')) {
             skip(`${user.name} skipped ${playback.currentItem!.media.title}`);
@@ -234,14 +232,10 @@ export function host(
 
     load();
 
-    const libraries: Map<string, Library> = new Map();
-    if (options.libraryOrigin) libraries.set("library", new Library("/library", options.libraryOrigin));
-    if (options.youtubeOrigin) libraries.set("youtube", new Library("/youtube", options.youtubeOrigin, options.youtubeAuthorization));
-
-    xws.app.get('/libraries', async (request, response) => response.json(Array.from(libraries.keys())));
+    xws.app.get('/libraries', async (request, response) => response.json(Array.from(opts.libraries.keys())));
     xws.app.get('/libraries/:prefix', async (request, response) => {
         const prefix = request.params.prefix;
-        const library = libraries.get(prefix);
+        const library = opts.libraries.get(prefix);
         const query = new URL(request.url, "http://localhost").search;
 
         if (library) {
@@ -255,7 +249,7 @@ export function host(
         const parts = path.split(":");
         const prefix = parts.shift()!;
         const mediaId = parts.join(":");
-        const library = libraries.get(prefix);
+        const library = opts.libraries.get(prefix);
 
         if (library) {
             return libraryToQueueableMedia(library, mediaId);
@@ -266,7 +260,7 @@ export function host(
 
     async function libraryTagToBanger(tag: string | undefined) {
         const EIGHT_MINUTES = 8 * 60 * SECONDS;
-        const library = await libraries.get("library")!.search(tag ? "?tag=" + tag : "");
+        const library = await opts.libraries.get("library")!.search(tag ? "?tag=" + tag : "");
         const extras = library.filter((media: any) => media.duration <= EIGHT_MINUTES);
         const banger = extras[randomInt(0, extras.length - 1)];
 
@@ -327,8 +321,8 @@ export function host(
         revokeUserToken(user);
     }
 
-    function voteSkip(source: string, user: UserState) {
-        if (!playback.currentItem || playback.currentItem.media.source !== source) return;
+    function voteSkip(itemId: number, user: UserState) {
+        if (!playback.currentItem || playback.currentItem.itemId !== itemId) return;
 
         skips.add(user.userId);
         const current = skips.size;
