@@ -12,6 +12,10 @@ export class Library {
         this.headers = this.auth ? { "Authorization": this.auth } : undefined;
     }
 
+    async search(query: string) {
+        return fetch(`${this.local}${query}`, { headers: this.headers }).then((r) => r.json());
+    }
+
     async getMeta(mediaId: string) {
         return fetch(`${this.local}/${mediaId}`, { headers: this.headers }).then((r) => r.json());
     }

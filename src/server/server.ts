@@ -10,8 +10,9 @@ import { getDefault, randomInt } from '../common/utility';
 import { MESSAGE_SCHEMAS } from './protocol';
 import { JoinMessage, SendAuth, SendCommand, EchoMessage } from '../common/client';
 import fetch from 'node-fetch';
-import { json, NextFunction, request, Request, Response } from 'express';
+import { json, NextFunction, Request, Response } from 'express';
 import { Library, libraryToQueueableMedia } from './libraries';
+import { URL } from 'url';
 
 const SECONDS = 1000;
 
@@ -238,9 +239,17 @@ export function host(
     if (options.libraryOrigin) libraries.set("library", new Library("/library", options.libraryOrigin));
     if (options.youtubeOrigin) libraries.set("youtube", new Library("/youtube", options.youtubeOrigin, options.youtubeAuthorization));
 
-    xws.app.get('/libraries', async (request, response) => {
-        const results = Array.from(libraries).map(([prefix, { remote }]) => ({ prefix, endpoint: remote }));
-        response.json(results);
+    xws.app.get('/libraries', async (request, response) => response.json(Array.from(libraries.keys())));
+    xws.app.get('/libraries/:prefix', async (request, response) => {
+        const prefix = request.params.prefix;
+        const library = libraries.get(prefix);
+        const query = new URL(request.url, "http://localhost").search;
+
+        if (library) {
+            response.json(await library.search(query));
+        } else {
+            response.status(404).send(`no library "${prefix}"`);
+        }
     });
 
     async function pathToMedia(path: string) {
