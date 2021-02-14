@@ -1,24 +1,34 @@
-import fetch from "node-fetch";
+import fetch, { HeadersInit } from "node-fetch";
 
-export async function libraryMediaMeta(origin: string, mediaId: string, auth?: string) {
-    const headers = auth ? { "Authorization": auth } : undefined;
-    return fetch(`${origin}/${mediaId}`, { headers }).then((r) => r.json());
-}
+export class Library {
+    private headers?: HeadersInit;
 
-export async function libraryMediaRequest(origin: string, mediaId: string, auth?: string) {
-    const headers = auth ? { "Authorization": auth } : undefined;
-    return fetch(`${origin}/${mediaId}/request`, { method: "POST", headers });
-}
+    constructor(
+        readonly remote: string,
+        readonly local?: string,
+        readonly auth?: string,
+    ) {
+        this.local ||= this.remote;
+        this.headers = this.auth ? { "Authorization": this.auth } : undefined;
+    }
 
-export async function libraryMediaStatus(origin: string, mediaId: string, auth?: string) {
-    const headers = auth ? { "Authorization": auth } : undefined;
-    return fetch(`${origin}/${mediaId}/status`, { headers }).then((r) => r.json());
-}
+    async getMeta(mediaId: string) {
+        return fetch(`${this.local}/${mediaId}`, { headers: this.headers }).then((r) => r.json());
+    }
 
-export async function libraryToQueueableMedia(origin: string, videoId: string, auth?: string) {
-    const media = await libraryMediaMeta(origin, videoId, auth);
-    media.getStatus = () => libraryMediaMeta(origin, videoId);
-    media.request = () => libraryMediaRequest(origin, videoId, auth);
+    async getStatus(mediaId: string) {
+        return fetch(`${this.local}/${mediaId}/status`, { headers: this.headers }).then((r) => r.json());
+    }
+
+    async request(mediaId: string) {
+        return fetch(`${this.local}/${mediaId}/request`, { method: "POST", headers: this.headers });
+    }
+};
+
+export async function libraryToQueueableMedia(library: Library, videoId: string) {
+    const media = await library.getMeta(videoId);
+    media.getStatus = () => library.getStatus(videoId);
+    media.request = () => library.request(videoId);
     await media.request();
     return media;
 }

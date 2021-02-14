@@ -10,8 +10,8 @@ import { getDefault, randomInt } from '../common/utility';
 import { MESSAGE_SCHEMAS } from './protocol';
 import { JoinMessage, SendAuth, SendCommand, EchoMessage } from '../common/client';
 import fetch from 'node-fetch';
-import { json, NextFunction, Request, Response } from 'express';
-import { libraryToQueueableMedia } from './libraries';
+import { json, NextFunction, request, Request, Response } from 'express';
+import { Library, libraryToQueueableMedia } from './libraries';
 
 const SECONDS = 1000;
 
@@ -234,21 +234,26 @@ export function host(
 
     load();
 
-    const libraries: Map<string, (id: string) => Promise<Media>> = new Map();
-    if (options.libraryOrigin) libraries.set("library", (videoId) => libraryToQueueableMedia(options.libraryOrigin!, videoId));
-    if (options.youtubeOrigin) libraries.set("youtube", (videoId) => libraryToQueueableMedia(options.youtubeOrigin!, videoId, options.youtubeAuthorization));
+    const libraries: Map<string, Library> = new Map();
+    if (options.libraryOrigin) libraries.set("library", new Library("/library", options.libraryOrigin));
+    if (options.youtubeOrigin) libraries.set("youtube", new Library("/youtube", options.youtubeOrigin, options.youtubeAuthorization));
+
+    xws.app.get('/libraries', requireUserToken, async (request, response) => {
+        const results = Array.from(libraries).map(([prefix, { remote }]) => ({ prefix, remote }));
+        response.json(results);
+    });
 
     async function pathToMedia(path: string) {
         const parts = path.split(":");
-        const library = parts.shift()!;
-        const id = parts.join(":");
+        const prefix = parts.shift()!;
+        const mediaId = parts.join(":");
 
-        const toMedia = libraries.get(library);
+        const library = libraries.get(prefix);
 
-        if (toMedia) {
-            return toMedia(id);
+        if (library) {
+            return libraryToQueueableMedia(library, mediaId);
         } else {
-            throw new Error(`no media "${path}"`);
+            throw new Error(`no library "${prefix}"`);
         }
     }
 
