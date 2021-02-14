@@ -195,17 +195,17 @@ export class ZoneClient extends EventEmitter {
     }
 
     async searchYoutube(query: string): Promise<Media[]> {
-        const url = this.options.urlRoot + '/youtube?q=' + encodeURIComponent(query);
+        const url = this.options.urlRoot + '/libraries/youtube?q=' + encodeURIComponent(query);
         return this.request("GET", url);
     }
 
     async searchLibrary(query: string): Promise<Media[]> {
-        const url = this.options.urlRoot + '/library?q=' + encodeURIComponent(query);
+        const url = this.options.urlRoot + '/libraries/library?q=' + encodeURIComponent(query);
         return this.request("GET", url);
     }
 
     async searchLibraryTag(tag: string): Promise<Media[]> {
-        const url = this.options.urlRoot + '/library?tag=' + encodeURIComponent(tag);
+        const url = this.options.urlRoot + '/libraries/library?tag=' + encodeURIComponent(tag);
         return this.request("GET", url);
     }
 

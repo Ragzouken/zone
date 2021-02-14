@@ -22,11 +22,10 @@ async function run() {
     const adapter = new FileSync(dataPath, { serialize: JSON.stringify, deserialize: JSON.parse });
 
     const { save, sendAll } = host(xws, adapter, {
-        joinPassword: process.env.JOIN_PASSWORD,
         authPassword: process.env.AUTH_PASSWORD || 'riverdale',
         libraryOrigin: process.env.LIBRARY_ORIGIN,
         youtubeOrigin: process.env.YOUTUBE_ORIGIN,
-        youtubePassword: process.env.YOUTUBE_PASSWORD,
+        youtubeAuthorization: process.env.YOUTUBE_AUTHORIZATION,
     });
 
     // trust glitch's proxy to give us socket ips

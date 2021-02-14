@@ -9,8 +9,9 @@ import { nanoid } from 'nanoid';
 import { getDefault, randomInt } from '../common/utility';
 import { MESSAGE_SCHEMAS } from './protocol';
 import { JoinMessage, SendAuth, SendCommand, EchoMessage } from '../common/client';
-import fetch from 'node-fetch';
 import { json, NextFunction, Request, Response } from 'express';
+import { Library, libraryToQueueableMedia } from './libraries';
+import { URL } from 'url';
 
 const SECONDS = 1000;
 
@@ -30,15 +31,13 @@ export type HostOptions = {
 
     perUserQueueLimit: number;
     voteSkipThreshold: number;
-    errorSkipThreshold: number;
 
-    joinPassword?: string;
     authPassword?: string;
 
     playbackStartDelay: number;
     libraryOrigin?: string;
     youtubeOrigin?: string;
-    youtubePassword?: string;
+    youtubeAuthorization?: string;
 
     queueCheckInterval: number;
 };
@@ -51,7 +50,6 @@ export const DEFAULT_OPTIONS: HostOptions = {
 
     perUserQueueLimit: 3,
     voteSkipThreshold: 0.6,
-    errorSkipThreshold: 0.4,
 
     playbackStartDelay: 1 * SECONDS,
     queueCheckInterval: 5 * SECONDS,
@@ -236,24 +234,39 @@ export function host(
 
     load();
 
-    async function pathToMedia(path: string) {
-        if (path.startsWith("library:") && options.libraryOrigin) {
-            const id = path.substr(8);
-            return libraryToMedia(id);
-        } else if (path.startsWith("youtube:") && options.youtubeOrigin) {
-            const youtubeId = path.substr(8);
-            return youtubeToMedia(youtubeId);
+    const libraries: Map<string, Library> = new Map();
+    if (options.libraryOrigin) libraries.set("library", new Library("/library", options.libraryOrigin));
+    if (options.youtubeOrigin) libraries.set("youtube", new Library("/youtube", options.youtubeOrigin, options.youtubeAuthorization));
+
+    xws.app.get('/libraries', async (request, response) => response.json(Array.from(libraries.keys())));
+    xws.app.get('/libraries/:prefix', async (request, response) => {
+        const prefix = request.params.prefix;
+        const library = libraries.get(prefix);
+        const query = new URL(request.url, "http://localhost").search;
+
+        if (library) {
+            response.json(await library.search(query));
         } else {
-            throw new Error(`no media "${path}"`);
+            response.status(404).send(`no library "${prefix}"`);
+        }
+    });
+
+    async function pathToMedia(path: string) {
+        const parts = path.split(":");
+        const prefix = parts.shift()!;
+        const mediaId = parts.join(":");
+        const library = libraries.get(prefix);
+
+        if (library) {
+            return libraryToQueueableMedia(library, mediaId);
+        } else {
+            throw new Error(`no library "${prefix}"`);
         }
     }
 
     async function libraryTagToBanger(tag: string | undefined) {
-        const url = options.libraryOrigin + "/library";
-        const query = tag ? "?tag=" + tag : "";
-
         const EIGHT_MINUTES = 8 * 60 * SECONDS;
-        const library = await (await fetch(url + query)).json();
+        const library = await libraries.get("library")!.search(tag ? "?tag=" + tag : "");
         const extras = library.filter((media: any) => media.duration <= EIGHT_MINUTES);
         const banger = extras[randomInt(0, extras.length - 1)];
 
@@ -345,14 +358,6 @@ export function host(
 
         messaging.messages.once('join', (message: JoinMessage) => {
             const resume = message.token && tokenToUser.has(message.token);
-            const authorised = resume || !opts.joinPassword || message.password === opts.joinPassword;
-
-            if (!authorised) {
-                messaging.send('reject', { text: 'rejected: password required' });
-                websocket.close(4000);
-                return;
-            }
-
             const token = resume ? message.token! : nanoid();
             const user = resume ? tokenToUser.get(token)! : zone.getUser((++lastUserId).toString() as UserId);
             user.name = message.name;
@@ -498,31 +503,6 @@ export function host(
         } else {
             playback.queueMedia(media, { userId: user.userId, ip: userIp, banger });
         }
-    }
-
-    async function requestYoutube(youtubeId: string) {
-        return fetch(
-            `${options.youtubeOrigin}/youtube/${youtubeId}/request`,
-            { 
-                method: "POST",
-                headers: {
-                    "Authorization": "Bearer " + options.youtubePassword,
-                }
-            }
-        );
-    }
-
-    async function youtubeToMedia(youtubeId: string) {
-        const media = await fetch(`${options.youtubeOrigin}/youtube/${youtubeId}/info`).then(r => r.json());
-        media.getStatus = async () => fetch(`${options.youtubeOrigin}/youtube/${youtubeId}/status`).then(r => r.json());
-        media.request = () => requestYoutube(youtubeId);
-        await media.request();
-        return media;
-    }
-
-    async function libraryToMedia(libraryId: string) {
-        const media = await fetch(options.libraryOrigin + "/library/" + libraryId).then(r => r.json());
-        return media;
     }
 
     function bindMessagingToUser(user: UserState, messaging: Messaging, userIp: unknown) {
