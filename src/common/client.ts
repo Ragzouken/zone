@@ -3,6 +3,7 @@ import { EventEmitter } from 'events';
 import { specifically } from './utility';
 import { ZoneState, UserState, QueueItem, UserEcho, Media } from './zone';
 import fetch, { HeadersInit } from 'node-fetch';
+import { URL } from 'url';
 
 export type StatusMesage = { text: string };
 export type JoinMessage = { name: string; token?: string; password?: string };
@@ -194,19 +195,13 @@ export class ZoneClient extends EventEmitter {
         });
     }
 
-    async searchYoutube(query: string): Promise<Media[]> {
-        const url = this.options.urlRoot + '/libraries/youtube?q=' + encodeURIComponent(query);
-        return this.request("GET", url);
-    }
-
-    async searchLibrary(query: string): Promise<Media[]> {
-        const url = this.options.urlRoot + '/libraries/library?q=' + encodeURIComponent(query);
-        return this.request("GET", url);
-    }
-
-    async searchLibraryTag(tag: string): Promise<Media[]> {
-        const url = this.options.urlRoot + '/libraries/library?tag=' + encodeURIComponent(tag);
-        return this.request("GET", url);
+    async searchLibrary(library: string, query?: string, tag?: string): Promise<Media[]> {
+        const url = new URL(`/libraries/${library}`, this.options.urlRoot);
+        if (query) url.searchParams.set("q", query);
+        if (tag) url.searchParams.set("tag", tag);
+        const results = await this.request("GET", url.toString()) as Media[];
+        results.forEach((item) => item.path = `${library}:${item.mediaId}`);
+        return results;
     }
 
     async banger(tag?: string) {
