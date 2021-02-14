@@ -8,6 +8,7 @@
         "no-empty": [true, "allow-empty-functions", "allow-empty-catch"],
         "no-string-literal": false,
         "no-bitwise": false,
-        "max-classes-per-file": false
+        "max-classes-per-file": false,
+        "no-var-requires": false
     }
 }
