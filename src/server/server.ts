@@ -194,12 +194,12 @@ export function host(
 
     xws.app.post('/queue/skip', requireUserToken, async (request, response) => {
         const user = request.user!;
-        const source = request.body.src;
+        const itemId = request.body.itemId;
 
-        if (!playback.currentItem || playback.currentItem.media.src !== source) {
-            response.status(404).send(`${source} is not playing`);
+        if (!playback.currentItem || playback.currentItem.itemId !== itemId) {
+            response.status(404).send(`queue item ${itemId} is not playing`);
         } else if (!eventMode) {
-            voteSkip(source, user);
+            voteSkip(itemId, user);
             response.status(202).send();
         } else if (user.tags.includes('dj')) {
             skip(`${user.name} skipped ${playback.currentItem!.media.title}`);
@@ -321,8 +321,8 @@ export function host(
         revokeUserToken(user);
     }
 
-    function voteSkip(source: string, user: UserState) {
-        if (!playback.currentItem || playback.currentItem.media.src !== source) return;
+    function voteSkip(itemId: number, user: UserState) {
+        if (!playback.currentItem || playback.currentItem.itemId !== itemId) return;
 
         skips.add(user.userId);
         const current = skips.size;
