@@ -238,7 +238,7 @@ export function host(
     if (options.libraryOrigin) libraries.set("library", new Library("/library", options.libraryOrigin));
     if (options.youtubeOrigin) libraries.set("youtube", new Library("/youtube", options.youtubeOrigin, options.youtubeAuthorization));
 
-    xws.app.get('/libraries', requireUserToken, async (request, response) => {
+    xws.app.get('/libraries', async (request, response) => {
         const results = Array.from(libraries).map(([prefix, { remote }]) => ({ prefix, remote }));
         response.json(results);
     });
