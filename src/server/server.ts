@@ -230,6 +230,26 @@ export function host(
         }
     });
 
+    xws.app.post('/admin/authorize', requireUserToken, async (request, response) => {
+        const user = request.user!;
+
+        if (!opts.authPassword) {
+            response.status(501).send();
+        } else if (request.body.password !== opts.authPassword) {
+            response.status(403).send();
+        } else {
+            if (user.tags.includes('admin')) {
+                status('you are already authorised', user);
+                response.status(200).send();
+            } else {
+                user.tags.push('admin');
+                sendAll('user', { userId: user.userId, tags: user.tags });
+                status('you are now authorised', user);
+                response.status(200).send();
+            }
+        }
+    });
+
     load();
 
     xws.app.get('/libraries', async (request, response) => response.json(Array.from(opts.libraries.keys())));
@@ -520,18 +540,6 @@ export function host(
             } else {
                 Object.assign(user, value);
                 sendAll('user', { ...value, userId: user.userId });
-            }
-        });
-
-        messaging.messages.on('auth', (message: SendAuth) => {
-            if ((message.password || {}) !== opts.authPassword) return;
-
-            if (user.tags.includes('admin')) {
-                status('you are already authorised', user);
-            } else {
-                user.tags.push('admin');
-                sendAll('user', { userId: user.userId, tags: user.tags });
-                status('you are now authorised', user);
             }
         });
 
