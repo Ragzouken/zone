@@ -4,7 +4,7 @@ import * as low from 'lowdb';
 
 import Playback from './playback';
 import Messaging from '../common/messaging';
-import { ZoneState, UserId, UserState, mediaEquals, Media, QueueItem, UserEcho } from '../common/zone';
+import { ZoneState, UserId, UserState, Media, QueueItem, UserEcho } from '../common/zone';
 import { nanoid } from 'nanoid';
 import { getDefault, randomInt } from '../common/utility';
 import { JoinMessage } from '../common/client';
@@ -548,7 +548,7 @@ export function host(
         }
 
         const userIp = userToIp.get(user);
-        const existing = playback.queue.find((queued) => mediaEquals(queued.media, media))?.media;
+        const existing = playback.queue.find((queued) => queued.media.src === media.src)?.media;
         const count = playback.queue.filter((item) => item.info.ip === userIp).length;
         const dj = eventMode && user.tags.includes('dj');
 
