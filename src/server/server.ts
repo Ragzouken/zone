@@ -596,5 +596,5 @@ export function host(
         connections.get(userId)!.send(type, message);
     }
 
-    return { save, sendAll };
+    return { save, sendAll, zone, playback };
 }
