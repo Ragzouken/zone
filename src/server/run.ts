@@ -23,8 +23,8 @@ async function run() {
     const adapter = new FileSync(dataPath, { serialize: JSON.stringify, deserialize: JSON.parse });
 
     const libraries: Map<string, Library> = new Map();
-    if (process.env.LIBRARY_ENDPOINT) libraries.set("library", new Library(process.env.LIBRARY_ENDPOINT));
     if (process.env.YOUTUBE_ENDPOINT) libraries.set("youtube", new Library(process.env.YOUTUBE_ENDPOINT, process.env.YOUTUBE_AUTHORIZATION));
+    if (process.env.LIBRARY_ENDPOINT) libraries.set("library", new Library(process.env.LIBRARY_ENDPOINT));
 
     const { save, sendAll } = host(xws, adapter, {
         authPassword: process.env.AUTH_PASSWORD || 'riverdale',
