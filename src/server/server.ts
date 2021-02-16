@@ -8,7 +8,7 @@ import { ZoneState, UserId, UserState, mediaEquals, Media, QueueItem, UserEcho }
 import { nanoid } from 'nanoid';
 import { getDefault, randomInt } from '../common/utility';
 import { MESSAGE_SCHEMAS } from './protocol';
-import { JoinMessage, SendAuth, SendCommand, EchoMessage } from '../common/client';
+import { JoinMessage } from '../common/client';
 import { json, NextFunction, Request, Response } from 'express';
 import { Library, libraryToQueueableMedia } from './libraries';
 import { URL } from 'url';
@@ -230,6 +230,27 @@ export function host(
         }
     });
 
+    xws.app.post('/echoes', requireUserToken, (request, response) => {
+        const user = request.user!;
+        const { text, position } = request.body;
+
+        const admin = !!zone.echoes.get(position)?.tags.includes('admin');
+        const valid = !admin || user.tags.includes('admin');
+
+        if (!valid) {
+            response.status(403).send("can't remove admin echo");
+        } else if (text.length > 0) {
+            const echo = { ...user, position, text: text.slice(0, 512) };
+            zone.echoes.set(position, echo);
+            sendAll('echoes', { added: [echo] });
+            response.status(201).send();
+        } else {
+            zone.echoes.delete(position);
+            sendAll('echoes', { removed: [position] });
+            response.status(201).send();
+        }
+    });
+
     xws.app.post('/admin/authorize', requireUserToken, async (request, response) => {
         const user = request.user!;
 
@@ -261,7 +282,7 @@ export function host(
             if (command) {
                 try {
                     await command(user, ...args);
-                    response.status(201).send();
+                    response.status(202).send();
                 } catch (error) {
                     response.status(503).send(error);
                 }
@@ -566,24 +587,6 @@ export function host(
                 sendAll('user', { ...value, userId: user.userId });
             }
         });
-
-        messaging.messages.on('echo', (message: EchoMessage) => {
-            const { text, position } = message;
-
-            const admin = !!zone.echoes.get(position)?.tags.includes('admin');
-            const valid = !admin || user.tags.includes('admin');
-
-            if (!valid) {
-                status("can't remove admin echo", user);
-            } else if (text.length > 0) {
-                const echo = { ...user, position, text: text.slice(0, 512) };
-                zone.echoes.set(position, echo);
-                sendAll('echoes', { added: [echo] });
-            } else {
-                zone.echoes.delete(position);
-                sendAll('echoes', { removed: [position] });
-            }
-        });
     }
 
     function sendAll(type: string, message: any) {
@@ -594,5 +597,5 @@ export function host(
         connections.get(userId)!.send(type, message);
     }
 
-    return { zone, playback, save, sendAll, authCommands };
+    return { save, sendAll };
 }

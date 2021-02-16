@@ -18,10 +18,6 @@ export type UnqueueMessage = { itemId: number };
 export type SendChat = { text: string };
 export type RecvChat = { text: string; userId: string };
 
-export type SendAuth = { password: string };
-export type SendCommand = { name: string; args: any[] };
-
-export type EchoMessage = { position: number[]; text: string };
 export type EchoesMessage = { added?: UserEcho[]; removed?: number[][] };
 
 export type DataMessage = { update: any };
@@ -174,7 +170,7 @@ export class ZoneClient extends EventEmitter {
     }
 
     async echo(position: number[], text: string) {
-        this.messaging.send('echo', { position, text });
+        return this.request("POST", "/echoes", { position, text });
     }
 
     async request(method: string, url: string, body?: any): Promise<any> {
