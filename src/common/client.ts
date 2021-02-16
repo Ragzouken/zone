@@ -185,7 +185,7 @@ export class ZoneClient extends EventEmitter {
             body = JSON.stringify(body);
         }
 
-        return fetch(new URL(url, this.options.urlRoot), { method, headers, body }).then(async (response) => {
+        return fetch(new URL(url, this.options.urlRoot === "." ? document.location.origin : this.options.urlRoot), { method, headers, body }).then(async (response) => {
             if (response.ok) return response.json().catch(() => {});
             throw new Error(await response.text());
         });
