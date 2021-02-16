@@ -18,10 +18,6 @@ export type UnqueueMessage = { itemId: number };
 export type SendChat = { text: string };
 export type RecvChat = { text: string; userId: string };
 
-export type SendAuth = { password: string };
-export type SendCommand = { name: string; args: any[] };
-
-export type EchoMessage = { position: number[]; text: string };
 export type EchoesMessage = { added?: UserEcho[]; removed?: number[][] };
 
 export type DataMessage = { update: any };
@@ -137,11 +133,11 @@ export class ZoneClient extends EventEmitter {
     }
 
     async auth(password: string) {
-        this.messaging.send('auth', { password });
+        return this.request("POST", "/admin/authorize", { password });
     }
 
     async command(name: string, args: any[] = []) {
-        this.messaging.send('command', { name, args });
+        return this.request("POST", "/admin/command", { name, args });
     }
 
     async rename(name: string): Promise<UserState> {
@@ -174,7 +170,7 @@ export class ZoneClient extends EventEmitter {
     }
 
     async echo(position: number[], text: string) {
-        this.messaging.send('echo', { position, text });
+        return this.request("POST", "/echoes", { position, text });
     }
 
     async request(method: string, url: string, body?: any): Promise<any> {
@@ -189,17 +185,17 @@ export class ZoneClient extends EventEmitter {
             body = JSON.stringify(body);
         }
 
-        return fetch(url, { method, headers, body }).then(async (response) => {
+        return fetch(new URL(url, this.options.urlRoot === "." ? document.location.origin : this.options.urlRoot), { method, headers, body }).then(async (response) => {
             if (response.ok) return response.json().catch(() => {});
             throw new Error(await response.text());
         });
     }
 
     async searchLibrary(library: string, query?: string, tag?: string): Promise<Media[]> {
-        const url = new URL(`/libraries/${library}`, this.options.urlRoot === "." ? document.location.origin : this.options.urlRoot);
-        if (query) url.searchParams.set("q", query);
-        if (tag) url.searchParams.set("tag", tag);
-        const results = await this.request("GET", url.toString()) as Media[];
+        const search = new URLSearchParams();
+        if (query) search.set("q", query);
+        if (tag) search.set("tag", tag);
+        const results = await this.request("GET", `/libraries/${library}?${search}`) as Media[];
         results.forEach((item) => item.path = `${library}:${item.mediaId}`);
         return results;
     }

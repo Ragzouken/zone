@@ -467,7 +467,7 @@ export async function load() {
 
     client.on('disconnect', async ({ clean }) => {
         if (clean) return;
-        await sleep(100);
+        await sleep(1000);
         await connect();
     });
 
@@ -686,16 +686,16 @@ export async function load() {
     });
     chatCommands.set('name', rename);
 
-    chatCommands.set('auth', (password) => client.auth(password));
-    chatCommands.set('admin', (args) => {
+    chatCommands.set('auth', async (password) => client.auth(password));
+    chatCommands.set('admin', async (args) => {
         const i = args.indexOf(' ');
 
         if (i >= 0) {
             const name = args.substring(0, i);
             const json = `[${args.substring(i + 1)}]`;
-            client.command(name, JSON.parse(json));
+            return client.command(name, JSON.parse(json));
         } else {
-            client.command(args);
+            return client.command(args);
         }
     });
 

@@ -7,11 +7,11 @@ import Messaging from '../common/messaging';
 import { ZoneState, UserId, UserState, mediaEquals, Media, QueueItem, UserEcho } from '../common/zone';
 import { nanoid } from 'nanoid';
 import { getDefault, randomInt } from '../common/utility';
-import { MESSAGE_SCHEMAS } from './protocol';
-import { JoinMessage, SendAuth, SendCommand, EchoMessage } from '../common/client';
+import { JoinMessage } from '../common/client';
 import { json, NextFunction, Request, Response } from 'express';
 import { Library, libraryToQueueableMedia } from './libraries';
 import { URL } from 'url';
+import Joi = require('@hapi/joi');
 
 const SECONDS = 1000;
 
@@ -230,6 +230,68 @@ export function host(
         }
     });
 
+    xws.app.post('/echoes', requireUserToken, (request, response) => {
+        const user = request.user!;
+        const { text, position } = request.body;
+
+        const admin = !!zone.echoes.get(position)?.tags.includes('admin');
+        const valid = !admin || user.tags.includes('admin');
+
+        if (!valid) {
+            response.status(403).send("can't remove admin echo");
+        } else if (text.length > 0) {
+            const echo = { ...user, position, text: text.slice(0, 512) };
+            zone.echoes.set(position, echo);
+            sendAll('echoes', { added: [echo] });
+            response.status(201).send();
+        } else {
+            zone.echoes.delete(position);
+            sendAll('echoes', { removed: [position] });
+            response.status(201).send();
+        }
+    });
+
+    xws.app.post('/admin/authorize', requireUserToken, async (request, response) => {
+        const user = request.user!;
+
+        if (!opts.authPassword) {
+            response.status(501).send();
+        } else if (request.body.password !== opts.authPassword) {
+            response.status(403).send();
+        } else {
+            if (user.tags.includes('admin')) {
+                status('you are already authorised', user);
+                response.status(200).send();
+            } else {
+                user.tags.push('admin');
+                sendAll('user', { userId: user.userId, tags: user.tags });
+                status('you are now authorised', user);
+                response.status(200).send();
+            }
+        }
+    });
+
+    xws.app.post('/admin/command', requireUserToken, async (request, response) => {
+        const user = request.user!;
+
+        if (!user.tags.includes('admin')) {
+            response.status(403).send("you are not authorized");
+        } else {
+            const { name, args } = request.body;
+            const command = authCommands.get(name);
+            if (command) {
+                try {
+                    await command(user, ...args);
+                    response.status(202).send();
+                } catch (error) {
+                    response.status(503).send(error);
+                }
+            } else {
+                response.status(501).send(`no command "${name}"`);
+            }
+        }
+    });
+
     load();
 
     xws.app.get('/libraries', async (request, response) => response.json(Array.from(opts.libraries.keys())));
@@ -351,7 +413,7 @@ export function host(
         }
 
         messaging.messages.once('join', (message: JoinMessage) => {
-            const resume = message.token && tokenToUser.has(message.token);
+            const resume = message.token && tokenToUser.has(message.token) && process.env.ALLOW_RESUME;
             const token = resume ? message.token! : nanoid();
             const user = resume ? tokenToUser.get(token)! : zone.getUser((++lastUserId).toString() as UserId);
             user.name = message.name;
@@ -360,7 +422,7 @@ export function host(
             addConnectionToUser(user, messaging);
             userToIp.set(user, userIp);
 
-            bindMessagingToUser(user, messaging, getNetworkIdFromIp(userIp));
+            bindMessagingToUser(user, messaging);
             connections.set(user.userId, messaging);
 
             websocket.on('close', (code: number) => {
@@ -402,13 +464,13 @@ export function host(
         sendOnly('echoes', { added: Array.from(zone.echoes).map(([, echo]) => echo) }, user.userId);
     }
 
-    function ifUser(name: string, action: (user: UserState) => void) {
-        const user = userByName(name);
-        if (user) action(user);
-    }
-
-    function userByName(name: string) {
-        return Array.from(zone.users.values()).find((user) => user.name === name);
+    function ifUser(name: string): Promise<UserState> {
+        return new Promise((resolve, reject) => {
+            const users = Array.from(zone.users.values());
+            const user = users.find((user) => user.name === name);
+            if (user) resolve(user);
+            else reject(`no user "${name}"`);
+        });
     }
 
     function status(text: string, user?: UserState) {
@@ -423,8 +485,8 @@ export function host(
     }
 
     const authCommands = new Map<string, (admin: UserState, ...args: any[]) => void>();
-    authCommands.set('ban', (admin, name: string, reason?: string) => {
-        ifUser(name, (user) => {
+    authCommands.set('ban', (admin, name: string, reason?: string) =>
+        ifUser(name).then((user) => {
             const ban: Ban = {
                 ip: userToIp.get(user)!,
                 bannee: user.name!,
@@ -436,15 +498,15 @@ export function host(
             status(`${user.name} is banned`);
 
             (userToConnections.get(user) || new Set<Messaging>()).forEach((messaging) => messaging.close(4001));
-        });
-    });
+        })
+    );
     authCommands.set('skip', () => skip(`admin skipped ${playback.currentItem!.media.title}`));
     authCommands.set('mode', (admin, mode: string) => {
         eventMode = mode === 'event';
         status(`event mode: ${eventMode}`);
     });
     authCommands.set('dj-add', (admin, name: string) =>
-        ifUser(name, (user) => {
+        ifUser(name).then((user) => {
             if (user.tags.includes('dj')) {
                 status(`${user.name} is already a dj`, admin);
             } else {
@@ -453,10 +515,10 @@ export function host(
                 status('you are a dj', user);
                 statusAuthed(`${user.name} is a dj`);
             }
-        }),
+        })
     );
     authCommands.set('dj-del', (admin, name: string) =>
-        ifUser(name, (user) => {
+        ifUser(name).then((user) => {
             if (!user.tags.includes('dj')) {
                 status(`${user.name} isn't a dj`, admin);
             } else {
@@ -465,10 +527,10 @@ export function host(
                 status('no longer a dj', user);
                 statusAuthed(`${user.name} no longer a dj`);
             }
-        }),
+        })
     );
     authCommands.set('despawn', (admin, name: string) => 
-        ifUser(name, (user) => {
+        ifUser(name).then((user) => {
             if (!user.position) {
                 status(`${user.name} isn't spawned`, admin);
             } else {
@@ -477,7 +539,7 @@ export function host(
                 status('you were despawned by an admin', user);
                 statusAuthed(`${user.name} has been despawned`);
             }
-        }),
+        })
     );
 
     function tryQueueMedia(user: UserState, media: Media, banger = false) {
@@ -499,69 +561,29 @@ export function host(
         }
     }
 
-    function bindMessagingToUser(user: UserState, messaging: Messaging, userIp: unknown) {
-        function sendUser(type: string, message: any = {}) {
-            sendOnly(type, message, user.userId);
-        }
+    const USER_SCHEMA = Joi.object({
+        name: Joi.string().min(1).max(32),
+        avatar: Joi.string().base64(),
+        emotes: Joi.array().items(Joi.string().valid('shk', 'wvy', 'rbw', 'spn')),
+        position: Joi.array().ordered(Joi.number().required(), Joi.number().required(), Joi.number().required()),
+    });
 
-        messaging.messages.on('heartbeat', () => sendUser('heartbeat'));
+    function bindMessagingToUser(user: UserState, messaging: Messaging) {
+        messaging.messages.on('heartbeat', () => sendOnly('heartbeat', {}, user.userId));
 
         messaging.messages.on('chat', (message: any) => {
-            let { text } = message;
-            text = text.substring(0, opts.chatLengthLimit);
+            const text = message.text.substring(0, opts.chatLengthLimit);
             sendAll('chat', { text, userId: user.userId });
         });
 
         messaging.messages.on('user', (changes: Partial<UserState>) => {
-            const { value, error } = MESSAGE_SCHEMAS.get('user')!.validate(changes);
+            const { value, error } = USER_SCHEMA.validate(changes);
 
             if (error) {
-                sendUser('reject', { text: error.details[0].message });
+                sendOnly('reject', { text: error.details[0].message }, user.userId);
             } else {
                 Object.assign(user, value);
                 sendAll('user', { ...value, userId: user.userId });
-            }
-        });
-
-        messaging.messages.on('auth', (message: SendAuth) => {
-            if ((message.password || {}) !== opts.authPassword) return;
-
-            if (user.tags.includes('admin')) {
-                status('you are already authorised', user);
-            } else {
-                user.tags.push('admin');
-                sendAll('user', { userId: user.userId, tags: user.tags });
-                status('you are now authorised', user);
-            }
-        });
-
-        messaging.messages.on('command', (message: SendCommand) => {
-            if (!user.tags.includes('admin')) return;
-
-            const { name, args } = message;
-            const command = authCommands.get(name);
-            if (command) {
-                command(user, ...args);
-            } else {
-                status(`no command "${name}"`, user);
-            }
-        });
-
-        messaging.messages.on('echo', (message: EchoMessage) => {
-            const { text, position } = message;
-
-            const admin = !!zone.echoes.get(position)?.tags.includes('admin');
-            const valid = !admin || user.tags.includes('admin');
-
-            if (!valid) {
-                status("can't remove admin echo", user);
-            } else if (text.length > 0) {
-                const echo = { ...user, position, text: text.slice(0, 512) };
-                zone.echoes.set(position, echo);
-                sendAll('echoes', { added: [echo] });
-            } else {
-                zone.echoes.delete(position);
-                sendAll('echoes', { removed: [position] });
             }
         });
     }
@@ -574,5 +596,5 @@ export function host(
         connections.get(userId)!.send(type, message);
     }
 
-    return { zone, playback, save, sendAll, authCommands };
+    return { save, sendAll, zone, playback };
 }
