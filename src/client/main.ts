@@ -11,6 +11,9 @@ import { createContext2D } from 'blitsy';
 import { menusFromDataAttributes, indexByDataAttribute } from './menus';
 import { SceneRenderer, avatarImage } from './scene';
 import { icons } from './text';
+import fetch from 'node-fetch';
+import { response } from 'express';
+import { options } from '@hapi/joi';
 
 window.addEventListener('load', () => load());
 
@@ -442,6 +445,16 @@ export async function load() {
 
     // player.on('subtitles', (lines) => lines.forEach((line) => chat.log(`{clr=#888888}${line}`)));
 
+    fetch("/libraries").then((res) => res.json()).then((libraries: string[]) => {
+        searchLibrary.innerHTML = "";
+        libraries.forEach((library) => {
+            const option = document.createElement("option");
+            option.textContent = library;
+            option.value = library;
+            searchLibrary.appendChild(option);
+        });
+    });
+    
     document.getElementById('search-form')?.addEventListener('submit', (event) => {
         event.preventDefault();
         event.stopPropagation();
