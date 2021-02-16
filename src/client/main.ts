@@ -431,6 +431,7 @@ export async function load() {
     });
 
     const searchInput = document.getElementById('search-input') as HTMLInputElement;
+    const searchLibrary = document.getElementById('search-library') as HTMLOptionElement;
     const searchSubmit = document.getElementById('search-submit') as HTMLButtonElement;
     const searchResults = document.getElementById('search-results')!;
 
@@ -446,7 +447,7 @@ export async function load() {
         event.stopPropagation();
 
         searchResults.innerText = 'searching...';
-        client.searchLibrary("youtube", searchInput.value).then((results) => {
+        client.searchLibrary(searchLibrary.value, searchInput.value).then((results) => {
             searchResults.innerHTML = '';
             results.forEach(({ title, duration, thumbnail, path }) => {
                 const row = searchResultTemplate.cloneNode(true) as HTMLElement;

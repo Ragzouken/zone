@@ -234,16 +234,17 @@
     width: 100%;
     display: flex;
     padding: 8px;
+    gap: 8px;
+}
+
+#search-library {
+    flex: 1;
 }
 
 #search-input {
     flex: 1;
     min-width: 0;
-}
-
-#search-form > button, #search-form > input[type="submit"] {
-    flex: 0;
-    margin-left: 8px;
+    flex-basis: 100%;
 }
 
 #search-results {
