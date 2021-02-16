@@ -141,7 +141,7 @@ export class ZoneClient extends EventEmitter {
     }
 
     async command(name: string, args: any[] = []) {
-        this.messaging.send('command', { name, args });
+        return this.request("POST", "/admin/command", { name, args });
     }
 
     async rename(name: string): Promise<UserState> {

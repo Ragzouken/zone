@@ -250,6 +250,27 @@ export function host(
         }
     });
 
+    xws.app.post('/admin/command', requireUserToken, async (request, response) => {
+        const user = request.user!;
+
+        if (!user.tags.includes('admin')) {
+            response.status(403).send("you are not authorized");
+        } else {
+            const { name, args } = request.body;
+            const command = authCommands.get(name);
+            if (command) {
+                try {
+                    await command(user, ...args);
+                    response.status(201).send();
+                } catch (error) {
+                    response.status(503).send(error);
+                }
+            } else {
+                response.status(501).send(`no command "${name}"`);
+            }
+        }
+    });
+
     load();
 
     xws.app.get('/libraries', async (request, response) => response.json(Array.from(opts.libraries.keys())));
@@ -422,9 +443,12 @@ export function host(
         sendOnly('echoes', { added: Array.from(zone.echoes).map(([, echo]) => echo) }, user.userId);
     }
 
-    function ifUser(name: string, action: (user: UserState) => void) {
-        const user = userByName(name);
-        if (user) action(user);
+    function ifUser(name: string): Promise<UserState> {
+        return new Promise((resolve, reject) => {
+            const user = userByName(name);
+            if (user) resolve(user);
+            else reject(`no user "${name}"`);
+        });
     }
 
     function userByName(name: string) {
@@ -443,8 +467,8 @@ export function host(
     }
 
     const authCommands = new Map<string, (admin: UserState, ...args: any[]) => void>();
-    authCommands.set('ban', (admin, name: string, reason?: string) => {
-        ifUser(name, (user) => {
+    authCommands.set('ban', (admin, name: string, reason?: string) =>
+        ifUser(name).then((user) => {
             const ban: Ban = {
                 ip: userToIp.get(user)!,
                 bannee: user.name!,
@@ -456,15 +480,15 @@ export function host(
             status(`${user.name} is banned`);
 
             (userToConnections.get(user) || new Set<Messaging>()).forEach((messaging) => messaging.close(4001));
-        });
-    });
+        })
+    );
     authCommands.set('skip', () => skip(`admin skipped ${playback.currentItem!.media.title}`));
     authCommands.set('mode', (admin, mode: string) => {
         eventMode = mode === 'event';
         status(`event mode: ${eventMode}`);
     });
     authCommands.set('dj-add', (admin, name: string) =>
-        ifUser(name, (user) => {
+        ifUser(name).then((user) => {
             if (user.tags.includes('dj')) {
                 status(`${user.name} is already a dj`, admin);
             } else {
@@ -473,10 +497,10 @@ export function host(
                 status('you are a dj', user);
                 statusAuthed(`${user.name} is a dj`);
             }
-        }),
+        })
     );
     authCommands.set('dj-del', (admin, name: string) =>
-        ifUser(name, (user) => {
+        ifUser(name).then((user) => {
             if (!user.tags.includes('dj')) {
                 status(`${user.name} isn't a dj`, admin);
             } else {
@@ -485,10 +509,10 @@ export function host(
                 status('no longer a dj', user);
                 statusAuthed(`${user.name} no longer a dj`);
             }
-        }),
+        })
     );
     authCommands.set('despawn', (admin, name: string) => 
-        ifUser(name, (user) => {
+        ifUser(name).then((user) => {
             if (!user.position) {
                 status(`${user.name} isn't spawned`, admin);
             } else {
@@ -497,7 +521,7 @@ export function host(
                 status('you were despawned by an admin', user);
                 statusAuthed(`${user.name} has been despawned`);
             }
-        }),
+        })
     );
 
     function tryQueueMedia(user: UserState, media: Media, banger = false) {
@@ -540,18 +564,6 @@ export function host(
             } else {
                 Object.assign(user, value);
                 sendAll('user', { ...value, userId: user.userId });
-            }
-        });
-
-        messaging.messages.on('command', (message: SendCommand) => {
-            if (!user.tags.includes('admin')) return;
-
-            const { name, args } = message;
-            const command = authCommands.get(name);
-            if (command) {
-                command(user, ...args);
-            } else {
-                status(`no command "${name}"`, user);
             }
         });
 
