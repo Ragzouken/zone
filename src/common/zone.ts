@@ -31,12 +31,6 @@ export type UserEcho = UserState & {
 export type QueueInfo = { userId?: UserId; ip?: unknown; banger?: boolean };
 export type QueueItem = { media: Media; info: QueueInfo; itemId: number };
 
-export type MediaMeta = Omit<Media, 'source'>;
-
-export function mediaEquals(a: Media, b: Media) {
-    return a.src === b.src;
-}
-
 export class ZoneState {
     public readonly users = new Map<UserId, UserState>();
     readonly queue: QueueItem[] = [];
