@@ -467,7 +467,7 @@ export async function load() {
 
     client.on('disconnect', async ({ clean }) => {
         if (clean) return;
-        await sleep(100);
+        await sleep(1000);
         await connect();
     });
 
