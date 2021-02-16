@@ -351,7 +351,7 @@ export function host(
         }
 
         messaging.messages.once('join', (message: JoinMessage) => {
-            const resume = message.token && tokenToUser.has(message.token);
+            const resume = message.token && tokenToUser.has(message.token) && process.env.ALLOW_RESUME;
             const token = resume ? message.token! : nanoid();
             const user = resume ? tokenToUser.get(token)! : zone.getUser((++lastUserId).toString() as UserId);
             user.name = message.name;
