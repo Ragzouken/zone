@@ -417,6 +417,7 @@ export function host(
             const token = resume ? message.token! : nanoid();
             const user = resume ? tokenToUser.get(token)! : zone.getUser((++lastUserId).toString() as UserId);
             user.name = message.name;
+            user.avatar = message.avatar || user.avatar;
 
             addUserToken(user, token);
             addConnectionToUser(user, messaging);

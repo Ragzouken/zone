@@ -134,9 +134,8 @@ async function connect(): Promise<void> {
     }
 
     try {
-        const assign = await client.join({ name: localName });
-        const data = getInitialAvatar();
-        if (data) client.avatar(data);
+        const avatar = getInitialAvatar() || undefined;
+        const assign = await client.join({ name: localName, avatar });
     } catch (e) {
         chat.error(`assignment failed (${e})`);
         console.log('assignment exception:', e);
