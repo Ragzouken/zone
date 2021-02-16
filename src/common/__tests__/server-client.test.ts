@@ -28,22 +28,6 @@ describe('connectivity', () => {
     }, 500);
 });
 
-describe('join open server', () => {
-    test('accepts no password', async () => {
-        await zoneServer({}, async (server) => {
-            const client = await server.client();
-            await client.join({ name: 'no pass' });
-        });
-    });
-
-    test('accepts any password', async () => {
-        await zoneServer({}, async (server) => {
-            const client = await server.client();
-            await client.join({ name: 'any pass', password: 'old password' });
-        });
-    });
-});
-
 describe('join server', () => {
     test('assigns id and token', async () => {
         await zoneServer({}, async (server) => {

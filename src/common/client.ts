@@ -6,7 +6,7 @@ import fetch, { HeadersInit } from 'node-fetch';
 const URL = window?.URL || require('url').URL;
 
 export type StatusMesage = { text: string };
-export type JoinMessage = { name: string; token?: string; password?: string };
+export type JoinMessage = { name: string; token?: string; avatar?: string };
 export type AssignMessage = { userId: string; token: string };
 export type RejectMessage = { text: string };
 export type UsersMessage = { users: UserState[] };
@@ -108,7 +108,7 @@ export class ZoneClient extends EventEmitter {
         });
     }
 
-    async join(options: { name?: string; token?: string; password?: string } = {}) {
+    async join(options: Partial<JoinMessage> = {}) {
         this.clear();
         options.name = options.name || this.options.joinName || 'anonymous';
         options.token = options.token || this.assignation?.token;
