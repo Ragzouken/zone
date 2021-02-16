@@ -7,11 +7,11 @@ import Messaging from '../common/messaging';
 import { ZoneState, UserId, UserState, mediaEquals, Media, QueueItem, UserEcho } from '../common/zone';
 import { nanoid } from 'nanoid';
 import { getDefault, randomInt } from '../common/utility';
-import { MESSAGE_SCHEMAS } from './protocol';
 import { JoinMessage } from '../common/client';
 import { json, NextFunction, Request, Response } from 'express';
 import { Library, libraryToQueueableMedia } from './libraries';
 import { URL } from 'url';
+import Joi = require('@hapi/joi');
 
 const SECONDS = 1000;
 
@@ -564,6 +564,13 @@ export function host(
         }
     }
 
+    const USER_SCHEMA = Joi.object({
+        name: Joi.string().min(1).max(32),
+        avatar: Joi.string().base64(),
+        emotes: Joi.array().items(Joi.string().valid('shk', 'wvy', 'rbw', 'spn')),
+        position: Joi.array().ordered(Joi.number().required(), Joi.number().required(), Joi.number().required()),
+    });
+
     function bindMessagingToUser(user: UserState, messaging: Messaging, userIp: unknown) {
         function sendUser(type: string, message: any = {}) {
             sendOnly(type, message, user.userId);
@@ -578,7 +585,7 @@ export function host(
         });
 
         messaging.messages.on('user', (changes: Partial<UserState>) => {
-            const { value, error } = MESSAGE_SCHEMAS.get('user')!.validate(changes);
+            const { value, error } = USER_SCHEMA.validate(changes);
 
             if (error) {
                 sendUser('reject', { text: error.details[0].message });
