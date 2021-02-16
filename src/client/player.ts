@@ -200,5 +200,6 @@ export class Player extends EventEmitter {
 
         if (this.source.parentElement) this.element.removeChild(this.source);
         if (this.subtrack.parentElement) this.element.removeChild(this.subtrack);
+        this.emit("subtitles", []);
     }
 }
