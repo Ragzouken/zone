@@ -192,10 +192,10 @@ export class ZoneClient extends EventEmitter {
     }
 
     async searchLibrary(library: string, query?: string, tag?: string): Promise<Media[]> {
-        const url = new URL(`/libraries/${library}`, this.options.urlRoot === "." ? document.location.origin : this.options.urlRoot);
-        if (query) url.searchParams.set("q", query);
-        if (tag) url.searchParams.set("tag", tag);
-        const results = await this.request("GET", url.toString()) as Media[];
+        const search = new URLSearchParams();
+        if (query) search.set("q", query);
+        if (tag) search.set("tag", tag);
+        const results = await this.request("GET", `/libraries/${library}?${search}`) as Media[];
         results.forEach((item) => item.path = `${library}:${item.mediaId}`);
         return results;
     }
