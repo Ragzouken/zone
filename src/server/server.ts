@@ -422,7 +422,7 @@ export function host(
             addConnectionToUser(user, messaging);
             userToIp.set(user, userIp);
 
-            bindMessagingToUser(user, messaging, getNetworkIdFromIp(userIp));
+            bindMessagingToUser(user, messaging);
             connections.set(user.userId, messaging);
 
             websocket.on('close', (code: number) => {
@@ -466,14 +466,11 @@ export function host(
 
     function ifUser(name: string): Promise<UserState> {
         return new Promise((resolve, reject) => {
-            const user = userByName(name);
+            const users = Array.from(zone.users.values());
+            const user = users.find((user) => user.name === name);
             if (user) resolve(user);
             else reject(`no user "${name}"`);
         });
-    }
-
-    function userByName(name: string) {
-        return Array.from(zone.users.values()).find((user) => user.name === name);
     }
 
     function status(text: string, user?: UserState) {
@@ -571,16 +568,11 @@ export function host(
         position: Joi.array().ordered(Joi.number().required(), Joi.number().required(), Joi.number().required()),
     });
 
-    function bindMessagingToUser(user: UserState, messaging: Messaging, userIp: unknown) {
-        function sendUser(type: string, message: any = {}) {
-            sendOnly(type, message, user.userId);
-        }
-
-        messaging.messages.on('heartbeat', () => sendUser('heartbeat'));
+    function bindMessagingToUser(user: UserState, messaging: Messaging) {
+        messaging.messages.on('heartbeat', () => sendOnly('heartbeat', {}, user.userId));
 
         messaging.messages.on('chat', (message: any) => {
-            let { text } = message;
-            text = text.substring(0, opts.chatLengthLimit);
+            const text = message.text.substring(0, opts.chatLengthLimit);
             sendAll('chat', { text, userId: user.userId });
         });
 
@@ -588,7 +580,7 @@ export function host(
             const { value, error } = USER_SCHEMA.validate(changes);
 
             if (error) {
-                sendUser('reject', { text: error.details[0].message });
+                sendOnly('reject', { text: error.details[0].message }, user.userId);
             } else {
                 Object.assign(user, value);
                 sendAll('user', { ...value, userId: user.userId });
