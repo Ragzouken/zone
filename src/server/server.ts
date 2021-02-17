@@ -10,7 +10,6 @@ import { json, NextFunction, Request, Response } from 'express';
 import { Library, libraryToQueueableMedia } from './libraries';
 import { URL } from 'url';
 import Joi = require('@hapi/joi');
-import { once } from 'events';
 
 const SECONDS = 1000;
 
@@ -194,24 +193,12 @@ export function host(
         sendAll('user', user);
 
         addUserToken(user, token);
-        addConnectionToUser(user, messaging);
         userToIp.set(user, request.ip);
 
         bindMessagingToUser(user, messaging);
         connections.set(user.userId, messaging);
 
-        websocket.on('close', (code: number) => {
-            removeConnectionFromUser(user, messaging);
-            const cleanExit = code === 1000 || code === 1001;
-
-            if (cleanExit) {
-                killUser(user);
-            } else {
-                setTimeout(() => {
-                    if (isUserConnectionless(user)) killUser(user);
-                }, opts.userTimeout);
-            }
-        });
+        websocket.on('close', (code: number) => killUser(user));
 
         sendCoreState(user);
         sendOtherState(user);
@@ -420,28 +407,11 @@ export function host(
         ).write();
     }
 
-    const userToConnections = new Map<UserState, Set<Messaging>>();
-    function addConnectionToUser(user: UserState, messaging: Messaging) {
-        const connections = userToConnections.get(user) || new Set<Messaging>();
-        connections.add(messaging);
-        userToConnections.set(user, connections);
-    }
-
-    function removeConnectionFromUser(user: UserState, messaging: Messaging) {
-        userToConnections.get(user)?.delete(messaging);
-    }
-
-    function isUserConnectionless(user: UserState) {
-        const connections = userToConnections.get(user);
-        const connectionless = !connections || connections.size === 0;
-        return connectionless;
-    }
-
     function killUser(user: UserState) {
         if (zone.users.has(user.userId)) sendAll('leave', { userId: user.userId });
         zone.users.delete(user.userId);
+        connections.get(user.userId)?.close(4001);
         connections.delete(user.userId);
-        userToConnections.delete(user);
         revokeUserToken(user);
     }
 
@@ -514,8 +484,7 @@ export function host(
             };
             bans.set(ban.ip, ban);
             status(`${user.name} is banned`);
-
-            (userToConnections.get(user) || new Set<Messaging>()).forEach((messaging) => messaging.close(4001));
+            killUser(user);
         })
     );
     authCommands.set('skip', () => skip(`admin skipped ${playback.currentItem!.media.title}`));
