@@ -1,4 +1,3 @@
-import * as WebSocket from 'ws';
 import * as expressWs from 'express-ws';
 import * as low from 'lowdb';
 
@@ -6,12 +5,12 @@ import Playback from './playback';
 import Messaging from '../common/messaging';
 import { ZoneState, UserId, UserState, Media, QueueItem, UserEcho } from '../common/zone';
 import { nanoid } from 'nanoid';
-import { getDefault, randomInt } from '../common/utility';
-import { JoinMessage } from '../common/client';
-import { json, NextFunction, Request, response, Response } from 'express';
+import { randomInt } from '../common/utility';
+import { json, NextFunction, Request, Response } from 'express';
 import { Library, libraryToQueueableMedia } from './libraries';
 import { URL } from 'url';
 import Joi = require('@hapi/joi');
+import { once } from 'events';
 
 const SECONDS = 1000;
 
@@ -162,7 +161,6 @@ export function host(
     xws.app.post('/zone/join', (request, response) => {
         const { name, avatar } = request.body;
         const ticket = nanoid();
-
         tickets.set(ticket, { name, avatar });
         response.json({ ticket });
     });
@@ -178,9 +176,7 @@ export function host(
         }
     });
 
-    xws.app.ws('/zone/:ticket', (websocket, request) => {
-        console.log(request.ticket);
-
+    xws.app.ws('/zone/:ticket', async (websocket, request) => {
         const messaging = new Messaging();
         messaging.setSocket(websocket);
         messaging.on('error', () => {});
@@ -189,6 +185,8 @@ export function host(
         const user = zone.getUser((++lastUserId).toString() as UserId);
         user.name = request.ticket!.name;
         user.avatar = request.ticket!.avatar;
+
+        sendAll('user', user);
 
         addUserToken(user, token);
         addConnectionToUser(user, messaging);

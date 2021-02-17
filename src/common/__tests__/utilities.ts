@@ -60,17 +60,18 @@ export class ZoneServer {
         this.hosting = { ...host(xws, new Memory(''), options), server };
     }
 
-    public async socket() {
-        const socket = new WebSocket(`ws://${this.host}/zone`);
+    public async socket(ticket: string) {
+        const socket = new WebSocket(`ws://${this.host}/zone/${ticket}`);
         this.sockets.push(socket);
-        await once(socket, 'open');
         return socket;
     }
 
     public async client(options: Partial<ClientOptions> = {}) {
-        options = Object.assign({ urlRoot: 'http://' + this.host }, TEST_CLIENT_OPTIONS, options);
+        options = Object.assign({ 
+            urlRoot: 'http://' + this.host,
+            createSocket: (ticket: string) => this.socket(ticket),
+        }, TEST_CLIENT_OPTIONS, options);
         const client = new ZoneClient(options);
-        client.messaging.setSocket(await this.socket());
         return client;
     }
 

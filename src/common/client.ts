@@ -1,4 +1,4 @@
-import Messaging from './messaging';
+import Messaging, { Socket } from './messaging';
 import { EventEmitter } from 'events';
 import { specifically } from './utility';
 import { ZoneState, UserState, QueueItem, UserEcho, Media } from './zone';
@@ -42,12 +42,14 @@ export interface ClientOptions {
     quickResponseTimeout: number;
     slowResponseTimeout: number;
     joinName?: string;
+    createSocket: (ticket: string) => Promise<Socket>;
 }
 
 export const DEFAULT_OPTIONS: ClientOptions = {
     urlRoot: '.',
     quickResponseTimeout: 3000,
     slowResponseTimeout: 5000,
+    createSocket: () => { throw new Error("not implemented"); },
 };
 
 export interface ClientEventMap {
@@ -108,14 +110,22 @@ export class ZoneClient extends EventEmitter {
         });
     }
 
-    async join() {
+    async join({ name = "anonymous", avatar = "" } = {}) {
         this.clear();
-        return this.expect('assign', this.options.quickResponseTimeout).then((assign) => {
+
+        const { ticket } = await this.request("POST", "/zone/join", { name, avatar });
+
+        const assignation = this.expect('assign', this.options.quickResponseTimeout).then((assign) => {
             this.assignation = assign;
             this.localUser = this.zone.getUser(assign.userId);
             this.emit('joined', { user: this.localUser });
             return assign;
         });
+
+        const socket = await this.options.createSocket(ticket);
+        this.messaging.setSocket(socket);
+
+        return assignation;
     }
 
     async heartbeat() {

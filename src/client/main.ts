@@ -1,5 +1,5 @@
 import * as blitsy from 'blitsy';
-import { secondsToTime, fakedownToTag, eventToElementPixel, withPixels, escapeHtml, hslToRgb, rgb2hex, shuffleArray } from './utility';
+import { secondsToTime, fakedownToTag, eventToElementPixel, withPixels, escapeHtml, hslToRgb, rgb2hex } from './utility';
 import { sleep } from '../common/utility';
 import { ChatPanel } from './chat';
 
@@ -12,12 +12,10 @@ import { menusFromDataAttributes, indexByDataAttribute } from './menus';
 import { SceneRenderer, avatarImage } from './scene';
 import { icons } from './text';
 import fetch from 'node-fetch';
-import { response } from 'express';
-import { options } from '@hapi/joi';
 
 window.addEventListener('load', () => load());
 
-export const client = new ZoneClient();
+export const client = new ZoneClient({ createSocket: socket });
 export const htmlui = new HTMLUI();
 
 const avatarTiles = new Map<string | undefined, CanvasRenderingContext2D>();
@@ -129,20 +127,11 @@ async function connect(): Promise<void> {
 
     const name = localName;
     const avatar = getInitialAvatar() || undefined;
-    const { ticket } = await client.request("POST", "/zone/join", { name, avatar });
 
     try {
-        client.messaging.setSocket(await socket(ticket));
+        await client.join({ name, avatar });
     } catch (e) {
         return connect();
-    }
-
-    try {
-        const assign = await client.join();
-    } catch (e) {
-        chat.error(`assignment failed (${e})`);
-        console.log('assignment exception:', e);
-        return;
     }
 
     // reload page after 2 hours of idling
