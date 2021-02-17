@@ -26,7 +26,6 @@ export type Ticket = { name: string, avatar: string, token: string, userId: stri
 
 export type HostOptions = {
     pingInterval: number;
-    userTimeout: number;
     nameLengthLimit: number;
     chatLengthLimit: number;
 
@@ -42,7 +41,6 @@ export type HostOptions = {
 
 export const DEFAULT_OPTIONS: HostOptions = {
     pingInterval: 10 * SECONDS,
-    userTimeout: 5 * SECONDS,
     nameLengthLimit: 16,
     chatLengthLimit: 160,
 
