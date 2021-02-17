@@ -1,12 +1,12 @@
 import Messaging from './messaging';
 import { EventEmitter } from 'events';
-import { YoutubeVideo } from '../server/youtube';
 import { specifically } from './utility';
 import { ZoneState, UserState, QueueItem, UserEcho, Media } from './zone';
-import fetch from 'node-fetch';
+import fetch, { HeadersInit } from 'node-fetch';
+const URL = window?.URL || require('url').URL;
 
 export type StatusMesage = { text: string };
-export type JoinMessage = { name: string; token?: string; password?: string };
+export type JoinMessage = { name: string; token?: string; avatar?: string };
 export type AssignMessage = { userId: string; token: string };
 export type RejectMessage = { text: string };
 export type UsersMessage = { users: UserState[] };
@@ -18,10 +18,6 @@ export type UnqueueMessage = { itemId: number };
 export type SendChat = { text: string };
 export type RecvChat = { text: string; userId: string };
 
-export type SendAuth = { password: string };
-export type SendCommand = { name: string; args: any[] };
-
-export type EchoMessage = { position: number[]; text: string };
 export type EchoesMessage = { added?: UserEcho[]; removed?: number[][] };
 
 export type DataMessage = { update: any };
@@ -112,7 +108,7 @@ export class ZoneClient extends EventEmitter {
         });
     }
 
-    async join(options: { name?: string; token?: string; password?: string } = {}) {
+    async join(options: Partial<JoinMessage> = {}) {
         this.clear();
         options.name = options.name || this.options.joinName || 'anonymous';
         options.token = options.token || this.assignation?.token;
@@ -137,11 +133,11 @@ export class ZoneClient extends EventEmitter {
     }
 
     async auth(password: string) {
-        this.messaging.send('auth', { password });
+        return this.request("POST", "/admin/authorize", { password });
     }
 
     async command(name: string, args: any[] = []) {
-        this.messaging.send('command', { name, args });
+        return this.request("POST", "/admin/command", { name, args });
     }
 
     async rename(name: string): Promise<UserState> {
@@ -173,79 +169,53 @@ export class ZoneClient extends EventEmitter {
         this.messaging.send('user', { emotes });
     }
 
-    async setBlock(coords: number[], value: number) {
-        this.messaging.send('block', { coords, value });
-    }
-
     async echo(position: number[], text: string) {
-        this.messaging.send('echo', { position, text });
+        return this.request("POST", "/echoes", { position, text });
     }
 
-    async search(query: string): Promise<YoutubeVideo[]> {
-        const url = this.options.urlRoot + '/youtube?q=' + encodeURIComponent(query);
-        return fetch(url).then(async (res) => {
-            if (res.ok) return res.json();
-            throw new Error(await res.text());
+    async request(method: string, url: string, body?: any): Promise<any> {
+        const headers: HeadersInit = {};
+
+        if (this.assignation) {
+            headers["Authorization"] = "Bearer " + this.assignation.token;
+        }
+
+        if (body) {
+            headers["Content-Type"] = "application/json";
+            body = JSON.stringify(body);
+        }
+
+        return fetch(new URL(url, this.options.urlRoot === "." ? document.location.origin : this.options.urlRoot), { method, headers, body }).then(async (response) => {
+            if (response.ok) return response.json().catch(() => {});
+            throw new Error(await response.text());
         });
     }
 
-    async searchLibrary2(query: string): Promise<Media[]> {
-        const url = this.options.urlRoot + '/library?q=' + encodeURIComponent(query);
-        return fetch(url).then(async (res) => {
-            if (res.ok) return res.json();
-            throw new Error(await res.text());
-        });
-    }
-
-    async searchLibraryTag(tag: string): Promise<Media[]> {
-        const url = this.options.urlRoot + '/library?tag=' + encodeURIComponent(tag);
-        return fetch(url).then(async (res) => {
-            if (res.ok) return res.json();
-            throw new Error(await res.text());
-        });
+    async searchLibrary(library: string, query?: string, tag?: string): Promise<Media[]> {
+        const search = new URLSearchParams();
+        if (query) search.set("q", query);
+        if (tag) search.set("tag", tag);
+        const results = await this.request("GET", `/libraries/${library}?${search}`) as Media[];
+        results.forEach((item) => item.path = `${library}:${item.mediaId}`);
+        return results;
     }
 
     async banger(tag?: string) {
-        this.messaging.send("banger", { tag });
+        return this.request("POST", "/queue/banger", { tag });
     }
 
-    async lucky(query: string) {
-        return new Promise<QueueMessage>((resolve, reject) => {
-            this.expect('queue', this.options.slowResponseTimeout).then(resolve, reject);
-            this.messaging.send('lucky', { query });
-        });
-    }
-
-    async youtube(videoId: string) {
-        return new Promise<QueueItem>((resolve, reject) => {
-            setTimeout(() => reject('timeout'), this.options.slowResponseTimeout);
-            this.on('queue', ({ item }) => {
-                if (item.media.source === 'youtube/' + videoId) resolve(item);
-            });
-            this.messaging.send('youtube', { videoId });
-        });
-    }
-
-    async local(path: string) {
-        return new Promise<QueueItem>((resolve, reject) => {
-            setTimeout(() => reject('timeout'), this.options.quickResponseTimeout);
-            this.once('queue', ({ item }) => resolve(item));
-            this.messaging.send('local', { path });
-        });
+    async queue(path: string) {
+        return this.request("POST", "/queue", { path });
     }
 
     async unqueue(item: QueueItem) {
-        return new Promise<QueueItem>((resolve, reject) => {
-            setTimeout(() => reject('timeout'), this.options.quickResponseTimeout);
-            specifically(this, 'unqueue', (unqueued: QueueItem) => unqueued.itemId === unqueued.itemId, resolve);
-            this.messaging.send('unqueue', { itemId: item.itemId });
-        });
+        return this.request("DELETE", "/queue/" + item.itemId);
     }
 
     async skip() {
         if (!this.zone.lastPlayedItem) return;
-        const source = this.zone.lastPlayedItem.media.source;
-        this.messaging.send('skip', { source });
+        const { itemId } = this.zone.lastPlayedItem;
+        return this.request("POST", "/queue/skip", { itemId });
     }
 
     private addStandardListeners() {

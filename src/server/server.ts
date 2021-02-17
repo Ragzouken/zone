@@ -4,50 +4,54 @@ import * as low from 'lowdb';
 
 import Playback from './playback';
 import Messaging from '../common/messaging';
-import { ZoneState, UserId, UserState, mediaEquals, Media, QueueItem, UserEcho } from '../common/zone';
+import { ZoneState, UserId, UserState, Media, QueueItem, UserEcho } from '../common/zone';
 import { nanoid } from 'nanoid';
 import { getDefault, randomInt } from '../common/utility';
-import { MESSAGE_SCHEMAS } from './protocol';
-import { JoinMessage, SendAuth, SendCommand, EchoMessage } from '../common/client';
-import { YoutubeService, search } from './youtube';
-import fetch from 'node-fetch';
+import { JoinMessage } from '../common/client';
+import { json, NextFunction, Request, Response } from 'express';
+import { Library, libraryToQueueableMedia } from './libraries';
+import { URL } from 'url';
+import Joi = require('@hapi/joi');
 
 const SECONDS = 1000;
 
+declare global {
+    namespace Express {
+        interface Request {
+            user?: UserState;
+        }
+    }
+}
+
 export type HostOptions = {
     pingInterval: number;
-    saveInterval: number;
     userTimeout: number;
     nameLengthLimit: number;
     chatLengthLimit: number;
 
     perUserQueueLimit: number;
     voteSkipThreshold: number;
-    errorSkipThreshold: number;
 
-    joinPassword?: string;
     authPassword?: string;
-    uploadPassword?: string;
 
     playbackStartDelay: number;
-    libraryOrigin?: string;
+    queueCheckInterval: number;
+    libraries: Map<string, Library>;
 };
 
 export const DEFAULT_OPTIONS: HostOptions = {
     pingInterval: 10 * SECONDS,
-    saveInterval: 60 * SECONDS,
     userTimeout: 5 * SECONDS,
     nameLengthLimit: 16,
     chatLengthLimit: 160,
 
     perUserQueueLimit: 3,
     voteSkipThreshold: 0.6,
-    errorSkipThreshold: 0.4,
 
-    playbackStartDelay: 3 * SECONDS,
+    playbackStartDelay: 1 * SECONDS,
+    queueCheckInterval: 5 * SECONDS,
+    libraries: new Map(),
 };
-
-const HALFHOUR = 30 * 60 * SECONDS;
 
 const bans = new Map<unknown, Ban>();
 
@@ -71,7 +75,6 @@ interface Ban {
 export function host(
     xws: expressWs.Instance,
     adapter: low.AdapterSync,
-    yts: YoutubeService,
     options: Partial<HostOptions> = {},
 ) {
     const opts = Object.assign({}, DEFAULT_OPTIONS, options);
@@ -103,7 +106,21 @@ export function host(
     }
 
     setInterval(ping, opts.pingInterval);
-    // setInterval(save, opts.saveInterval);
+    setInterval(checkQueue, opts.queueCheckInterval);
+
+    async function getMediaStatus(media: Media) {
+        return media.getStatus ? await media.getStatus() : "available";
+    }
+
+    async function checkQueue() {
+        const checks = playback.queue.map(async (item) => {
+            if (await getMediaStatus(item.media) === 'failed') {
+                playback.unqueue(item);
+                status(`failed to load "${item.media.title}"`);
+            }
+        });
+        return Promise.all(checks);
+    }
 
     function addUserToken(user: UserState, token: string) {
         tokenToUser.set(token, user);
@@ -127,42 +144,202 @@ export function host(
 
     let eventMode = false;
 
+    function requireUserToken(
+        request: Request, 
+        response: Response, 
+        next: NextFunction,
+    ) {
+        const auth = request.headers.authorization || "";
+        const token = auth.startsWith("Bearer ") ? auth.substr(7) : "";
+        request.user = tokenToUser.get(token);
+
+        if (request.user) {
+            next();
+        } else {
+            response.status(401).send("invalid user");
+        }
+    }
+
+    xws.app.use(json());
+
+    xws.app.get('/queue', (request, response) => response.json(playback.queue));
+    xws.app.post('/queue', requireUserToken, async (request, response) => {
+        try {
+            const media = await pathToMedia(request.body.path);
+            tryQueueMedia(request.user!, media);
+            response.status(202).send();
+        } catch (error) {
+            response.status(400).send(error.message);
+        }
+    });
+
+    xws.app.post('/queue/banger', requireUserToken, async (request, response) => {
+        if (!opts.libraries.has("library")) {
+            response.status(501).send();
+        } else {
+            const banger = await libraryTagToBanger(request.body.tag);
+        
+            if (banger) {
+                try {
+                    tryQueueMedia(request.user!, banger, true);
+                    response.status(202).send();
+                } catch (error) {
+                    response.status(403).send(error.message);
+                }
+            } else {
+                response.status(503).send("no matching bangers");
+            }
+        }
+    });
+
+    xws.app.post('/queue/skip', requireUserToken, async (request, response) => {
+        const user = request.user!;
+        const itemId = request.body.itemId;
+
+        if (!playback.currentItem || playback.currentItem.itemId !== itemId) {
+            response.status(404).send(`queue item ${itemId} is not playing`);
+        } else if (!eventMode) {
+            voteSkip(itemId, user);
+            response.status(202).send();
+        } else if (user.tags.includes('dj')) {
+            skip(`${user.name} skipped ${playback.currentItem!.media.title}`);
+            response.status(204).send();
+        } else {
+            response.status(403).send("can't skip during event mode");
+        }
+    });
+
+    xws.app.delete('/queue/:itemId', requireUserToken, async (request, response) => {
+        const user = request.user!;
+        const itemId = parseInt(request.params.itemId, 10);
+        
+        const item = playback.queue.find((item) => item.itemId === itemId);
+        if (!item) {
+            response.status(404).send();
+        } else {
+            const dj = eventMode && user.tags.includes('dj');
+            const own = item.info.userId === user.userId;
+            const auth = user.tags.includes('admin');
+    
+            if (dj || own || auth) {
+                playback.unqueue(item);
+                response.status(204).send();
+            } else {
+                response.status(403).send();
+            }
+        }
+    });
+
+    xws.app.post('/echoes', requireUserToken, (request, response) => {
+        const user = request.user!;
+        const { text, position } = request.body;
+
+        const admin = !!zone.echoes.get(position)?.tags.includes('admin');
+        const valid = !admin || user.tags.includes('admin');
+
+        if (!valid) {
+            response.status(403).send("can't remove admin echo");
+        } else if (text.length > 0) {
+            const echo = { ...user, position, text: text.slice(0, 512) };
+            zone.echoes.set(position, echo);
+            sendAll('echoes', { added: [echo] });
+            response.status(201).send();
+        } else {
+            zone.echoes.delete(position);
+            sendAll('echoes', { removed: [position] });
+            response.status(201).send();
+        }
+    });
+
+    xws.app.post('/admin/authorize', requireUserToken, async (request, response) => {
+        const user = request.user!;
+
+        if (!opts.authPassword) {
+            response.status(501).send();
+        } else if (request.body.password !== opts.authPassword) {
+            response.status(403).send();
+        } else {
+            if (user.tags.includes('admin')) {
+                status('you are already authorised', user);
+                response.status(200).send();
+            } else {
+                user.tags.push('admin');
+                sendAll('user', { userId: user.userId, tags: user.tags });
+                status('you are now authorised', user);
+                response.status(200).send();
+            }
+        }
+    });
+
+    xws.app.post('/admin/command', requireUserToken, async (request, response) => {
+        const user = request.user!;
+
+        if (!user.tags.includes('admin')) {
+            response.status(403).send("you are not authorized");
+        } else {
+            const { name, args } = request.body;
+            const command = authCommands.get(name);
+            if (command) {
+                try {
+                    await command(user, ...args);
+                    response.status(202).send();
+                } catch (error) {
+                    response.status(503).send(error);
+                }
+            } else {
+                response.status(501).send(`no command "${name}"`);
+            }
+        }
+    });
+
     load();
+
+    xws.app.get('/libraries', async (request, response) => response.json(Array.from(opts.libraries.keys())));
+    xws.app.get('/libraries/:prefix', async (request, response) => {
+        const prefix = request.params.prefix;
+        const library = opts.libraries.get(prefix);
+        const query = new URL(request.url, "http://localhost").search;
+
+        if (library) {
+            response.json(await library.search(query));
+        } else {
+            response.status(404).send(`no library "${prefix}"`);
+        }
+    });
+
+    async function pathToMedia(path: string) {
+        const parts = path.split(":");
+        const prefix = parts.shift()!;
+        const mediaId = parts.join(":");
+        const library = opts.libraries.get(prefix);
+
+        if (library) {
+            return libraryToQueueableMedia(library, mediaId);
+        } else {
+            throw new Error(`no library "${prefix}"`);
+        }
+    }
+
+    async function libraryTagToBanger(tag: string | undefined) {
+        const EIGHT_MINUTES = 8 * 60 * SECONDS;
+        const library = await opts.libraries.get("library")!.search(tag ? "?tag=" + tag : "");
+        const extras = library.filter((media: any) => media.duration <= EIGHT_MINUTES);
+        const banger = extras[randomInt(0, extras.length - 1)];
+
+        return banger;
+    }
 
     playback.on('queue', (item: QueueItem) => sendAll('queue', { items: [item] }));
     playback.on('play', (item: QueueItem) => sendAll('play', { item, time: playback.currentTime }));
     playback.on('stop', () => sendAll('play', {}));
     playback.on('unqueue', ({ itemId }) => sendAll('unqueue', { itemId }));
-
-    playback.on('finish', (item) => {
-        const videoId = sourceToVideoId(item.media.source);
-        if (videoId) yts.deleteVideo(videoId);
-    });
-
-    playback.on('unqueue', (item) => {
-        const videoId = sourceToVideoId(item.media.source);
-        if (videoId) yts.deleteVideo(videoId);
-    });
-
-    function sourceToVideoId(source: string) {
-        return source.startsWith('youtube/') ? source.slice(8) : undefined;
-    }
+    playback.on('failed', (item: QueueItem) => skip("video failed to load"));
 
     const skips = new Set<UserId>();
     playback.on('play', async (item) => skips.clear());
 
     function load() {
         playback.loadState(db.get('playback').value());
-
-        if (playback.currentItem) {
-            const videoId = sourceToVideoId(playback.currentItem.media.source);
-            if (videoId) yts.queueVideoDownload(videoId);
-        }
-
-        playback.queue.forEach((item) => {
-            const videoId = sourceToVideoId(item.media.source);
-            if (videoId) yts.queueVideoDownload(videoId);
-        });
 
         const banlist = db.get('bans').value() as Ban[];
         banlist.forEach((ban) => bans.set(ban.ip, ban));
@@ -206,8 +383,8 @@ export function host(
         revokeUserToken(user);
     }
 
-    function voteSkip(source: string, user: UserState) {
-        if (!playback.currentItem || playback.currentItem.media.source !== source) return;
+    function voteSkip(itemId: number, user: UserState) {
+        if (!playback.currentItem || playback.currentItem.itemId !== itemId) return;
 
         skips.add(user.userId);
         const current = skips.size;
@@ -236,24 +413,17 @@ export function host(
         }
 
         messaging.messages.once('join', (message: JoinMessage) => {
-            const resume = message.token && tokenToUser.has(message.token);
-            const authorised = resume || !opts.joinPassword || message.password === opts.joinPassword;
-
-            if (!authorised) {
-                messaging.send('reject', { text: 'rejected: password required' });
-                websocket.close(4000);
-                return;
-            }
-
+            const resume = message.token && tokenToUser.has(message.token) && process.env.ALLOW_RESUME;
             const token = resume ? message.token! : nanoid();
             const user = resume ? tokenToUser.get(token)! : zone.getUser((++lastUserId).toString() as UserId);
             user.name = message.name;
+            user.avatar = message.avatar || user.avatar;
 
             addUserToken(user, token);
             addConnectionToUser(user, messaging);
             userToIp.set(user, userIp);
 
-            bindMessagingToUser(user, messaging, getNetworkIdFromIp(userIp));
+            bindMessagingToUser(user, messaging);
             connections.set(user.userId, messaging);
 
             websocket.on('close', (code: number) => {
@@ -295,13 +465,13 @@ export function host(
         sendOnly('echoes', { added: Array.from(zone.echoes).map(([, echo]) => echo) }, user.userId);
     }
 
-    function ifUser(name: string, action: (user: UserState) => void) {
-        const user = userByName(name);
-        if (user) action(user);
-    }
-
-    function userByName(name: string) {
-        return Array.from(zone.users.values()).find((user) => user.name === name);
+    function ifUser(name: string): Promise<UserState> {
+        return new Promise((resolve, reject) => {
+            const users = Array.from(zone.users.values());
+            const user = users.find((user) => user.name === name);
+            if (user) resolve(user);
+            else reject(`no user "${name}"`);
+        });
     }
 
     function status(text: string, user?: UserState) {
@@ -316,8 +486,8 @@ export function host(
     }
 
     const authCommands = new Map<string, (admin: UserState, ...args: any[]) => void>();
-    authCommands.set('ban', (admin, name: string, reason?: string) => {
-        ifUser(name, (user) => {
+    authCommands.set('ban', (admin, name: string, reason?: string) =>
+        ifUser(name).then((user) => {
             const ban: Ban = {
                 ip: userToIp.get(user)!,
                 bannee: user.name!,
@@ -329,15 +499,15 @@ export function host(
             status(`${user.name} is banned`);
 
             (userToConnections.get(user) || new Set<Messaging>()).forEach((messaging) => messaging.close(4001));
-        });
-    });
+        })
+    );
     authCommands.set('skip', () => skip(`admin skipped ${playback.currentItem!.media.title}`));
     authCommands.set('mode', (admin, mode: string) => {
         eventMode = mode === 'event';
         status(`event mode: ${eventMode}`);
     });
     authCommands.set('dj-add', (admin, name: string) =>
-        ifUser(name, (user) => {
+        ifUser(name).then((user) => {
             if (user.tags.includes('dj')) {
                 status(`${user.name} is already a dj`, admin);
             } else {
@@ -346,10 +516,10 @@ export function host(
                 status('you are a dj', user);
                 statusAuthed(`${user.name} is a dj`);
             }
-        }),
+        })
     );
     authCommands.set('dj-del', (admin, name: string) =>
-        ifUser(name, (user) => {
+        ifUser(name).then((user) => {
             if (!user.tags.includes('dj')) {
                 status(`${user.name} isn't a dj`, admin);
             } else {
@@ -358,10 +528,10 @@ export function host(
                 status('no longer a dj', user);
                 statusAuthed(`${user.name} no longer a dj`);
             }
-        }),
+        })
     );
     authCommands.set('despawn', (admin, name: string) => 
-        ifUser(name, (user) => {
+        ifUser(name).then((user) => {
             if (!user.position) {
                 status(`${user.name} isn't spawned`, admin);
             } else {
@@ -370,168 +540,51 @@ export function host(
                 status('you were despawned by an admin', user);
                 statusAuthed(`${user.name} has been despawned`);
             }
-        }),
+        })
     );
 
-    
-
-    function tryQueueMedia(user: UserState, media: Media, userIp: unknown, banger = false) {
+    function tryQueueMedia(user: UserState, media: Media, banger = false) {
         if (eventMode && !user.tags.includes('dj')) {
-            status('zone is currently in event mode, only djs may queue', user);
-            return;
+            throw new Error('only djs may queue during event mode');
         }
 
-        const existing = playback.queue.find((queued) => mediaEquals(queued.media, media))?.media;
+        const userIp = userToIp.get(user);
+        const existing = playback.queue.find((queued) => queued.media.src === media.src)?.media;
         const count = playback.queue.filter((item) => item.info.ip === userIp).length;
         const dj = eventMode && user.tags.includes('dj');
 
         if (existing) {
-            status(`'${existing.title}' is already queued`, user);
+            throw new Error(`'${existing.title}' is already queued`);
         } else if (!dj && count >= opts.perUserQueueLimit) {
-            status(`you already have ${count} videos in the queue`, user);
+            throw new Error(`you already have ${count} videos in the queue`);
         } else {
             playback.queueMedia(media, { userId: user.userId, ip: userIp, banger });
         }
     }
 
-    function bindMessagingToUser(user: UserState, messaging: Messaging, userIp: unknown) {
-        function sendUser(type: string, message: any = {}) {
-            sendOnly(type, message, user.userId);
-        }
+    const USER_SCHEMA = Joi.object({
+        name: Joi.string().min(1).max(32),
+        avatar: Joi.string().base64(),
+        emotes: Joi.array().items(Joi.string().valid('shk', 'wvy', 'rbw', 'spn')),
+        position: Joi.array().ordered(Joi.number().required(), Joi.number().required(), Joi.number().required()),
+    });
 
-        const tryUserQueueMedia = (media: Media, banger = false) => tryQueueMedia(user, media, userIp, banger);
-
-        messaging.messages.on('heartbeat', () => sendUser('heartbeat'));
+    function bindMessagingToUser(user: UserState, messaging: Messaging) {
+        messaging.messages.on('heartbeat', () => sendOnly('heartbeat', {}, user.userId));
 
         messaging.messages.on('chat', (message: any) => {
-            let { text } = message;
-            text = text.substring(0, opts.chatLengthLimit);
+            const text = message.text.substring(0, opts.chatLengthLimit);
             sendAll('chat', { text, userId: user.userId });
         });
 
-        async function tryQueueLocalByPath(path: string) {
-            if (path.startsWith("library2:") && options.libraryOrigin) {
-                const id = path.substr(9);
-                const media = await fetch(options.libraryOrigin + "/library/" + id).then(r => r.json());
-                if (media) tryUserQueueMedia(media);
-            }
-        }
-
-        async function tryQueueYoutubeById(videoId: string) {
-            const media = await yts.getVideoMedia(videoId);
-            const privileged = user.tags.includes('dj') || user.tags.includes('admin');
-
-            if (!media) {
-                status('video unloadable', user);
-            } else if (media.duration > HALFHOUR * 3 && !privileged) {
-                status('video too long', user);
-            } else if (yts.getVideoState(videoId) !== 'broken') {
-                yts.queueVideoDownload(videoId);
-                tryUserQueueMedia(media);
-            } else {
-                status('video unloadable (broken)', user);
-            }
-        }
-
-        messaging.messages.on('youtube', (message: any) => tryQueueYoutubeById(message.videoId));
-        messaging.messages.on('local', (message: any) => tryQueueLocalByPath(message.path));
-        messaging.messages.on('banger', async (message: any) => {
-            if (!options.libraryOrigin) return; 
-            const url = options.libraryOrigin + "/library"; 
-            const query = message.tag ? "?tag=" + message.tag : "";
-
-            const EIGHT_MINUTES = 8 * 60 * SECONDS;
-            const library = await (await fetch(url + query)).json();
-            const extras = library.filter((media: any) => media.duration <= EIGHT_MINUTES);
-            const banger = extras[randomInt(0, extras.length - 1)];
-            tryUserQueueMedia(banger, true);
-        });
-
-        messaging.messages.on('lucky', (message: any) => {
-            search(message.query).then(async (results) => {
-                results = results.filter((result) => result.duration < HALFHOUR);
-
-                if (results.length === 0) {
-                    status('no loadable results, user');
-                } else {
-                    tryQueueYoutubeById(results[0].videoId);
-                }
-            });
-        });
-
-        messaging.messages.on('skip', (message: any) => {
-            if (!playback.currentItem || playback.currentItem.media.source !== message.source) return;
-
-            if (!eventMode) {
-                voteSkip(message.source, user);
-            } else if (user.tags.includes('dj')) {
-                skip(`${user.name} skipped ${playback.currentItem!.media.title}`);
-            } else {
-                status(`can't skip during event mode`, user);
-            }
-        });
-
-        messaging.messages.on('unqueue', ({ itemId }) => {
-            const item = playback.queue.find((item) => item.itemId === itemId);
-            if (!item) return;
-
-            const dj = eventMode && user.tags.includes('dj');
-            const own = item.info.userId === user.userId;
-            const auth = user.tags.includes('admin');
-
-            if (dj || own || auth) playback.unqueue(item);
-        });
-
         messaging.messages.on('user', (changes: Partial<UserState>) => {
-            const { value, error } = MESSAGE_SCHEMAS.get('user')!.validate(changes);
+            const { value, error } = USER_SCHEMA.validate(changes);
 
             if (error) {
-                sendUser('reject', { text: error.details[0].message });
+                sendOnly('reject', { text: error.details[0].message }, user.userId);
             } else {
                 Object.assign(user, value);
                 sendAll('user', { ...value, userId: user.userId });
-            }
-        });
-
-        messaging.messages.on('auth', (message: SendAuth) => {
-            if ((message.password || {}) !== opts.authPassword) return;
-
-            if (user.tags.includes('admin')) {
-                status('you are already authorised', user);
-            } else {
-                user.tags.push('admin');
-                sendAll('user', { userId: user.userId, tags: user.tags });
-                status('you are now authorised', user);
-            }
-        });
-
-        messaging.messages.on('command', (message: SendCommand) => {
-            if (!user.tags.includes('admin')) return;
-
-            const { name, args } = message;
-            const command = authCommands.get(name);
-            if (command) {
-                command(user, ...args);
-            } else {
-                status(`no command "${name}"`, user);
-            }
-        });
-
-        messaging.messages.on('echo', (message: EchoMessage) => {
-            const { text, position } = message;
-
-            const admin = !!zone.echoes.get(position)?.tags.includes('admin');
-            const valid = !admin || user.tags.includes('admin');
-
-            if (!valid) {
-                status("can't remove admin echo", user);
-            } else if (text.length > 0) {
-                const echo = { ...user, position, text: text.slice(0, 512) };
-                zone.echoes.set(position, echo);
-                sendAll('echoes', { added: [echo] });
-            } else {
-                zone.echoes.delete(position);
-                sendAll('echoes', { removed: [position] });
             }
         });
     }
@@ -544,5 +597,5 @@ export function host(
         connections.get(userId)!.send(type, message);
     }
 
-    return { zone, playback, save, sendAll, authCommands };
+    return { save, sendAll, zone, playback };
 }

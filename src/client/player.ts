@@ -60,7 +60,7 @@ export class Player extends EventEmitter {
     }
 
     get hasVideo() {
-        return this.item && !this.item.media.source.endsWith('.mp3');
+        return this.item && !this.item.media.src.endsWith('.mp3');
     }
 
     get duration() {
@@ -172,7 +172,7 @@ export class Player extends EventEmitter {
         this.element.pause();
         const waiter = expectMetadata(this.element);
         this.source = document.createElement('source');
-        this.source.src = this.item.media.source;
+        this.source.src = this.item.media.src;
         this.element.appendChild(this.source);
         this.element.load();
 
@@ -200,5 +200,6 @@ export class Player extends EventEmitter {
 
         if (this.source.parentElement) this.element.removeChild(this.source);
         if (this.subtrack.parentElement) this.element.removeChild(this.subtrack);
+        this.emit("subtitles", []);
     }
 }

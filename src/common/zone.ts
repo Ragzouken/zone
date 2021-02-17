@@ -12,12 +12,16 @@ export type UserState = {
 };
 
 export type Media = {
+    mediaId: string;
     title: string;
     duration: number;
-    source: string;
+    src: string;
     subtitle?: string;
     thumbnail?: string;
     shortcut?: string;
+    getStatus?: () => Promise<string>;
+    request?: () => Promise<any>;
+    path?: string;
 };
 
 export type UserEcho = UserState & {
@@ -26,12 +30,6 @@ export type UserEcho = UserState & {
 
 export type QueueInfo = { userId?: UserId; ip?: unknown; banger?: boolean };
 export type QueueItem = { media: Media; info: QueueInfo; itemId: number };
-
-export type MediaMeta = Omit<Media, 'source'>;
-
-export function mediaEquals(a: Media, b: Media) {
-    return a.source === b.source;
-}
 
 export class ZoneState {
     public readonly users = new Map<UserId, UserState>();

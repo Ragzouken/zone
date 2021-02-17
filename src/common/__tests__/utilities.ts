@@ -11,9 +11,6 @@ import * as Memory from 'lowdb/adapters/Memory';
 import { host, HostOptions } from '../../server/server';
 import ZoneClient, { ClientOptions } from '../../common/client';
 import Playback from '../../server/playback';
-import { Media } from '../zone';
-import { DAY_MEDIA, TINY_MEDIA } from './media.data';
-import { YoutubeService } from '../../server/youtube';
 
 export const TEST_CLIENT_OPTIONS: Partial<ClientOptions> = {
     quickResponseTimeout: 50,
@@ -60,7 +57,7 @@ export class ZoneServer {
     constructor(options?: Partial<HostOptions>) {
         const xws = expressWs(express());
         const server = xws.app.listen(0);
-        this.hosting = { ...host(xws, new Memory(''), new YoutubeService(), options), server };
+        this.hosting = { ...host(xws, new Memory(''), options), server };
     }
 
     public async socket() {
