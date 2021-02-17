@@ -113,11 +113,11 @@ function rename(name: string) {
     client.rename(name);
 }
 
-function socket(): Promise<WebSocket> {
+function socket(ticket: string): Promise<WebSocket> {
     return new Promise((resolve, reject) => {
         const secure = window.location.protocol.startsWith('https');
         const protocol = secure ? 'wss' : 'ws';
-        const socket = new WebSocket(`${protocol}://${window.location.host}/zone`);
+        const socket = new WebSocket(`${protocol}://${window.location.host}/zone/${ticket}`);
         socket.addEventListener('open', () => resolve(socket));
         socket.addEventListener('error', reject);
     });
@@ -127,15 +127,18 @@ async function connect(): Promise<void> {
     const joined = !!client.localUserId;
     const existing = client.localUser;
 
+    const name = localName;
+    const avatar = getInitialAvatar() || undefined;
+    const { ticket } = await client.request("POST", "/zone/join", { name, avatar });
+
     try {
-        client.messaging.setSocket(await socket());
+        client.messaging.setSocket(await socket(ticket));
     } catch (e) {
         return connect();
     }
 
     try {
-        const avatar = getInitialAvatar() || undefined;
-        const assign = await client.join({ name: localName, avatar });
+        const assign = await client.join();
     } catch (e) {
         chat.error(`assignment failed (${e})`);
         console.log('assignment exception:', e);

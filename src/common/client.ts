@@ -108,16 +108,9 @@ export class ZoneClient extends EventEmitter {
         });
     }
 
-    async join(options: Partial<JoinMessage> = {}) {
+    async join() {
         this.clear();
-        options.name = options.name || this.options.joinName || 'anonymous';
-        options.token = options.token || this.assignation?.token;
-
-        return new Promise<AssignMessage>((resolve, reject) => {
-            this.expect('assign', this.options.quickResponseTimeout).then(resolve, reject);
-            this.expect('reject').then(reject);
-            this.messaging.send('join', options);
-        }).then((assign) => {
+        return this.expect('assign', this.options.quickResponseTimeout).then((assign) => {
             this.assignation = assign;
             this.localUser = this.zone.getUser(assign.userId);
             this.emit('joined', { user: this.localUser });

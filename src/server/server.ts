@@ -8,7 +8,7 @@ import { ZoneState, UserId, UserState, Media, QueueItem, UserEcho } from '../com
 import { nanoid } from 'nanoid';
 import { getDefault, randomInt } from '../common/utility';
 import { JoinMessage } from '../common/client';
-import { json, NextFunction, Request, Response } from 'express';
+import { json, NextFunction, Request, response, Response } from 'express';
 import { Library, libraryToQueueableMedia } from './libraries';
 import { URL } from 'url';
 import Joi = require('@hapi/joi');
@@ -19,6 +19,7 @@ declare global {
     namespace Express {
         interface Request {
             user?: UserState;
+            ticket?: { name: string, avatar: string };
         }
     }
 }
@@ -55,15 +56,6 @@ export const DEFAULT_OPTIONS: HostOptions = {
 
 const bans = new Map<unknown, Ban>();
 
-const ipToNetworkId = new Map<unknown, string>();
-const networkIdToIp = new Map<string, unknown>();
-
-function getNetworkIdFromIp(ip: unknown) {
-    const networkId = getDefault(ipToNetworkId, ip, () => ipToNetworkId.size.toString());
-    networkIdToIp.set(networkId, ip);
-    return networkId;
-}
-
 interface Ban {
     ip: unknown;
     bannee: string;
@@ -85,15 +77,6 @@ export function host(
         bans: [],
         echoes: [],
     }).write();
-
-    // this zone's websocket endpoint
-    xws.app.ws('/zone', (websocket, req) => waitJoin(websocket, req.ip));
-
-    xws.app.get('/users', (req, res) => {
-        const users = Array.from(zone.users.values());
-        const names = users.map(({ name, avatar, userId }) => ({ name, avatar, userId }));
-        res.json(names);
-    });
 
     function ping() {
         xws.getWss().clients.forEach((websocket) => {
@@ -144,6 +127,18 @@ export function host(
 
     let eventMode = false;
 
+    function requireNotBanned(
+        request: Request,
+        response: Response,
+        next: NextFunction,
+    ) {
+        if (bans.has(request.ip)) {
+            response.status(403).send("you are banned");
+        } else {
+            next();
+        }
+    }
+
     function requireUserToken(
         request: Request, 
         response: Response, 
@@ -160,7 +155,71 @@ export function host(
         }
     }
 
+    const tickets = new Map<string, { name: string, avatar: string }>();
+
     xws.app.use(json());
+    xws.app.use(requireNotBanned);
+    xws.app.post('/zone/join', (request, response) => {
+        const { name, avatar } = request.body;
+        const ticket = nanoid();
+
+        tickets.set(ticket, { name, avatar });
+        response.json({ ticket });
+    });
+
+    xws.app.param('ticket', (request, response, next, id) => {
+        const ticket = tickets.get(id);
+        
+        if (ticket) {
+            request.ticket = ticket;
+            next();
+        } else {
+            response.status(404).send();
+        }
+    });
+
+    xws.app.ws('/zone/:ticket', (websocket, request) => {
+        console.log(request.ticket);
+
+        const messaging = new Messaging();
+        messaging.setSocket(websocket);
+        messaging.on('error', () => {});
+
+        const token = nanoid();
+        const user = zone.getUser((++lastUserId).toString() as UserId);
+        user.name = request.ticket!.name;
+        user.avatar = request.ticket!.avatar;
+
+        addUserToken(user, token);
+        addConnectionToUser(user, messaging);
+        userToIp.set(user, request.ip);
+
+        bindMessagingToUser(user, messaging);
+        connections.set(user.userId, messaging);
+
+        websocket.on('close', (code: number) => {
+            removeConnectionFromUser(user, messaging);
+            const cleanExit = code === 1000 || code === 1001;
+
+            if (cleanExit) {
+                killUser(user);
+            } else {
+                setTimeout(() => {
+                    if (isUserConnectionless(user)) killUser(user);
+                }, opts.userTimeout);
+            }
+        });
+
+        sendCoreState(user);
+        sendOnly('assign', { userId: user.userId, token }, user.userId);
+        sendOtherState(user);
+    });
+
+    xws.app.get('/users', (req, res) => {
+        const users = Array.from(zone.users.values());
+        const names = users.map(({ name, avatar, userId }) => ({ name, avatar, userId }));
+        res.json(names);
+    });
 
     xws.app.get('/queue', (request, response) => response.json(playback.queue));
     xws.app.post('/queue', requireUserToken, async (request, response) => {
@@ -399,51 +458,6 @@ export function host(
     function skip(message?: string) {
         if (message) status(message);
         playback.skip();
-    }
-
-    function waitJoin(websocket: WebSocket, userIp: unknown) {
-        const messaging = new Messaging();
-        messaging.setSocket(websocket);
-        messaging.on('error', () => {});
-
-        if (bans.has(userIp)) {
-            messaging.send('reject', { text: 'you are banned' });
-            websocket.close(4001, 'banned');
-            return;
-        }
-
-        messaging.messages.once('join', (message: JoinMessage) => {
-            const resume = message.token && tokenToUser.has(message.token) && process.env.ALLOW_RESUME;
-            const token = resume ? message.token! : nanoid();
-            const user = resume ? tokenToUser.get(token)! : zone.getUser((++lastUserId).toString() as UserId);
-            user.name = message.name;
-            user.avatar = message.avatar || user.avatar;
-
-            addUserToken(user, token);
-            addConnectionToUser(user, messaging);
-            userToIp.set(user, userIp);
-
-            bindMessagingToUser(user, messaging);
-            connections.set(user.userId, messaging);
-
-            websocket.on('close', (code: number) => {
-                removeConnectionFromUser(user, messaging);
-                const cleanExit = code === 1000 || code === 1001;
-
-                if (cleanExit) {
-                    killUser(user);
-                } else {
-                    setTimeout(() => {
-                        if (isUserConnectionless(user)) killUser(user);
-                    }, opts.userTimeout);
-                }
-            });
-
-            sendCoreState(user);
-            sendOnly('assign', { userId: user.userId, token }, user.userId);
-            if (!resume) sendAll('user', user);
-            sendOtherState(user);
-        });
     }
 
     function sendCurrent(user: UserState) {
