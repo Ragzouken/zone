@@ -562,6 +562,13 @@ export async function load() {
         if (user.position) {
             const [px, py, pz] = user.position;
             moveTo(px + dx, py, pz + dz);
+
+            // HACK: when moving, focus + blur chat canvas so that next tab press will take you to the chat input
+            const el = chatInput.previousElementSibling as HTMLCanvasElement;
+            el.tabIndex = 0;
+            el.focus();
+            el.blur();
+            el.tabIndex = -1;
         }
     }
 
@@ -739,15 +746,6 @@ export async function load() {
     }
 
     const gameKeys = new Map<string, () => void>();
-    gameKeys.set('Tab', () => {
-        const typing = document.activeElement === chatInput;
-
-        if (typing) {
-            chatInput.blur();
-        } else {
-            chatInput.focus();
-        }
-    });
     gameKeys.set('1', () => toggleEmote('wvy'));
     gameKeys.set('2', () => toggleEmote('shk'));
     gameKeys.set('3', () => toggleEmote('rbw'));
@@ -866,6 +864,7 @@ export async function load() {
     renderScene();
 
     const tooltip = document.getElementById('tooltip')!;
+    tooltip.hidden = true;
 
     sceneRenderer.on('click', (event, [tx, tz]) => {
         const objectCoords = `${tx},0,${tz}`;
@@ -915,6 +914,7 @@ function createAvatarElement(avatar: string) {
 }
 
 function setupEntrySplash() {
+    const zone = document.getElementById('zone') as HTMLElement;
     const nameInput = document.querySelector('#join-name') as HTMLInputElement;
     const entrySplash = document.getElementById('entry-splash') as HTMLElement;
     const entryUsers = document.getElementById('entry-users') as HTMLParagraphElement;
@@ -952,11 +952,14 @@ function setupEntrySplash() {
 
     entryButton.disabled = !entryForm.checkValidity();
     nameInput.addEventListener('input', () => (entryButton.disabled = !entryForm.checkValidity()));
+    zone.hidden = true;
 
     entryForm.addEventListener('submit', async (event) => {
         event.preventDefault();
         (document.getElementById('entry-sound') as HTMLAudioElement).play();
         entrySplash.hidden = true;
+        zone.hidden = false;
+        window.dispatchEvent(new Event('resize')); // trigger a resize to update renderer
         localName = nameInput.value;
         localStorage.setItem('name', localName);
         await connect();

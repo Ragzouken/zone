@@ -11,25 +11,13 @@ html
         script(src="script.js")
     body
         #zone
+            #scene
+                #tooltip
+                canvas#renderer
             #sidebar
-                #menu-tabs.toolbar
-                    button(title="show playback panel (q)" data-tab-toggle="playback")
-                        img(src="icons/music.png")      
-                    button(title="show zonies (w)" data-tab-toggle="social")
-                        img(src="icons/users.png")           
-                    button#avatar-button(title="change appearance (e)" data-tab-toggle="avatar")
-                        img(src="icons/avatar.png")
-                    button#resync-button2(title="resync video")
-                        img(src="icons/resync.png")
-                    .spacer
-                    button(title="toggle float emote (1)", data-emote-toggle="wvy")
-                        img(src="icons/wvy.png")
-                    button(title="toggle shake emote (2)", data-emote-toggle="shk")
-                        img(src="icons/shk.png")
-                    button(title="toggle rave emote (3)", data-emote-toggle="rbw")
-                        img(src="icons/rbw.png")
-                    button(title="toggle spin emote (4)", data-emote-toggle="spn")
-                        img(src="icons/spn.png")
+                #chat-panel
+                    canvas#chat-canvas2(width=512, height=512)
+                    input#chat-input(type="text" placeholder="chat message..." maxlength="160" autocomplete="off")
                 #panel-container
                     #social-panel.menu-panel(data-window data-tab-body="social")
                         .menu-panel-tab-body-container
@@ -48,12 +36,8 @@ html
                                     button#event-mode-on event mode on
                                     button#event-mode-off event mode off
                     #playback-panel.menu-panel(data-window data-tab-body="playback")
-                        .menu-panel-tab-toggle-container
-                            .menu-panel-tab-toggle(data-tab-toggle="playback/search") search
-                            .menu-panel-tab-toggle.active(data-tab-toggle="playback/playlist") playlist
-                            .menu-panel-tab-toggle(data-tab-toggle="playback/player") player
                         .menu-panel-tab-body-container
-                            .menu-panel-tab-body(data-tab-body="playback/search" hidden)
+                            .menu-panel-tab-body(role="tabpanel" data-tab-body="playback/search" hidden)
                                 #search-results
                                     #search-result-template.search-result
                                         div title
@@ -64,7 +48,7 @@ html
                                         option library
                                     input#search-input(placeholder="search for a video" type="text" autocomplete="off")
                                     input#search-submit(type="submit" value="search" disabled)
-                            .menu-panel-tab-body(data-tab-body="playback/playlist")
+                            .menu-panel-tab-body(role="tabpanel" data-tab-body="playback/playlist")
                                 #queue-title
                                 .queue-item#current-item
                                     .queue-item-title#current-item-title title
@@ -80,7 +64,7 @@ html
                                 .button-rows
                                     .button-row
                                         button#play-banger(title="queue random song", type="button") queue random song
-                            .menu-panel-tab-body.button-rows(data-tab-body="playback/player" hidden)
+                            .menu-panel-tab-body.button-rows(role="tabpanel" data-tab-body="playback/player" hidden)
                                 .button-row
                                     label(for="volume-slider") volume
                                     input#volume-slider(type="range", min="0", max="1", step=".01")
@@ -88,11 +72,13 @@ html
                                     button#popout-button pop out video
                                     button#resync-button resync video
                                     button#external-button open video in tab
+                        .menu-panel-tab-toggle-container(role="tablist")
+                            button.menu-panel-tab-toggle(role="tab" data-tab-toggle="playback/search") search
+                            button.menu-panel-tab-toggle.active(role="tab" data-tab-toggle="playback/playlist") playlist
+                            button.menu-panel-tab-toggle(role="tab" data-tab-toggle="playback/player") player
                     #avatar-panel.menu-panel(data-window data-tab-body="avatar")
-                        .menu-panel-tab-toggle-container
-                            .menu-panel-tab-toggle.active(data-tab-toggle="avatar/appearance") appearance
                         .menu-panel-tab-body-container
-                            .menu-panel-tab-body(data-tab-body="avatar/appearance")
+                            .menu-panel-tab-body(role="tabpanel" data-tab-body="avatar/appearance")
                                 #avatar-paint-container
                                     canvas#avatar-paint(width=8 height=8)
                                     #avatar-slot-container
@@ -103,12 +89,27 @@ html
                                 .button-row
                                     input#avatar-name(type="text", maxlength="16")
                                     button#avatar-update update
-                #chat-panel
-                    canvas#chat-canvas2(width=512, height=512)
-                    input#chat-input(type="text" placeholder="chat message..." maxlength="160" autocomplete="off")
-            #scene
-                #tooltip
-                canvas#renderer
+                        .menu-panel-tab-toggle-container
+                            button.menu-panel-tab-toggle.active(role="tab" data-tab-toggle="avatar/appearance") appearance
+                #menu-tabs.toolbar
+                    button(title="show playback panel (q)" data-tab-toggle="playback")
+                        img(src="icons/music.png")      
+                    button(title="show zonies (w)" data-tab-toggle="social")
+                        img(src="icons/users.png")           
+                    button#avatar-button(title="change appearance (e)" data-tab-toggle="avatar")
+                        img(src="icons/avatar.png")
+                    button#resync-button2(title="resync video")
+                        img(src="icons/resync.png")
+                    .spacer
+                    button(title="toggle float emote (1)", data-emote-toggle="wvy")
+                        img(src="icons/wvy.png")
+                    button(title="toggle shake emote (2)", data-emote-toggle="shk")
+                        img(src="icons/shk.png")
+                    button(title="toggle rave emote (3)", data-emote-toggle="rbw")
+                        img(src="icons/rbw.png")
+                    button(title="toggle spin emote (4)", data-emote-toggle="spn")
+                        img(src="icons/spn.png")
+
         #popout-panel.menu-panel(data-window)
             .menu-title(data-window-drag)
                 div video pop-out

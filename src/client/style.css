@@ -37,7 +37,7 @@ html, body {
     width: 100%; height: 100%;
 
     display: flex;
-    flex-direction: row;
+    flex-direction: row-reverse;
     align-items: stretch;
 
     background: black;
@@ -49,7 +49,8 @@ html, body {
     background: rgb(0 0 0 / 100%);
 
     display: flex;
-    flex-direction: column-reverse;
+    flex-direction: column;
+    justify-content: flex-end;
 }
 
 #scene {
@@ -71,8 +72,9 @@ html, body {
     }
 
     #sidebar {
-        z-index: 1;
         position: absolute;
+        left: 0;
+
         background: none;
         pointer-events: none;
 
@@ -171,6 +173,10 @@ input[type="text"]:focus {
     pointer-events: initial;
 }
 
+.toolbar > button.active {
+    filter: invert();
+}
+
 button > img {
     width: 100%; height: 100%;
 }
@@ -185,10 +191,6 @@ button > img {
 
     pointer-events: none;
     z-index: 100;
-}
-
-button.active {
-    filter: invert();
 }
 
 .menu-title {
@@ -310,7 +312,6 @@ button.active {
 }
 
 #entry-splash {
-    z-index: 5;
     position: absolute;
     left: 0; top: 0;
     width: 100vw; height: 100vh;
