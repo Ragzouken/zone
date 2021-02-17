@@ -1,4 +1,4 @@
-import Messaging from './messaging';
+import Messaging, { Socket } from './messaging';
 import { EventEmitter } from 'events';
 import { specifically } from './utility';
 import { ZoneState, UserState, QueueItem, UserEcho, Media } from './zone';
@@ -7,7 +7,6 @@ const URL = window?.URL || require('url').URL;
 
 export type StatusMesage = { text: string };
 export type JoinMessage = { name: string; token?: string; avatar?: string };
-export type AssignMessage = { userId: string; token: string };
 export type RejectMessage = { text: string };
 export type UsersMessage = { users: UserState[] };
 export type LeaveMessage = { userId: string };
@@ -24,7 +23,7 @@ export type DataMessage = { update: any };
 
 export interface MessageMap {
     heartbeat: {};
-    assign: AssignMessage;
+    ready: {};
     reject: RejectMessage;
     users: UsersMessage;
     leave: LeaveMessage;
@@ -42,17 +41,18 @@ export interface ClientOptions {
     quickResponseTimeout: number;
     slowResponseTimeout: number;
     joinName?: string;
+    createSocket: (ticket: string) => Promise<Socket>;
 }
 
 export const DEFAULT_OPTIONS: ClientOptions = {
     urlRoot: '.',
     quickResponseTimeout: 3000,
     slowResponseTimeout: 5000,
+    createSocket: () => { throw new Error("not implemented"); },
 };
 
 export interface ClientEventMap {
     disconnect: (event: { clean: boolean }) => void;
-    joined: (event: { user: UserState }) => void;
 
     chat: (event: { user: UserState; text: string; local: boolean }) => void;
     join: (event: { user: UserState }) => void;
@@ -83,10 +83,8 @@ export class ZoneClient extends EventEmitter {
     readonly messaging = new Messaging();
     readonly zone = new ZoneState();
 
-    localUser?: UserState;
-
-    private assignation?: AssignMessage;
-
+    private credentials?: { userId: string, token: string };
+    
     constructor(options: Partial<ClientOptions> = {}) {
         super();
         this.options = Object.assign({}, DEFAULT_OPTIONS, options);
@@ -94,11 +92,16 @@ export class ZoneClient extends EventEmitter {
     }
 
     get localUserId() {
-        return this.assignation?.userId;
+        return this.credentials?.userId;
+    }
+
+    get localUser() {
+        return this.zone.users.get(this.localUserId || "");
     }
 
     clear() {
         this.zone.clear();
+        this.credentials = undefined;
     }
 
     async expect<K extends keyof MessageMap>(type: K, timeout?: number): Promise<MessageMap[K]> {
@@ -108,21 +111,16 @@ export class ZoneClient extends EventEmitter {
         });
     }
 
-    async join(options: Partial<JoinMessage> = {}) {
+    async join({ name = "anonymous", avatar = "" } = {}) {
         this.clear();
-        options.name = options.name || this.options.joinName || 'anonymous';
-        options.token = options.token || this.assignation?.token;
 
-        return new Promise<AssignMessage>((resolve, reject) => {
-            this.expect('assign', this.options.quickResponseTimeout).then(resolve, reject);
-            this.expect('reject').then(reject);
-            this.messaging.send('join', options);
-        }).then((assign) => {
-            this.assignation = assign;
-            this.localUser = this.zone.getUser(assign.userId);
-            this.emit('joined', { user: this.localUser });
-            return assign;
-        });
+        const { ticket, token, userId } = await this.request("POST", "/zone/join", { name, avatar });
+        this.credentials = { userId, token };
+
+        const socket = await this.options.createSocket(ticket);
+        this.messaging.setSocket(socket);
+
+        return this.expect("ready");
     }
 
     async heartbeat() {
@@ -176,8 +174,8 @@ export class ZoneClient extends EventEmitter {
     async request(method: string, url: string, body?: any): Promise<any> {
         const headers: HeadersInit = {};
 
-        if (this.assignation) {
-            headers["Authorization"] = "Bearer " + this.assignation.token;
+        if (this.credentials) {
+            headers["Authorization"] = "Bearer " + this.credentials.token;
         }
 
         if (body) {

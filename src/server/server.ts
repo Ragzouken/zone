@@ -1,4 +1,3 @@
-import * as WebSocket from 'ws';
 import * as expressWs from 'express-ws';
 import * as low from 'lowdb';
 
@@ -6,8 +5,7 @@ import Playback from './playback';
 import Messaging from '../common/messaging';
 import { ZoneState, UserId, UserState, Media, QueueItem, UserEcho } from '../common/zone';
 import { nanoid } from 'nanoid';
-import { getDefault, randomInt } from '../common/utility';
-import { JoinMessage } from '../common/client';
+import { randomInt } from '../common/utility';
 import { json, NextFunction, Request, Response } from 'express';
 import { Library, libraryToQueueableMedia } from './libraries';
 import { URL } from 'url';
@@ -19,13 +17,15 @@ declare global {
     namespace Express {
         interface Request {
             user?: UserState;
+            ticket?: Ticket;
         }
     }
 }
 
+export type Ticket = { name: string, avatar: string, token: string, userId: string };
+
 export type HostOptions = {
     pingInterval: number;
-    userTimeout: number;
     nameLengthLimit: number;
     chatLengthLimit: number;
 
@@ -41,7 +41,6 @@ export type HostOptions = {
 
 export const DEFAULT_OPTIONS: HostOptions = {
     pingInterval: 10 * SECONDS,
-    userTimeout: 5 * SECONDS,
     nameLengthLimit: 16,
     chatLengthLimit: 160,
 
@@ -54,15 +53,6 @@ export const DEFAULT_OPTIONS: HostOptions = {
 };
 
 const bans = new Map<unknown, Ban>();
-
-const ipToNetworkId = new Map<unknown, string>();
-const networkIdToIp = new Map<string, unknown>();
-
-function getNetworkIdFromIp(ip: unknown) {
-    const networkId = getDefault(ipToNetworkId, ip, () => ipToNetworkId.size.toString());
-    networkIdToIp.set(networkId, ip);
-    return networkId;
-}
 
 interface Ban {
     ip: unknown;
@@ -85,15 +75,6 @@ export function host(
         bans: [],
         echoes: [],
     }).write();
-
-    // this zone's websocket endpoint
-    xws.app.ws('/zone', (websocket, req) => waitJoin(websocket, req.ip));
-
-    xws.app.get('/users', (req, res) => {
-        const users = Array.from(zone.users.values());
-        const names = users.map(({ name, avatar, userId }) => ({ name, avatar, userId }));
-        res.json(names);
-    });
 
     function ping() {
         xws.getWss().clients.forEach((websocket) => {
@@ -144,6 +125,18 @@ export function host(
 
     let eventMode = false;
 
+    function requireNotBanned(
+        request: Request,
+        response: Response,
+        next: NextFunction,
+    ) {
+        if (bans.has(request.ip)) {
+            response.status(403).send("you are banned");
+        } else {
+            next();
+        }
+    }
+
     function requireUserToken(
         request: Request, 
         response: Response, 
@@ -160,7 +153,64 @@ export function host(
         }
     }
 
+    const tickets = new Map<string, Ticket>();
+
     xws.app.use(json());
+    xws.app.use(requireNotBanned);
+    xws.app.post('/zone/join', (request, response) => {
+        const { name, avatar } = request.body;
+        const ticket = nanoid();
+        const token = nanoid();
+        const userId = (++lastUserId).toString();
+        tickets.set(ticket, { name, avatar, token, userId });
+        response.json({ ticket, token, userId });
+    });
+
+    xws.app.param('ticket', (request, response, next, id) => {
+        request.ticket = tickets.get(id);
+        
+        if (request.ticket) {
+            tickets.delete(id);
+            next();
+        } else {
+            response.status(404).send();
+        }
+    });
+
+    xws.app.ws('/zone/:ticket', async (websocket, request) => {
+        const messaging = new Messaging();
+        messaging.setSocket(websocket);
+        messaging.on('error', () => {});
+        
+        const { name, avatar, token, userId } = request.ticket!;
+
+        const user = zone.getUser(userId);
+        user.name = name;
+        user.avatar = avatar;
+
+        sendAll('user', user);
+
+        addUserToken(user, token);
+        userToIp.set(user, request.ip);
+
+        bindMessagingToUser(user, messaging);
+        connections.set(user.userId, messaging);
+
+        websocket.on('close', (code: number) => killUser(user));
+
+        const users = Array.from(zone.users.values());
+        sendOnly('users', { users }, user.userId);
+        sendOnly('queue', { items: playback.queue }, user.userId);
+        sendOnly('play', { item: playback.currentItem, time: playback.currentTime }, user.userId);
+        sendOnly('echoes', { added: Array.from(zone.echoes).map(([, echo]) => echo) }, user.userId);
+        sendOnly("ready", {}, user.userId);
+    });
+
+    xws.app.get('/users', (req, res) => {
+        const users = Array.from(zone.users.values());
+        const names = users.map(({ name, avatar, userId }) => ({ name, avatar, userId }));
+        res.json(names);
+    });
 
     xws.app.get('/queue', (request, response) => response.json(playback.queue));
     xws.app.post('/queue', requireUserToken, async (request, response) => {
@@ -358,28 +408,11 @@ export function host(
         ).write();
     }
 
-    const userToConnections = new Map<UserState, Set<Messaging>>();
-    function addConnectionToUser(user: UserState, messaging: Messaging) {
-        const connections = userToConnections.get(user) || new Set<Messaging>();
-        connections.add(messaging);
-        userToConnections.set(user, connections);
-    }
-
-    function removeConnectionFromUser(user: UserState, messaging: Messaging) {
-        userToConnections.get(user)?.delete(messaging);
-    }
-
-    function isUserConnectionless(user: UserState) {
-        const connections = userToConnections.get(user);
-        const connectionless = !connections || connections.size === 0;
-        return connectionless;
-    }
-
     function killUser(user: UserState) {
         if (zone.users.has(user.userId)) sendAll('leave', { userId: user.userId });
         zone.users.delete(user.userId);
+        connections.get(user.userId)?.close(4001);
         connections.delete(user.userId);
-        userToConnections.delete(user);
         revokeUserToken(user);
     }
 
@@ -401,70 +434,6 @@ export function host(
         playback.skip();
     }
 
-    function waitJoin(websocket: WebSocket, userIp: unknown) {
-        const messaging = new Messaging();
-        messaging.setSocket(websocket);
-        messaging.on('error', () => {});
-
-        if (bans.has(userIp)) {
-            messaging.send('reject', { text: 'you are banned' });
-            websocket.close(4001, 'banned');
-            return;
-        }
-
-        messaging.messages.once('join', (message: JoinMessage) => {
-            const resume = message.token && tokenToUser.has(message.token) && process.env.ALLOW_RESUME;
-            const token = resume ? message.token! : nanoid();
-            const user = resume ? tokenToUser.get(token)! : zone.getUser((++lastUserId).toString() as UserId);
-            user.name = message.name;
-            user.avatar = message.avatar || user.avatar;
-
-            addUserToken(user, token);
-            addConnectionToUser(user, messaging);
-            userToIp.set(user, userIp);
-
-            bindMessagingToUser(user, messaging);
-            connections.set(user.userId, messaging);
-
-            websocket.on('close', (code: number) => {
-                removeConnectionFromUser(user, messaging);
-                const cleanExit = code === 1000 || code === 1001;
-
-                if (cleanExit) {
-                    killUser(user);
-                } else {
-                    setTimeout(() => {
-                        if (isUserConnectionless(user)) killUser(user);
-                    }, opts.userTimeout);
-                }
-            });
-
-            sendCoreState(user);
-            sendOnly('assign', { userId: user.userId, token }, user.userId);
-            if (!resume) sendAll('user', user);
-            sendOtherState(user);
-        });
-    }
-
-    function sendCurrent(user: UserState) {
-        if (playback.currentItem) {
-            sendOnly('play', { item: playback.currentItem, time: playback.currentTime }, user.userId);
-        } else {
-            sendOnly('play', {}, user.userId);
-        }
-    }
-
-    function sendCoreState(user: UserState) {
-        const users = Array.from(zone.users.values());
-        sendOnly('users', { users }, user.userId);
-        sendOnly('queue', { items: playback.queue }, user.userId);
-        sendCurrent(user);
-    }
-
-    function sendOtherState(user: UserState) {
-        sendOnly('echoes', { added: Array.from(zone.echoes).map(([, echo]) => echo) }, user.userId);
-    }
-
     function ifUser(name: string): Promise<UserState> {
         return new Promise((resolve, reject) => {
             const users = Array.from(zone.users.values());
@@ -484,65 +453,7 @@ export function host(
             if (user.tags.includes('admin')) status(text, user);
         });
     }
-
-    const authCommands = new Map<string, (admin: UserState, ...args: any[]) => void>();
-    authCommands.set('ban', (admin, name: string, reason?: string) =>
-        ifUser(name).then((user) => {
-            const ban: Ban = {
-                ip: userToIp.get(user)!,
-                bannee: user.name!,
-                banner: admin.name!,
-                reason,
-                date: JSON.stringify(new Date()),
-            };
-            bans.set(ban.ip, ban);
-            status(`${user.name} is banned`);
-
-            (userToConnections.get(user) || new Set<Messaging>()).forEach((messaging) => messaging.close(4001));
-        })
-    );
-    authCommands.set('skip', () => skip(`admin skipped ${playback.currentItem!.media.title}`));
-    authCommands.set('mode', (admin, mode: string) => {
-        eventMode = mode === 'event';
-        status(`event mode: ${eventMode}`);
-    });
-    authCommands.set('dj-add', (admin, name: string) =>
-        ifUser(name).then((user) => {
-            if (user.tags.includes('dj')) {
-                status(`${user.name} is already a dj`, admin);
-            } else {
-                user.tags.push('dj');
-                sendAll('user', { userId: user.userId, tags: user.tags });
-                status('you are a dj', user);
-                statusAuthed(`${user.name} is a dj`);
-            }
-        })
-    );
-    authCommands.set('dj-del', (admin, name: string) =>
-        ifUser(name).then((user) => {
-            if (!user.tags.includes('dj')) {
-                status(`${user.name} isn't a dj`, admin);
-            } else {
-                user.tags.splice(user.tags.indexOf('dj'), 1);
-                sendAll('user', { userId: user.userId, tags: user.tags });
-                status('no longer a dj', user);
-                statusAuthed(`${user.name} no longer a dj`);
-            }
-        })
-    );
-    authCommands.set('despawn', (admin, name: string) => 
-        ifUser(name).then((user) => {
-            if (!user.position) {
-                status(`${user.name} isn't spawned`, admin);
-            } else {
-                user.position = undefined;
-                sendAll('user', { userId: user.userId, position: null });
-                status('you were despawned by an admin', user);
-                statusAuthed(`${user.name} has been despawned`);
-            }
-        })
-    );
-
+    
     function tryQueueMedia(user: UserState, media: Media, banger = false) {
         if (eventMode && !user.tags.includes('dj')) {
             throw new Error('only djs may queue during event mode');
@@ -596,6 +507,63 @@ export function host(
     function sendOnly(type: string, message: any, userId: UserId) {
         connections.get(userId)!.send(type, message);
     }
+
+    const authCommands = new Map<string, (admin: UserState, ...args: any[]) => void>();
+    authCommands.set('ban', (admin, name: string, reason?: string) =>
+        ifUser(name).then((user) => {
+            const ban: Ban = {
+                ip: userToIp.get(user)!,
+                bannee: user.name!,
+                banner: admin.name!,
+                reason,
+                date: JSON.stringify(new Date()),
+            };
+            bans.set(ban.ip, ban);
+            status(`${user.name} is banned`);
+            killUser(user);
+        })
+    );
+    authCommands.set('skip', () => skip(`admin skipped ${playback.currentItem!.media.title}`));
+    authCommands.set('mode', (admin, mode: string) => {
+        eventMode = mode === 'event';
+        status(`event mode: ${eventMode}`);
+    });
+    authCommands.set('dj-add', (admin, name: string) =>
+        ifUser(name).then((user) => {
+            if (user.tags.includes('dj')) {
+                status(`${user.name} is already a dj`, admin);
+            } else {
+                user.tags.push('dj');
+                sendAll('user', { userId: user.userId, tags: user.tags });
+                status('you are a dj', user);
+                statusAuthed(`${user.name} is a dj`);
+            }
+        })
+    );
+    authCommands.set('dj-del', (admin, name: string) =>
+        ifUser(name).then((user) => {
+            if (!user.tags.includes('dj')) {
+                status(`${user.name} isn't a dj`, admin);
+            } else {
+                user.tags.splice(user.tags.indexOf('dj'), 1);
+                sendAll('user', { userId: user.userId, tags: user.tags });
+                status('no longer a dj', user);
+                statusAuthed(`${user.name} no longer a dj`);
+            }
+        })
+    );
+    authCommands.set('despawn', (admin, name: string) => 
+        ifUser(name).then((user) => {
+            if (!user.position) {
+                status(`${user.name} isn't spawned`, admin);
+            } else {
+                user.position = undefined;
+                sendAll('user', { userId: user.userId, position: null });
+                status('you were despawned by an admin', user);
+                statusAuthed(`${user.name} has been despawned`);
+            }
+        })
+    );
 
     return { save, sendAll, zone, playback };
 }

@@ -3,7 +3,7 @@ import { ZoneState, UserState } from '../common/zone';
 import { randomInt } from '../common/utility';
 import { hslToRgb, eventToElementPixel } from './utility';
 import { EventEmitter } from 'events';
-import { decodeAsciiTexture } from 'blitsy';
+import { decodeAsciiTexture, encodeTexture } from 'blitsy';
 import { Player } from './player';
 
 export const avatarImage = decodeAsciiTexture(

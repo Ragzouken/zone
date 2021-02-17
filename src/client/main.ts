@@ -1,5 +1,5 @@
 import * as blitsy from 'blitsy';
-import { secondsToTime, fakedownToTag, eventToElementPixel, withPixels, escapeHtml, hslToRgb, rgb2hex, shuffleArray } from './utility';
+import { secondsToTime, fakedownToTag, eventToElementPixel, withPixels, escapeHtml, hslToRgb, rgb2hex } from './utility';
 import { sleep } from '../common/utility';
 import { ChatPanel } from './chat';
 
@@ -12,12 +12,10 @@ import { menusFromDataAttributes, indexByDataAttribute } from './menus';
 import { SceneRenderer, avatarImage } from './scene';
 import { icons } from './text';
 import fetch from 'node-fetch';
-import { response } from 'express';
-import { options } from '@hapi/joi';
 
 window.addEventListener('load', () => load());
 
-export const client = new ZoneClient();
+export const client = new ZoneClient({ createSocket: socket });
 export const htmlui = new HTMLUI();
 
 const avatarTiles = new Map<string | undefined, CanvasRenderingContext2D>();
@@ -113,11 +111,11 @@ function rename(name: string) {
     client.rename(name);
 }
 
-function socket(): Promise<WebSocket> {
+function socket(ticket: string): Promise<WebSocket> {
     return new Promise((resolve, reject) => {
         const secure = window.location.protocol.startsWith('https');
         const protocol = secure ? 'wss' : 'ws';
-        const socket = new WebSocket(`${protocol}://${window.location.host}/zone`);
+        const socket = new WebSocket(`${protocol}://${window.location.host}/zone/${ticket}`);
         socket.addEventListener('open', () => resolve(socket));
         socket.addEventListener('error', reject);
     });
@@ -127,19 +125,15 @@ async function connect(): Promise<void> {
     const joined = !!client.localUserId;
     const existing = client.localUser;
 
-    try {
-        client.messaging.setSocket(await socket());
-    } catch (e) {
-        return connect();
-    }
+    const name = localName;
+    const avatar = getInitialAvatar() || undefined;
 
     try {
-        const avatar = getInitialAvatar() || undefined;
-        const assign = await client.join({ name: localName, avatar });
+        await client.join({ name, avatar });
     } catch (e) {
-        chat.error(`assignment failed (${e})`);
-        console.log('assignment exception:', e);
-        return;
+        console.log("RECONNECT", e);
+        await sleep(500);
+        return connect();
     }
 
     // reload page after 2 hours of idling
@@ -484,7 +478,6 @@ export async function load() {
         await connect();
     });
 
-    client.on('joined', refreshUsers);
     client.on('join', refreshUsers);
     client.on('leave', refreshUsers);
     client.on('rename', refreshUsers);
