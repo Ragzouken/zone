@@ -200,8 +200,11 @@ export function host(
 
         websocket.on('close', (code: number) => killUser(user));
 
-        sendCoreState(user);
-        sendOtherState(user);
+        const users = Array.from(zone.users.values());
+        sendOnly('users', { users }, user.userId);
+        sendOnly('queue', { items: playback.queue }, user.userId);
+        sendOnly('play', { item: playback.currentItem, time: playback.currentTime }, user.userId);
+        sendOnly('echoes', { added: Array.from(zone.echoes).map(([, echo]) => echo) }, user.userId);
         sendOnly("ready", {}, user.userId);
     });
 
@@ -433,25 +436,6 @@ export function host(
         playback.skip();
     }
 
-    function sendCurrent(user: UserState) {
-        if (playback.currentItem) {
-            sendOnly('play', { item: playback.currentItem, time: playback.currentTime }, user.userId);
-        } else {
-            sendOnly('play', {}, user.userId);
-        }
-    }
-
-    function sendCoreState(user: UserState) {
-        const users = Array.from(zone.users.values());
-        sendOnly('users', { users }, user.userId);
-        sendOnly('queue', { items: playback.queue }, user.userId);
-        sendCurrent(user);
-    }
-
-    function sendOtherState(user: UserState) {
-        sendOnly('echoes', { added: Array.from(zone.echoes).map(([, echo]) => echo) }, user.userId);
-    }
-
     function ifUser(name: string): Promise<UserState> {
         return new Promise((resolve, reject) => {
             const users = Array.from(zone.users.values());
@@ -470,6 +454,60 @@ export function host(
         zone.users.forEach((user) => {
             if (user.tags.includes('admin')) status(text, user);
         });
+    }
+    
+    function tryQueueMedia(user: UserState, media: Media, banger = false) {
+        if (eventMode && !user.tags.includes('dj')) {
+            throw new Error('only djs may queue during event mode');
+        }
+
+        const userIp = userToIp.get(user);
+        const existing = playback.queue.find((queued) => queued.media.src === media.src)?.media;
+        const count = playback.queue.filter((item) => item.info.ip === userIp).length;
+        const dj = eventMode && user.tags.includes('dj');
+
+        if (existing) {
+            throw new Error(`'${existing.title}' is already queued`);
+        } else if (!dj && count >= opts.perUserQueueLimit) {
+            throw new Error(`you already have ${count} videos in the queue`);
+        } else {
+            playback.queueMedia(media, { userId: user.userId, ip: userIp, banger });
+        }
+    }
+
+    const USER_SCHEMA = Joi.object({
+        name: Joi.string().min(1).max(32),
+        avatar: Joi.string().base64(),
+        emotes: Joi.array().items(Joi.string().valid('shk', 'wvy', 'rbw', 'spn')),
+        position: Joi.array().ordered(Joi.number().required(), Joi.number().required(), Joi.number().required()),
+    });
+
+    function bindMessagingToUser(user: UserState, messaging: Messaging) {
+        messaging.messages.on('heartbeat', () => sendOnly('heartbeat', {}, user.userId));
+
+        messaging.messages.on('chat', (message: any) => {
+            const text = message.text.substring(0, opts.chatLengthLimit);
+            sendAll('chat', { text, userId: user.userId });
+        });
+
+        messaging.messages.on('user', (changes: Partial<UserState>) => {
+            const { value, error } = USER_SCHEMA.validate(changes);
+
+            if (error) {
+                sendOnly('reject', { text: error.details[0].message }, user.userId);
+            } else {
+                Object.assign(user, value);
+                sendAll('user', { ...value, userId: user.userId });
+            }
+        });
+    }
+
+    function sendAll(type: string, message: any) {
+        connections.forEach((connection) => connection.send(type, message));
+    }
+
+    function sendOnly(type: string, message: any, userId: UserId) {
+        connections.get(userId)!.send(type, message);
     }
 
     const authCommands = new Map<string, (admin: UserState, ...args: any[]) => void>();
@@ -528,60 +566,6 @@ export function host(
             }
         })
     );
-
-    function tryQueueMedia(user: UserState, media: Media, banger = false) {
-        if (eventMode && !user.tags.includes('dj')) {
-            throw new Error('only djs may queue during event mode');
-        }
-
-        const userIp = userToIp.get(user);
-        const existing = playback.queue.find((queued) => queued.media.src === media.src)?.media;
-        const count = playback.queue.filter((item) => item.info.ip === userIp).length;
-        const dj = eventMode && user.tags.includes('dj');
-
-        if (existing) {
-            throw new Error(`'${existing.title}' is already queued`);
-        } else if (!dj && count >= opts.perUserQueueLimit) {
-            throw new Error(`you already have ${count} videos in the queue`);
-        } else {
-            playback.queueMedia(media, { userId: user.userId, ip: userIp, banger });
-        }
-    }
-
-    const USER_SCHEMA = Joi.object({
-        name: Joi.string().min(1).max(32),
-        avatar: Joi.string().base64(),
-        emotes: Joi.array().items(Joi.string().valid('shk', 'wvy', 'rbw', 'spn')),
-        position: Joi.array().ordered(Joi.number().required(), Joi.number().required(), Joi.number().required()),
-    });
-
-    function bindMessagingToUser(user: UserState, messaging: Messaging) {
-        messaging.messages.on('heartbeat', () => sendOnly('heartbeat', {}, user.userId));
-
-        messaging.messages.on('chat', (message: any) => {
-            const text = message.text.substring(0, opts.chatLengthLimit);
-            sendAll('chat', { text, userId: user.userId });
-        });
-
-        messaging.messages.on('user', (changes: Partial<UserState>) => {
-            const { value, error } = USER_SCHEMA.validate(changes);
-
-            if (error) {
-                sendOnly('reject', { text: error.details[0].message }, user.userId);
-            } else {
-                Object.assign(user, value);
-                sendAll('user', { ...value, userId: user.userId });
-            }
-        });
-    }
-
-    function sendAll(type: string, message: any) {
-        connections.forEach((connection) => connection.send(type, message));
-    }
-
-    function sendOnly(type: string, message: any, userId: UserId) {
-        connections.get(userId)!.send(type, message);
-    }
 
     return { save, sendAll, zone, playback };
 }
