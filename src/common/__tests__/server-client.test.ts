@@ -31,27 +31,27 @@ describe('connectivity', () => {
 });
 
 describe('join server', () => {
-    test('assigns id and token', async () => {
+    test('assigns id', async () => {
         await zoneServer({}, async (server) => {
             const client = await server.client();
-            const { userId, token } = await client.join();
+            await client.join();
 
-            expect(userId).not.toBeUndefined();
-            expect(token).not.toBeUndefined();
+            expect(client.localUserId).not.toBeUndefined();
         });
     });
 
     it('sends user list', async () => {
         await zoneServer({}, async (server) => {
+            const name = "baby yoda";
             const client1 = await server.client();
             const client2 = await server.client();
-            const { userId } = await client1.join();
+            await client1.join({ name });
 
             const waitUsers = client2.expect('users');
             await client2.join();
             const { users } = await waitUsers;
 
-            expect(users[0]).toMatchObject({ userId });
+            expect(users[0]).toMatchObject({ name });
         });
     });
 
@@ -63,10 +63,9 @@ describe('join server', () => {
 
             await client1.join();
             const waiter = client1.expect('user');
-            const { userId } = await client2.join({ name });
+            await client2.join({ name });
             const message = await waiter;
 
-            expect(message.userId).toEqual(userId);
             expect(message.name).toEqual(name);
         });
     });
@@ -185,13 +184,13 @@ test('server sends leave on clean quit', async () => {
         const client1 = await server.client();
         const client2 = await server.client();
 
-        const { userId: joinedId } = await client1.join();
+        await client1.join();
         await client2.join();
 
         const waiter = client2.expect('leave');
         await client1.messaging.close();
         const { userId: leftId } = await waiter;
 
-        expect(joinedId).toEqual(leftId);
+        expect(client1.localUserId).toEqual(leftId);
     });
 });

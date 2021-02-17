@@ -83,8 +83,7 @@ export class ZoneClient extends EventEmitter {
     readonly messaging = new Messaging();
     readonly zone = new ZoneState();
 
-    private token?: string;
-    private userId?: string;
+    private credentials?: { userId: string, token: string };
     
     constructor(options: Partial<ClientOptions> = {}) {
         super();
@@ -93,7 +92,7 @@ export class ZoneClient extends EventEmitter {
     }
 
     get localUserId() {
-        return this.userId;
+        return this.credentials?.userId;
     }
 
     get localUser() {
@@ -102,6 +101,7 @@ export class ZoneClient extends EventEmitter {
 
     clear() {
         this.zone.clear();
+        this.credentials = undefined;
     }
 
     async expect<K extends keyof MessageMap>(type: K, timeout?: number): Promise<MessageMap[K]> {
@@ -115,8 +115,7 @@ export class ZoneClient extends EventEmitter {
         this.clear();
 
         const { ticket, token, userId } = await this.request("POST", "/zone/join", { name, avatar });
-        this.token = token;
-        this.userId = userId;
+        this.credentials = { userId, token };
 
         const socket = await this.options.createSocket(ticket);
         this.messaging.setSocket(socket);
@@ -175,8 +174,8 @@ export class ZoneClient extends EventEmitter {
     async request(method: string, url: string, body?: any): Promise<any> {
         const headers: HeadersInit = {};
 
-        if (this.token) {
-            headers["Authorization"] = "Bearer " + this.token;
+        if (this.credentials) {
+            headers["Authorization"] = "Bearer " + this.credentials.token;
         }
 
         if (body) {
