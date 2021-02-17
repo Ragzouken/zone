@@ -7,7 +7,6 @@ const URL = window?.URL || require('url').URL;
 
 export type StatusMesage = { text: string };
 export type JoinMessage = { name: string; token?: string; avatar?: string };
-export type AssignMessage = { userId: string; token: string };
 export type RejectMessage = { text: string };
 export type UsersMessage = { users: UserState[] };
 export type LeaveMessage = { userId: string };
@@ -24,7 +23,7 @@ export type DataMessage = { update: any };
 
 export interface MessageMap {
     heartbeat: {};
-    assign: AssignMessage;
+    ready: {};
     reject: RejectMessage;
     users: UsersMessage;
     leave: LeaveMessage;
@@ -54,7 +53,6 @@ export const DEFAULT_OPTIONS: ClientOptions = {
 
 export interface ClientEventMap {
     disconnect: (event: { clean: boolean }) => void;
-    joined: (event: { user: UserState }) => void;
 
     chat: (event: { user: UserState; text: string; local: boolean }) => void;
     join: (event: { user: UserState }) => void;
@@ -85,10 +83,9 @@ export class ZoneClient extends EventEmitter {
     readonly messaging = new Messaging();
     readonly zone = new ZoneState();
 
-    localUser?: UserState;
-
-    private assignation?: AssignMessage;
-
+    private token?: string;
+    private userId?: string;
+    
     constructor(options: Partial<ClientOptions> = {}) {
         super();
         this.options = Object.assign({}, DEFAULT_OPTIONS, options);
@@ -96,7 +93,11 @@ export class ZoneClient extends EventEmitter {
     }
 
     get localUserId() {
-        return this.assignation?.userId;
+        return this.userId;
+    }
+
+    get localUser() {
+        return this.zone.users.get(this.localUserId || "");
     }
 
     clear() {
@@ -113,19 +114,14 @@ export class ZoneClient extends EventEmitter {
     async join({ name = "anonymous", avatar = "" } = {}) {
         this.clear();
 
-        const { ticket } = await this.request("POST", "/zone/join", { name, avatar });
-
-        const assignation = this.expect('assign', this.options.quickResponseTimeout).then((assign) => {
-            this.assignation = assign;
-            this.localUser = this.zone.getUser(assign.userId);
-            this.emit('joined', { user: this.localUser });
-            return assign;
-        });
+        const { ticket, token, userId } = await this.request("POST", "/zone/join", { name, avatar });
+        this.token = token;
+        this.userId = userId;
 
         const socket = await this.options.createSocket(ticket);
         this.messaging.setSocket(socket);
 
-        return assignation;
+        return this.expect("ready");
     }
 
     async heartbeat() {
@@ -179,8 +175,8 @@ export class ZoneClient extends EventEmitter {
     async request(method: string, url: string, body?: any): Promise<any> {
         const headers: HeadersInit = {};
 
-        if (this.assignation) {
-            headers["Authorization"] = "Bearer " + this.assignation.token;
+        if (this.token) {
+            headers["Authorization"] = "Bearer " + this.token;
         }
 
         if (body) {

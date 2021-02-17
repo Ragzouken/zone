@@ -131,6 +131,8 @@ async function connect(): Promise<void> {
     try {
         await client.join({ name, avatar });
     } catch (e) {
+        console.log("RECONNECT", e);
+        await sleep(500);
         return connect();
     }
 
@@ -476,7 +478,6 @@ export async function load() {
         await connect();
     });
 
-    client.on('joined', refreshUsers);
     client.on('join', refreshUsers);
     client.on('leave', refreshUsers);
     client.on('rename', refreshUsers);

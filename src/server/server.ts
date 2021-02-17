@@ -18,10 +18,12 @@ declare global {
     namespace Express {
         interface Request {
             user?: UserState;
-            ticket?: { name: string, avatar: string };
+            ticket?: Ticket;
         }
     }
 }
+
+export type Ticket = { name: string, avatar: string, token: string, userId: string };
 
 export type HostOptions = {
     pingInterval: number;
@@ -154,22 +156,24 @@ export function host(
         }
     }
 
-    const tickets = new Map<string, { name: string, avatar: string }>();
+    const tickets = new Map<string, Ticket>();
 
     xws.app.use(json());
     xws.app.use(requireNotBanned);
     xws.app.post('/zone/join', (request, response) => {
         const { name, avatar } = request.body;
         const ticket = nanoid();
-        tickets.set(ticket, { name, avatar });
-        response.json({ ticket });
+        const token = nanoid();
+        const userId = (++lastUserId).toString();
+        tickets.set(ticket, { name, avatar, token, userId });
+        response.json({ ticket, token, userId });
     });
 
     xws.app.param('ticket', (request, response, next, id) => {
-        const ticket = tickets.get(id);
+        request.ticket = tickets.get(id);
         
-        if (ticket) {
-            request.ticket = ticket;
+        if (request.ticket) {
+            tickets.delete(id);
             next();
         } else {
             response.status(404).send();
@@ -180,11 +184,12 @@ export function host(
         const messaging = new Messaging();
         messaging.setSocket(websocket);
         messaging.on('error', () => {});
+        
+        const { name, avatar, token, userId } = request.ticket!;
 
-        const token = nanoid();
-        const user = zone.getUser((++lastUserId).toString() as UserId);
-        user.name = request.ticket!.name;
-        user.avatar = request.ticket!.avatar;
+        const user = zone.getUser(userId);
+        user.name = name;
+        user.avatar = avatar;
 
         sendAll('user', user);
 
@@ -209,8 +214,8 @@ export function host(
         });
 
         sendCoreState(user);
-        sendOnly('assign', { userId: user.userId, token }, user.userId);
         sendOtherState(user);
+        sendOnly("ready", {}, user.userId);
     });
 
     xws.app.get('/users', (req, res) => {
