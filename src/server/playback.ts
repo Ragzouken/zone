@@ -26,7 +26,7 @@ export class Playback extends EventEmitter {
 
     private nextId = 0;
 
-    constructor(private readonly libraries: Map<string, Library>) {
+    constructor(private readonly libraries = new Map<string, Library>()) {
         super();
         this.clearMedia();
     }
