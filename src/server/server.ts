@@ -83,8 +83,8 @@ export function host(
 
     async function checkQueue() {
         const checks = playback.queue.map(async (item) => {
-            const library = opts.libraries.get(item.media.library)!;
-            if (await library.getStatus(item.media.mediaId) === 'failed') {
+            const library = opts.libraries.get(item.media.library || "");
+            if (library && await library.getStatus(item.media.mediaId) === 'failed') {
                 playback.unqueue(item);
                 status(`failed to load "${item.media.title}"`);
             }

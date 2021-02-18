@@ -19,7 +19,7 @@ export type Media = {
     subtitle?: string;
     thumbnail?: string;
     path?: string;
-    library: string;
+    library?: string;
 };
 
 export type UserEcho = UserState & {

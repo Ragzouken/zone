@@ -85,8 +85,8 @@ export class Playback extends EventEmitter {
             this.clearMedia();
         } else {
             const next = this.queue[0];
-            const library = this.libraries.get(next.media.library)!;
-            const status = await library.getStatus(next.media.mediaId);
+            const library = this.libraries.get(next.media.library || "");
+            const status = library ? await library.getStatus(next.media.mediaId) : 'available';
             if (status === 'available') {
                 this.queue.shift();
                 this.playMedia(next);
@@ -94,7 +94,7 @@ export class Playback extends EventEmitter {
                 if (this.checkTimeout) clearTimeout(this.checkTimeout);
                 this.checkTimeout = setTimeout(() => this.check(), 500);
                 this.emit('waiting', next);
-            } else if (status === 'none') {
+            } else if (library && status === 'none') {
                 library.request(next.media.mediaId);
             } else {
                 this.queue.shift();
