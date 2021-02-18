@@ -25,7 +25,7 @@ export class Playback extends EventEmitter {
 
     private nextId = 0;
 
-    constructor(public startDelay = 0) {
+    constructor() {
         super();
         this.clearMedia();
     }
@@ -40,7 +40,7 @@ export class Playback extends EventEmitter {
     }
 
     loadState(data: PlaybackState) {
-        if (data.current) this.setMedia(data.current, data.time);
+        if (data.current) this.playMedia(data.current, data.time);
         data.queue.forEach((item) => this.queueMedia(item.media, item.info, item.itemId));
         this.nextId = data.nextId || 0;
     }
@@ -109,10 +109,6 @@ export class Playback extends EventEmitter {
         }
     }
 
-    private playMedia(media: QueueItem) {
-        this.setMedia(media, -this.startDelay);
-    }
-
     private clearMedia() {
         if (this.currentItem) this.emit('stop');
         this.setTime(0);
@@ -128,7 +124,7 @@ export class Playback extends EventEmitter {
         }
     }
 
-    private setMedia(item: QueueItem, time = 0) {
+    private playMedia(item: QueueItem, time = 0) {
         this.currentItem = item;
         this.setTime(item.media.duration, time);
         this.emit('play', copy(item));

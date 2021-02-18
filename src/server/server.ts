@@ -34,7 +34,6 @@ export type HostOptions = {
 
     authPassword?: string;
 
-    playbackStartDelay: number;
     queueCheckInterval: number;
     libraries: Map<string, Library>;
 };
@@ -47,7 +46,6 @@ export const DEFAULT_OPTIONS: HostOptions = {
     perUserQueueLimit: 3,
     voteSkipThreshold: 0.6,
 
-    playbackStartDelay: 1 * SECONDS,
     queueCheckInterval: 5 * SECONDS,
     libraries: new Map(),
 };
@@ -76,26 +74,16 @@ export function host(
         echoes: [],
     }).write();
 
-    function ping() {
-        xws.getWss().clients.forEach((websocket) => {
-            try {
-                websocket.ping();
-            } catch (e) {
-                console.log("couldn't ping", e);
-            }
-        });
+    function pingAll() {
+        xws.getWss().clients.forEach((ws) => ws.ping(undefined, undefined, console.log));
     }
 
-    setInterval(ping, opts.pingInterval);
+    setInterval(pingAll, opts.pingInterval);
     setInterval(checkQueue, opts.queueCheckInterval);
-
-    async function getMediaStatus(media: Media) {
-        return media.getStatus ? await media.getStatus() : "available";
-    }
 
     async function checkQueue() {
         const checks = playback.queue.map(async (item) => {
-            if (await getMediaStatus(item.media) === 'failed') {
+            if (await item.media.getStatus!() === 'failed') {
                 playback.unqueue(item);
                 status(`failed to load "${item.media.title}"`);
             }
@@ -121,7 +109,7 @@ export function host(
     const connections = new Map<UserId, Messaging>();
 
     const zone = new ZoneState();
-    const playback = new Playback(opts.playbackStartDelay);
+    const playback = new Playback();
 
     let eventMode = false;
 
@@ -163,6 +151,7 @@ export function host(
         const token = nanoid();
         const userId = (++lastUserId).toString();
         tickets.set(ticket, { name, avatar, token, userId });
+        setTimeout(() => tickets.delete(ticket), 60 * SECONDS);
         response.json({ ticket, token, userId });
     });
 
@@ -481,8 +470,6 @@ export function host(
     });
 
     function bindMessagingToUser(user: UserState, messaging: Messaging) {
-        messaging.messages.on('heartbeat', () => sendOnly('heartbeat', {}, user.userId));
-
         messaging.messages.on('chat', (message: any) => {
             const text = message.text.substring(0, opts.chatLengthLimit);
             sendAll('chat', { text, userId: user.userId });
