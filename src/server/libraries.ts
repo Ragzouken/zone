@@ -4,6 +4,7 @@ export class Library {
     private headers?: HeadersInit;
 
     constructor(
+        readonly prefix: string,
         readonly endpoint: string,
         readonly auth?: string,
     ) {
@@ -27,10 +28,9 @@ export class Library {
     }
 };
 
-export async function libraryToQueueableMedia(library: Library, videoId: string) {
-    const media = await library.getMeta(videoId);
-    media.getStatus = () => library.getStatus(videoId);
-    media.request = () => library.request(videoId);
-    await media.request();
+export async function libraryToQueueableMedia(library: Library, mediaId: string) {
+    const media = await library.getMeta(mediaId);
+    media.library = library.prefix;
+    await library.request(mediaId);
     return media;
 }

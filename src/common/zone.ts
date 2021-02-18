@@ -18,10 +18,8 @@ export type Media = {
     src: string;
     subtitle?: string;
     thumbnail?: string;
-    shortcut?: string;
-    getStatus?: () => Promise<string>;
-    request?: () => Promise<any>;
     path?: string;
+    library: string;
 };
 
 export type UserEcho = UserState & {

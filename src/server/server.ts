@@ -83,7 +83,8 @@ export function host(
 
     async function checkQueue() {
         const checks = playback.queue.map(async (item) => {
-            if (await item.media.getStatus!() === 'failed') {
+            const library = opts.libraries.get(item.media.library)!;
+            if (await library.getStatus(item.media.mediaId) === 'failed') {
                 playback.unqueue(item);
                 status(`failed to load "${item.media.title}"`);
             }
@@ -109,7 +110,7 @@ export function host(
     const connections = new Map<UserId, Messaging>();
 
     const zone = new ZoneState();
-    const playback = new Playback();
+    const playback = new Playback(opts.libraries);
 
     let eventMode = false;
 

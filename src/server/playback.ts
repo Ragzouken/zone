@@ -2,6 +2,7 @@ import { EventEmitter } from 'events';
 import { performance } from 'perf_hooks';
 import { copy } from '../common/utility';
 import { Media, QueueItem, QueueInfo } from '../common/zone';
+import { Library } from './libraries';
 
 export type PlaybackState = {
     current?: QueueItem;
@@ -25,7 +26,7 @@ export class Playback extends EventEmitter {
 
     private nextId = 0;
 
-    constructor() {
+    constructor(private readonly libraries: Map<string, Library>) {
         super();
         this.clearMedia();
     }
@@ -77,34 +78,28 @@ export class Playback extends EventEmitter {
         return Math.max(0, this.currentEndTime - performance.now());
     }
 
-    skip() {
+    async skip() {
         if (this.currentItem) this.emit('finish', this.currentItem);
 
         if (this.queue.length === 0) {
             this.clearMedia();
         } else {
             const next = this.queue[0];
-
-            if (next.media.getStatus) {
-                next.media.getStatus().then((status) => {
-                    if (status === 'available') {
-                        this.queue.shift();
-                        this.playMedia(next);
-                    } else if (status === 'requested') {
-                        if (this.checkTimeout) clearTimeout(this.checkTimeout);
-                        this.checkTimeout = setTimeout(() => this.check(), 500);
-                        this.emit('waiting', next);
-                    } else if (status === 'none' && next.media.request) {
-                        next.media.request();
-                    } else {
-                        this.queue.shift();
-                        this.playMedia(next);
-                        this.emit('failed', next);
-                    }
-                });
+            const library = this.libraries.get(next.media.library)!;
+            const status = await library.getStatus(next.media.mediaId);
+            if (status === 'available') {
+                this.queue.shift();
+                this.playMedia(next);
+            } else if (status === 'requested') {
+                if (this.checkTimeout) clearTimeout(this.checkTimeout);
+                this.checkTimeout = setTimeout(() => this.check(), 500);
+                this.emit('waiting', next);
+            } else if (status === 'none') {
+                library.request(next.media.mediaId);
             } else {
                 this.queue.shift();
                 this.playMedia(next);
+                this.emit('failed', next);
             }
         }
     }
