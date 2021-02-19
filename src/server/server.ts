@@ -2,14 +2,13 @@ import * as expressWs from 'express-ws';
 import * as low from 'lowdb';
 
 import Playback from './playback';
-import Messaging from '../common/messaging';
-import { ZoneState, UserId, UserState, Media, QueueItem, UserEcho } from '../common/zone';
+import { ZoneState, UserId, UserState, Media, QueueItem, UserEcho } from './zone';
 import { nanoid } from 'nanoid';
-import { randomInt } from '../common/utility';
 import { json, NextFunction, Request, Response } from 'express';
 import { Library, libraryToQueueableMedia } from './libraries';
 import { URL } from 'url';
 import Joi = require('@hapi/joi');
+import WebSocket = require('ws');
 
 const SECONDS = 1000;
 
@@ -107,7 +106,7 @@ export function host(
     const tokenToUser = new Map<string, UserState>();
     const userToToken = new Map<UserState, string>();
     const userToIp = new Map<UserState, unknown>();
-    const connections = new Map<UserId, Messaging>();
+    const sockets = new Map<UserId, WebSocket>();
 
     const zone = new ZoneState();
     const playback = new Playback(opts.libraries);
@@ -167,14 +166,10 @@ export function host(
         }
     });
 
-    xws.app.ws('/zone/:ticket', async (websocket, request) => {
-        const messaging = new Messaging();
-        messaging.setSocket(websocket);
-        messaging.on('error', () => {});
-        
+    xws.app.ws('/zone/:ticket', async (websocket, request) => {        
         const { name, avatar, token, userId } = request.ticket!;
 
-        const user = zone.getUser(userId);
+        const user = zone.addUser(userId);
         user.name = name;
         user.avatar = avatar;
 
@@ -183,9 +178,9 @@ export function host(
         addUserToken(user, token);
         userToIp.set(user, request.ip);
 
-        bindMessagingToUser(user, messaging);
-        connections.set(user.userId, messaging);
+        bindSocketToUser(user, websocket);
 
+        websocket.on('error', (error) => killUser(user));
         websocket.on('close', (code: number) => killUser(user));
 
         const users = Array.from(zone.users.values());
@@ -360,6 +355,7 @@ export function host(
         }
     }
 
+    const randomInt = (min: number, max: number) => Math.floor(Math.random() * (max - min + 1)) + min;
     async function libraryTagToBanger(tag: string | undefined) {
         const EIGHT_MINUTES = 8 * 60 * SECONDS;
         const library = await opts.libraries.get("library")!.search(tag ? "?tag=" + tag : "");
@@ -399,11 +395,13 @@ export function host(
     }
 
     function killUser(user: UserState) {
-        if (zone.users.has(user.userId)) sendAll('leave', { userId: user.userId });
-        zone.users.delete(user.userId);
-        connections.get(user.userId)?.close(4001);
-        connections.delete(user.userId);
+        sockets.get(user.userId)?.close(4001);
+        sockets.delete(user.userId);
         revokeUserToken(user);
+
+        if (zone.users.delete(user.userId)) {
+            sendAll('leave', { userId: user.userId });
+        }
     }
 
     function voteSkip(itemId: number, user: UserState) {
@@ -470,30 +468,44 @@ export function host(
         position: Joi.array().ordered(Joi.number().required(), Joi.number().required(), Joi.number().required()),
     });
 
-    function bindMessagingToUser(user: UserState, messaging: Messaging) {
-        messaging.messages.on('chat', (message: any) => {
-            const text = message.text.substring(0, opts.chatLengthLimit);
-            sendAll('chat', { text, userId: user.userId });
-        });
+    const messageHandlers = new Map<string, (sender: UserState, message: any) => void>();
 
-        messaging.messages.on('user', (changes: Partial<UserState>) => {
-            const { value, error } = USER_SCHEMA.validate(changes);
+    messageHandlers.set('chat', (sender, chat) => {
+        const text = chat.text.substring(0, opts.chatLengthLimit);
+        sendAll('chat', { text, userId: sender.userId });
+    });
 
-            if (error) {
-                sendOnly('reject', { text: error.details[0].message }, user.userId);
-            } else {
-                Object.assign(user, value);
-                sendAll('user', { ...value, userId: user.userId });
-            }
+    messageHandlers.set('user', (sender, changes: Partial<UserState>) => {
+        const { value, error } = USER_SCHEMA.validate(changes);
+
+        if (error) {
+            sendOnly('reject', { text: error.details[0].message }, sender.userId);
+        } else {
+            Object.assign(sender, value);
+            sendAll('user', { ...value, userId: sender.userId });
+        }
+    });
+
+    function bindSocketToUser(user: UserState, socket: WebSocket) {
+        sockets.set(user.userId, socket);
+
+        socket.on("message", (data: string) => {
+            const { type, ...message } = JSON.parse(data);
+            const handler = messageHandlers.get(type)!;
+            handler(user, message);
         });
+    }
+
+    function sendMessage(websocket: WebSocket, type: string, message: any) {
+        websocket.send(JSON.stringify({ type, ...message }), () => {});
     }
 
     function sendAll(type: string, message: any) {
-        connections.forEach((connection) => connection.send(type, message));
+        sockets.forEach((connection) => sendMessage(connection, type, message));
     }
 
     function sendOnly(type: string, message: any, userId: UserId) {
-        connections.get(userId)!.send(type, message);
+        sendMessage(sockets.get(userId)!, type, message);
     }
 
     const authCommands = new Map<string, (admin: UserState, ...args: any[]) => void>();

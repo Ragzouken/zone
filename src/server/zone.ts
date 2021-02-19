@@ -1,5 +1,3 @@
-import { getDefault, Grid } from './utility';
-
 export type UserId = string;
 
 export type UserState = {
@@ -48,8 +46,45 @@ export class ZoneState {
         this.users.set(userId, user);
         return user;
     }
+}
 
-    public getUser(userId: UserId): UserState {
-        return getDefault(this.users, userId, () => ({ userId, emotes: [], tags: [] }));
+export function coordsToKey(coords: number[]): string {
+    return coords.join(',');
+}
+
+export class Grid<T> {
+    private readonly cells = new Map<string, [number[], T]>();
+
+    get size() {
+        return this.cells.size;
+    }
+
+    clear() {
+        return this.cells.clear();
+    }
+
+    has(coords: number[]) {
+        return this.cells.has(coordsToKey(coords));
+    }
+
+    get(coords: number[]) {
+        const [, value] = this.cells.get(coordsToKey(coords)) || [undefined, undefined];
+        return value;
+    }
+
+    set(coords: number[], value: T) {
+        return this.cells.set(coordsToKey(coords), [coords, value]);
+    }
+
+    delete(coords: number[]) {
+        return this.cells.delete(coordsToKey(coords));
+    }
+
+    forEach(callbackfn: (value: T, coords: number[], grid: Grid<T>) => void) {
+        return this.cells.forEach(([coords, value]) => callbackfn(value, coords, this));
+    }
+
+    [Symbol.iterator]() {
+        return this.cells.values();
     }
 }
