@@ -1,8 +1,9 @@
 import { EventEmitter } from 'events';
 import { performance } from 'perf_hooks';
-import { copy } from '../common/utility';
-import { Media, QueueItem, QueueInfo } from '../common/zone';
+import { Media, QueueItem, QueueInfo } from './zone';
 import { Library } from './libraries';
+
+export const copy = <T>(object: T) => JSON.parse(JSON.stringify(object)) as T;
 
 export type PlaybackState = {
     current?: QueueItem;
