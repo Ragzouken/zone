@@ -7,7 +7,7 @@ import { nanoid } from 'nanoid';
 import { json, NextFunction, Request, Response } from 'express';
 import { Library, libraryToQueueableMedia } from './libraries';
 import { URL } from 'url';
-import Joi = require('@hapi/joi');
+import Joi = require('joi');
 import WebSocket = require('ws');
 
 const SECONDS = 1000;
