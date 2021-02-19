@@ -74,7 +74,7 @@ export function host(
     }).write();
 
     function pingAll() {
-        xws.getWss().clients.forEach((ws) => ws.ping(undefined, undefined, console.log));
+        xws.getWss().clients.forEach((ws) => ws.ping(undefined, undefined, () => {}));
     }
 
     setInterval(pingAll, opts.pingInterval);
