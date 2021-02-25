@@ -1,7 +1,9 @@
 import { EventEmitter } from 'events';
 import { performance } from 'perf_hooks';
-import { copy } from '../common/utility';
-import { Media, QueueItem, QueueInfo } from '../common/zone';
+import { Media, QueueItem, QueueInfo } from './zone';
+import { Library } from './libraries';
+
+export const copy = <T>(object: T) => JSON.parse(JSON.stringify(object)) as T;
 
 export type PlaybackState = {
     current?: QueueItem;
@@ -25,7 +27,7 @@ export class Playback extends EventEmitter {
 
     private nextId = 0;
 
-    constructor(public startDelay = 0) {
+    constructor(private readonly libraries = new Map<string, Library>()) {
         super();
         this.clearMedia();
     }
@@ -40,7 +42,7 @@ export class Playback extends EventEmitter {
     }
 
     loadState(data: PlaybackState) {
-        if (data.current) this.setMedia(data.current, data.time);
+        if (data.current) this.playMedia(data.current, data.time);
         data.queue.forEach((item) => this.queueMedia(item.media, item.info, item.itemId));
         this.nextId = data.nextId || 0;
     }
@@ -77,40 +79,30 @@ export class Playback extends EventEmitter {
         return Math.max(0, this.currentEndTime - performance.now());
     }
 
-    skip() {
+    async skip() {
         if (this.currentItem) this.emit('finish', this.currentItem);
 
         if (this.queue.length === 0) {
             this.clearMedia();
         } else {
             const next = this.queue[0];
-
-            if (next.media.getStatus) {
-                next.media.getStatus().then((status) => {
-                    if (status === 'available') {
-                        this.queue.shift();
-                        this.playMedia(next);
-                    } else if (status === 'requested') {
-                        if (this.checkTimeout) clearTimeout(this.checkTimeout);
-                        this.checkTimeout = setTimeout(() => this.check(), 500);
-                        this.emit('waiting', next);
-                    } else if (status === 'none' && next.media.request) {
-                        next.media.request();
-                    } else {
-                        this.queue.shift();
-                        this.playMedia(next);
-                        this.emit('failed', next);
-                    }
-                });
+            const library = this.libraries.get(next.media.library || "");
+            const status = library ? await library.getStatus(next.media.mediaId) : 'available';
+            if (status === 'available') {
+                this.queue.shift();
+                this.playMedia(next);
+            } else if (status === 'requested') {
+                if (this.checkTimeout) clearTimeout(this.checkTimeout);
+                this.checkTimeout = setTimeout(() => this.check(), 500);
+                this.emit('waiting', next);
+            } else if (library && status === 'none') {
+                library.request(next.media.mediaId);
             } else {
                 this.queue.shift();
                 this.playMedia(next);
+                this.emit('failed', next);
             }
         }
-    }
-
-    private playMedia(media: QueueItem) {
-        this.setMedia(media, -this.startDelay);
     }
 
     private clearMedia() {
@@ -128,7 +120,7 @@ export class Playback extends EventEmitter {
         }
     }
 
-    private setMedia(item: QueueItem, time = 0) {
+    private playMedia(item: QueueItem, time = 0) {
         this.currentItem = item;
         this.setTime(item.media.duration, time);
         this.emit('play', copy(item));

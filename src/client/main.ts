@@ -547,8 +547,6 @@ export async function load() {
         }
     });
 
-    setInterval(() => client.heartbeat(), 30 * 1000);
-
     function move(dx: number, dz: number) {
         const user = getLocalUser()!;
 

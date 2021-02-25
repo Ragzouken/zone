@@ -19,10 +19,7 @@ export type RecvChat = { text: string; userId: string };
 
 export type EchoesMessage = { added?: UserEcho[]; removed?: number[][] };
 
-export type DataMessage = { update: any };
-
 export interface MessageMap {
-    heartbeat: {};
     ready: {};
     reject: RejectMessage;
     users: UsersMessage;
@@ -121,13 +118,6 @@ export class ZoneClient extends EventEmitter {
         this.messaging.setSocket(socket);
 
         return this.expect("ready");
-    }
-
-    async heartbeat() {
-        return new Promise<{}>((resolve, reject) => {
-            this.expect('heartbeat', this.options.quickResponseTimeout).then(resolve, reject);
-            this.messaging.send('heartbeat', {});
-        });
     }
 
     async auth(password: string) {

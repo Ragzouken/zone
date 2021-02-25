@@ -2,34 +2,6 @@ import { once } from 'events';
 import { sleep } from '../utility';
 import { zoneServer } from './utilities';
 
-describe('connectivity', () => {
-    test('heartbeat response', async () => {
-        await zoneServer({}, async (server) => {
-            const client = await server.client();
-            await client.join();
-            await client.heartbeat();
-        });
-    });
-
-    /*
-    test('server sends ping', async () => {
-        await zoneServer({ pingInterval: 10 }, async (server) => {
-            const socket = await server.socket();
-            await once(socket, 'ping');
-        });
-    }, 500);
-
-    test('server responds with pong', async () => {
-        await zoneServer({}, async (server) => {
-            const socket = await server.socket();
-            const waiter = once(socket, 'pong');
-            socket.ping();
-            await waiter;
-        });
-    }, 500);
-    */
-});
-
 describe('join server', () => {
     test('assigns id', async () => {
         await zoneServer({}, async (server) => {
