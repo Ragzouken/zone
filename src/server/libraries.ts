@@ -11,26 +11,33 @@ export class Library {
         this.headers = this.auth ? { "Authorization": this.auth } : undefined;
     }
 
+    async request(method: string, url: string, body?: any): Promise<any> {
+        return fetch(url, { method, headers: this.headers, body }).then(async (response) => {
+            if (response.ok) return response.json();
+            throw new Error(await response.text());
+        });
+    }
+
     async search(query: string) {
-        return fetch(`${this.endpoint}${query}`, { headers: this.headers }).then((r) => r.json());
+        return this.request("GET", `${this.endpoint}${query}`);
     }
 
     async getMeta(mediaId: string) {
-        return fetch(`${this.endpoint}/${mediaId}`, { headers: this.headers }).then((r) => r.json());
+        return this.request("GET", `${this.endpoint}/${mediaId}`);
     }
 
     async getStatus(mediaId: string) {
-        return fetch(`${this.endpoint}/${mediaId}/status`, { headers: this.headers }).then((r) => r.json());
+        return this.request("GET", `${this.endpoint}/${mediaId}/status`);
     }
 
-    async request(mediaId: string) {
-        return fetch(`${this.endpoint}/${mediaId}/request`, { method: "POST", headers: this.headers });
+    async requestMedia(mediaId: string) {
+        return this.request("POST", `${this.endpoint}/${mediaId}/request`);
     }
 };
 
 export async function libraryToQueueableMedia(library: Library, mediaId: string) {
     const media = await library.getMeta(mediaId);
     media.library = library.prefix;
-    await library.request(mediaId);
+    await library.requestMedia(mediaId);
     return media;
 }
