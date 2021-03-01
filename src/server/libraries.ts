@@ -14,7 +14,8 @@ export class Library {
     async request(method: string, url: string, body?: any): Promise<any> {
         return fetch(url, { method, headers: this.headers, body }).then(async (response) => {
             if (response.ok) {
-                return response.size > 0 ? response.json() : "";
+                if (response.size > 0) 
+                    return response.json();
             } else {
                 throw new Error(await response.text());
             }
