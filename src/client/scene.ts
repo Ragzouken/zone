@@ -144,7 +144,7 @@ export class SceneRenderer extends EventEmitter {
                 });
             }
 
-            let pairs: BatchRecolorItem[] = [];
+            const pairs: BatchRecolorItem[] = [];
             this.zone.users.forEach((user) => prepareAvatar(user, false));
             this.zone.echoes.forEach((echo) => prepareAvatar(echo, true));
             batchRecolor(pairs);
