@@ -810,26 +810,6 @@ export async function load() {
         context.clearRect(0, 0, context.canvas.width, context.canvas.height);
     }
 
-    function redraw() {
-        window.requestAnimationFrame(redraw);
-
-        quickResync.hidden = !player.problem;
-
-        refreshCurrentItem();
-        clearContext(chatContext2);
-
-        const height = chatContext2.canvas.clientHeight;
-        chatContext2.canvas.height = height;
-        chatContext2.imageSmoothingEnabled = false;
-        chat.height = Math.ceil(height / 2);
-        if (chat.height === 0) return;
-        const mobile = window.getComputedStyle(document.documentElement).getPropertyValue('--mobile').trim() === '1';
-        chat.render(!mobile);
-        chatContext2.drawImage(chat.context.canvas, 0, 0, 512, chat.height * 2);
-    }
-
-    redraw();
-
     setupEntrySplash();
 
     function connecting() {
@@ -844,18 +824,40 @@ export async function load() {
     }
 
     const sceneRenderer = new SceneRenderer(client, client.zone, getTile, connecting, getStatus, player);
+    const tooltip = document.getElementById('tooltip')!;
+    tooltip.hidden = true;
 
-    function renderScene() {
-        requestAnimationFrame(renderScene);
+    let mobile = false;
+    window.addEventListener("resize", resizeChat);
+    function resizeChat() {
+        const height = chatContext2.canvas.clientHeight;
+        chatContext2.canvas.height = height;
+        chatContext2.imageSmoothingEnabled = false;
+        chat.height = Math.ceil(height / 2);
+        mobile = window.getComputedStyle(document.documentElement).getPropertyValue('--mobile').trim() === '1';
+    }
+    resizeChat();
+
+    function redraw() {
+        window.requestAnimationFrame(redraw);
+
+        quickResync.hidden = !player.problem;
+
+        refreshCurrentItem();
+        clearContext(chatContext2);
+
+        if (chat.height !== 0) {
+            chat.render(!mobile);
+            chatContext2.drawImage(chat.context.canvas, 0, 0, 512, chat.height * 2);
+        }
 
         const logo = player.hasItem ? audioLogo : undefined;
         sceneRenderer.mediaElement = popoutPanel.hidden && player.hasVideo ? video : logo;
+
+        sceneRenderer.render();
     }
 
-    renderScene();
-
-    const tooltip = document.getElementById('tooltip')!;
-    tooltip.hidden = true;
+    redraw();
 
     sceneRenderer.on('click', (event, [tx, tz]) => {
         const objectCoords = `${tx},0,${tz}`;
