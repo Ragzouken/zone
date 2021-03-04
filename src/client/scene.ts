@@ -3,7 +3,7 @@ import { ZoneState, UserState } from '../common/zone';
 import { randomInt } from '../common/utility';
 import { hslToRgb, eventToElementPixel } from './utility';
 import { EventEmitter } from 'events';
-import { decodeAsciiTexture, encodeTexture } from 'blitsy';
+import { createCanvas, createContext2D, decodeAsciiTexture, encodeTexture } from 'blitsy';
 import { Player } from './player';
 
 export const avatarImage = decodeAsciiTexture(
@@ -20,19 +20,29 @@ __X__X__
     'X',
 );
 
-const recolorCanvas = document.createElement('canvas');
-recolorCanvas.width = 8;
-recolorCanvas.height = 8;
-const recolorContext = recolorCanvas.getContext('2d')!;
+const recolorBatchImage = createContext2D(8 * 256, 8);
+const recolorBatchColor = createContext2D(8 * 256, 8);
 
-function recolor(canvas: HTMLCanvasElement, color: string) {
-    recolorContext.save();
-    recolorContext.fillStyle = color;
-    recolorContext.fillRect(0, 0, 8, 8);
-    recolorContext.globalCompositeOperation = 'destination-in';
-    recolorContext.drawImage(canvas, 0, 0);
-    recolorContext.restore();
-    return recolorContext.canvas;
+type BatchRecolorItem = { 
+    canvas: HTMLCanvasElement;
+    color: string;
+    callback: (index: number) => void;
+}
+
+function batchRecolor(items: BatchRecolorItem[]) {
+    recolorBatchColor.clearRect(0, 0, 8 * 256, 8);
+    recolorBatchImage.clearRect(0, 0, 8 * 256, 8);
+    recolorBatchColor.globalCompositeOperation = 'source-over';
+
+    items.forEach(({ canvas, color }, i) => {
+        recolorBatchColor.fillStyle = color;
+        recolorBatchColor.fillRect(i * 8, 0, 8, 8);
+        recolorBatchImage.drawImage(canvas, i * 8, 0);
+    });
+    recolorBatchColor.globalCompositeOperation = 'destination-in';
+    recolorBatchColor.drawImage(recolorBatchImage.canvas, 0, 0);
+
+    items.forEach((item, i) => item.callback(i));
 }
 
 const isVideo = (element: HTMLElement | undefined): element is HTMLVideoElement => element?.nodeName === 'VIDEO';
@@ -53,6 +63,8 @@ function getSize(element: HTMLElement) {
 
 export class SceneRenderer extends EventEmitter {
     mediaElement?: HTMLImageElement | HTMLCanvasElement | HTMLVideoElement;
+
+    render: () => void;
 
     constructor(
         private readonly client: ZoneClient,
@@ -102,8 +114,7 @@ export class SceneRenderer extends EventEmitter {
             subtitles = lines.slice().join('\n').split('\n').reverse();
         });
 
-        const render = () => {
-            window.requestAnimationFrame(render);
+        this.render = () => {
             const inset = margin;
             context.fillStyle = connecting() ? 'red' : 'black';
             context.fillRect(0, 0, renderer.width, renderer.height);
@@ -112,8 +123,32 @@ export class SceneRenderer extends EventEmitter {
             context.save();
             context.translate(margin, margin);
             context.scale(scale, scale);
-            this.zone.users.forEach((user) => drawAvatar(user));
-            this.zone.echoes.forEach((echo) => drawAvatar(echo, true));
+
+            const prepareAvatar = (user: UserState, ghost: boolean) => {
+                if (!user.position) return;
+
+                let [r, g, b] = [255, 255, 255];
+
+                if (user.emotes && user.emotes.includes('rbw')) {
+                    const h = Math.abs(Math.sin(performance.now() / 600 - user.position![0] / 8));
+                    [r, g, b] = hslToRgb(h, 1, 0.5);
+                    r = Math.round(r);
+                    g = Math.round(g);
+                    b = Math.round(b);
+                }
+
+                pairs.push({
+                    canvas: this.getTile(user.avatar).canvas,
+                    color: `rgb(${r} ${g} ${b})`,
+                    callback: (i) => drawAvatar(user, ghost, i),
+                });
+            }
+
+            const pairs: BatchRecolorItem[] = [];
+            this.zone.users.forEach((user) => prepareAvatar(user, false));
+            this.zone.echoes.forEach((echo) => prepareAvatar(echo, true));
+            batchRecolor(pairs);
+
             context.restore();
 
             if (!this.mediaElement) {
@@ -181,9 +216,8 @@ export class SceneRenderer extends EventEmitter {
                 context.restore();
             }
         };
-        render();
 
-        const drawAvatar = (user: UserState, echo = false) => {
+        const drawAvatar = (user: UserState, echo: boolean, index: number) => {
             if (!user.position) return;
 
             const [x, y, z] = user.position;
@@ -199,18 +233,6 @@ export class SceneRenderer extends EventEmitter {
                 dy -= 1 + Math.sin(performance.now() / 250 - x / 2) * 1;
             }
 
-            let tile = this.getTile(user.avatar).canvas;
-
-            let [r, g, b] = [255, 255, 255];
-            if (user.emotes && user.emotes.includes('rbw')) {
-                const h = Math.abs(Math.sin(performance.now() / 600 - x / 8));
-                [r, g, b] = hslToRgb(h, 1, 0.5);
-                r = Math.round(r);
-                g = Math.round(g);
-                b = Math.round(b);
-                tile = recolor(tile, `rgb(${r} ${g} ${b})`);
-            }
-
             const spin = user.emotes && user.emotes.includes('spn');
 
             context.save();
@@ -223,11 +245,9 @@ export class SceneRenderer extends EventEmitter {
             }
 
             context.drawImage(
-                tile,
-                -4,
-                0,
-                8,
-                8,
+                recolorBatchColor.canvas, 
+                index * 8, 0, 8, 8,
+                -4, 0, 8, 8,
             );
             context.restore();
         };
