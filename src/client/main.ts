@@ -673,7 +673,8 @@ export async function load() {
     chatCommands.set('r', chatCommands.get('result')!);
     chatCommands.set('youtube', async (args) => client.queue("youtube:" + textToYoutubeVideoId(args)!));
     chatCommands.set('skip', () => client.skip());
-    chatCommands.set('banger', (tag) => client.banger(tag));
+    chatCommands.set('banger', async (tag) => client.banger(tag));
+    chatCommands.set('lucky', async (query) => client.lucky("youtube", query));
     chatCommands.set('users', () => listUsers());
     chatCommands.set('help', () => listHelp());
     chatCommands.set('avatar', (data) => {

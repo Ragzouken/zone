@@ -179,6 +179,11 @@ export class ZoneClient extends EventEmitter {
         });
     }
 
+    async lucky(library: string, query: string) {
+        const [first, ..._] = await this.searchLibrary(library, query);
+        this.queue(first.path!);
+    }
+
     async searchLibrary(library: string, query?: string, tag?: string): Promise<Media[]> {
         const search = new URLSearchParams();
         if (query) search.set("q", query);
