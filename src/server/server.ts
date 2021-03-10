@@ -85,12 +85,12 @@ export function host(
             const library = opts.libraries.get(item.media.library || "");
 
             if (library) {
-                const status = await library.getStatus(item.media.mediaId);
+                const mediaStatus = await library.getStatus(item.media.mediaId);
                 
-                if (status === 'failed') {
+                if (mediaStatus === 'failed') {
                     playback.unqueue(item);
-                    console.log("FAILED", library.prefix, item.media.mediaId, status);
-                    status(`failed to load "${item.media.title}" (${status})`);
+                    console.log("FAILED", library.prefix, item.media.mediaId, mediaStatus);
+                    status(`failed to load "${item.media.title}" (${mediaStatus})`);
                 }
             }
         });
