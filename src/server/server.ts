@@ -91,6 +91,8 @@ export function host(
                     playback.unqueue(item);
                     console.log("FAILED", library.prefix, item.media.mediaId, status);
                     status(`failed to load "${item.media.title}" (${status})`);
+                } else if (status === 'none') {
+                    library.request(item.media.mediaId);
                 }
             }
         });
