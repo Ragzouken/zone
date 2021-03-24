@@ -9,6 +9,7 @@ import { Library, libraryToQueueableMedia } from './libraries';
 import { URL } from 'url';
 import Joi = require('joi');
 import WebSocket = require('ws');
+import { performance } from 'perf_hooks';
 
 const SECONDS = 1000;
 
@@ -38,7 +39,7 @@ export type HostOptions = {
 };
 
 export const DEFAULT_OPTIONS: HostOptions = {
-    pingInterval: 10 * SECONDS,
+    pingInterval: 5 * SECONDS,
     nameLengthLimit: 16,
     chatLengthLimit: 160,
 
@@ -496,6 +497,14 @@ export function host(
 
     function bindSocketToUser(user: UserState, socket: WebSocket) {
         sockets.set(user.userId, socket);
+
+        let lastpong = performance.now();
+        socket.on("pong", () => lastpong = performance.now());
+        setInterval(() => {
+            if (performance.now() - lastpong > opts.pingInterval * 5) {
+                killUser(user);
+            }
+        }, opts.pingInterval);
 
         socket.on("message", (data: string) => {
             const { type, ...message } = JSON.parse(data);
