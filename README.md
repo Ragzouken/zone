@@ -25,8 +25,8 @@ zone currently takes config via environmental variables:
 ```
 export PORT=443;
 export AUTH_PASSWORD=scooter;
-export LIBRARY_ORIGIN=http://127.0.0.1:4000/library;
-export YOUTUBE_ORIGIN=http://127.0.0.1:4001/youtube;
+export LIBRARY_ENDPOINT=http://127.0.0.1:4000/library;
+export YOUTUBE_ENDPOINT=http://127.0.0.1:4001/youtube;
 export YOUTUBE_AUTHORIZATION="Bearer some_token";
 ```
 
