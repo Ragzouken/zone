@@ -3,7 +3,7 @@ const path = require('path');
 module.exports = {
   mode: 'production',
   devtool: "source-map",
-  entry: './src/main.ts',
+  entry: './src/client/main.ts',
   output: {
     filename: 'script.js',
     path: path.resolve(__dirname, '../../public'),
@@ -28,5 +28,6 @@ module.exports = {
   },
   resolve: {
     extensions: [ '.tsx', '.ts', '.js' ],
+    fallback: { "url": require.resolve("url/") },
   },
 };
