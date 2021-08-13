@@ -185,8 +185,12 @@ export class SceneRenderer extends EventEmitter {
                 }
 
                 context.save();
-                context.globalCompositeOperation = 'screen';
-                context.drawImage(this.mediaElement, inset + ox, inset + oy, rw, rh);
+                try {
+                    context.globalCompositeOperation = 'screen';
+                    context.drawImage(this.mediaElement, inset + ox, inset + oy, rw, rh);
+                } catch (error) {
+                    console.log("ERROR DRAWING VIDEO:", error);
+                }
                 context.restore();
 
                 context.save();
