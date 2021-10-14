@@ -533,7 +533,7 @@ export function host(
         if (library) {
             const mediaStatus = await library.getStatus(item.media.mediaId);
             const mediaProgress = await library.getProgress(item.media.mediaId);
-            const perc = mediaProgress.toFixed(1);
+            const perc = (mediaProgress * 100).toFixed(1);
             status(`${mediaStatus}, ${perc}% (${item.media.title})`);
         }
     });
