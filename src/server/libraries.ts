@@ -23,7 +23,7 @@ export class Library {
         return fetch(`${this.endpoint}/${mediaId}/status`, { headers: this.headers }).then((r) => r.json());
     }
 
-    async getProgress(mediaId: string) {
+    async getProgress(mediaId: string): Promise<number> {
         return fetch(`${this.endpoint}/${mediaId}/progress`, { headers: this.headers }).then((r) => r.json());
     }
 
