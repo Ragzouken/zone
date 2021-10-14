@@ -534,7 +534,7 @@ export function host(
             const mediaStatus = await library.getStatus(item.media.mediaId);
             const mediaProgress = await library.getProgress(item.media.mediaId);
             const perc = mediaProgress.toFixed(1);
-            status(`${mediaStatus}, ${mediaProgress}% (${item.media.title})`);
+            status(`${mediaStatus}, ${perc}% (${item.media.title})`);
         }
     });
     authCommands.set('ban', (admin, name: string, reason?: string) =>
