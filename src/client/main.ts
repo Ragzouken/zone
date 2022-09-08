@@ -247,7 +247,7 @@ export async function load() {
 
     const openButton = document.getElementById('external-button') as HTMLButtonElement;
     openButton.addEventListener('click', () => {
-        window.open(player.playingItem?.media.src);
+        window.open(`${player.playingItem?.media.src}#t=${player.elapsed/1000}`);
     });
 
     const pipButton = document.getElementById('pip-button') as HTMLButtonElement;
