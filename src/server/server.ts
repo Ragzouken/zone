@@ -526,6 +526,17 @@ export function host(
     }
 
     const authCommands = new Map<string, (admin: UserState, ...args: any[]) => void>();
+    authCommands.set('check', async (admin) => {
+        const item = playback.queue[0];
+        const library = opts.libraries.get(item?.media.library || "");
+
+        if (library) {
+            const mediaStatus = await library.getStatus(item.media.mediaId);
+            const mediaProgress = await library.getProgress(item.media.mediaId);
+            const perc = (mediaProgress * 100).toFixed(1);
+            status(`${mediaStatus}, ${perc}% (${item.media.title})`);
+        }
+    });
     authCommands.set('ban', (admin, name: string, reason?: string) =>
         ifUser(name).then((user) => {
             const ban: Ban = {
