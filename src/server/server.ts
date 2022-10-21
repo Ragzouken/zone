@@ -212,7 +212,7 @@ export function host(
             const media = await pathToMedia(request.body.path);
             tryQueueMedia(request.user!, media);
             response.status(202).send();
-        } catch (error) {
+        } catch (error: any) {
             response.status(400).send(error.message);
         }
     });
@@ -227,7 +227,7 @@ export function host(
                 try {
                     tryQueueMedia(request.user!, banger, true);
                     response.status(202).send();
-                } catch (error) {
+                } catch (error: any) {
                     response.status(403).send(error.message);
                 }
             } else {
