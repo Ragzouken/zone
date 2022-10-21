@@ -92,6 +92,7 @@ export class Playback extends EventEmitter {
                 this.queue.shift();
                 this.playMedia(next);
             } else if (status === 'requested') {
+                this.clearMedia();
                 if (this.checkTimeout) clearTimeout(this.checkTimeout);
                 this.checkTimeout = setTimeout(() => this.check(), 500);
                 this.emit('waiting', next);
