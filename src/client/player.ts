@@ -17,7 +17,7 @@ export interface Player {
     on(type: 'subtitles', callback: (lines: string[]) => void): this;
 }
 
-const STALL_TIMEOUT = 500;
+const STALL_TIMEOUT = 2500;
 
 export class Player extends EventEmitter {
     private item?: QueueItem;
@@ -45,10 +45,10 @@ export class Player extends EventEmitter {
             if (state >= HTMLMediaElement.HAVE_FUTURE_DATA) {
                 lastUnstall = performance.now();
             } else if (state >= HTMLMediaElement.HAVE_METADATA && performance.now() - lastUnstall > stallTimeout) {
-                this.forceRetry('stalling');
                 stallTimeout += STALL_TIMEOUT;
+                this.forceRetry('stalling');
             }
-        }, 100);
+        }, 500);
     }
 
     get playingItem() {
