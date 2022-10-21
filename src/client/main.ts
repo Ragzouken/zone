@@ -247,8 +247,21 @@ export async function load() {
 
     const openButton = document.getElementById('external-button') as HTMLButtonElement;
     openButton.addEventListener('click', () => {
-        window.open(player.playingItem?.media.src);
+        window.open(`${player.playingItem?.media.src}#t=${player.elapsed/1000}`);
     });
+
+    const pipButton = document.getElementById('pip-button') as HTMLButtonElement;
+    if (document.pictureInPictureEnabled) {
+        pipButton.addEventListener('click', () => {
+            video.requestPictureInPicture();
+        });
+        // resync when closing PiP to avoid automatically pausing
+        video.addEventListener('leavepictureinpicture', () => {
+            player.forceRetry('left PiP');
+        });
+    } else {
+        pipButton.hidden = true;
+    }
 
     const player = new Player(video);
     const zoneLogo = document.createElement('img');
@@ -853,7 +866,7 @@ export async function load() {
         }
 
         const logo = player.hasItem ? audioLogo : undefined;
-        sceneRenderer.mediaElement = popoutPanel.hidden && player.hasVideo ? video : logo;
+        sceneRenderer.mediaElement = popoutPanel.hidden && player.hasVideo && !document.pictureInPictureElement ? video : logo;
 
         sceneRenderer.render();
     }
