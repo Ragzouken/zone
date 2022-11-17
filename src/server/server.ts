@@ -465,6 +465,8 @@ export function host(
             throw new Error(`'${existing.title}' is already queued`);
         } else if (!dj && count >= opts.perUserQueueLimit) {
             throw new Error(`you already have ${count} videos in the queue`);
+        } else if (media.duration > 45 * 60 * 1000 && !user.tags.includes('dj')) {
+            throw new Error('only djs may queue long videos')
         } else {
             playback.queueMedia(media, { userId: user.userId, ip: userIp, banger });
         }
