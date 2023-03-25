@@ -186,7 +186,7 @@ export class SceneRenderer extends EventEmitter {
 
                 context.save();
                 try {
-                    context.globalCompositeOperation = 'screen';
+                    context.globalCompositeOperation = 'source-over';
                     context.drawImage(this.mediaElement, inset + ox, inset + oy, rw, rh);
                 } catch (error) {
                     console.log("ERROR DRAWING VIDEO:", error);
