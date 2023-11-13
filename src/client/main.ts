@@ -471,7 +471,7 @@ export async function load() {
             results.forEach(({ title, duration, thumbnail, path }) => {
                 const row = searchResultTemplate.cloneNode(true) as HTMLElement;
                 row.addEventListener('click', () => {
-                    client.queue(path!);
+                    client.queue(path!).catch((error) => chat.status(`queueing ${title} failed: ${error.message}`));
                     menu.open('playback/playlist');
                 });
 
