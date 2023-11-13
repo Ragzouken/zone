@@ -471,7 +471,7 @@ export async function load() {
             results.forEach(({ title, duration, thumbnail, path }) => {
                 const row = searchResultTemplate.cloneNode(true) as HTMLElement;
                 row.addEventListener('click', () => {
-                    client.queue(path!);
+                    client.queue(path!).catch((error) => chat.status(`queueing ${title} failed: ${error.message}`));
                     menu.open('playback/playlist');
                 });
 
@@ -586,7 +586,7 @@ export async function load() {
         else return client.queue(results[index].path!);
     }
 
-    document.getElementById('play-banger')?.addEventListener('click', () => client.banger());
+    document.getElementById('play-banger')?.addEventListener('click', () => client.banger().catch((error) => chat.status(`banger failed: ${error.message}`)));
 
     const menu = menusFromDataAttributes(document.documentElement);
     menu.on('show:avatar', openAvatarEditor);

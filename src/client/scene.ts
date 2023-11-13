@@ -168,6 +168,8 @@ export class SceneRenderer extends EventEmitter {
                 context.textAlign = 'center';
                 context.fillStyle = 'black';
                 subtitles.forEach((line, i) => {
+                    if (line.trim().length === 0) return;
+
                     const measure = context.measureText(line);
                     const tx = margin + (8 + 1) * scale + screenWidth * scale * 0.5;
                     const ty = margin + (8 + 3) * scale + (screenHeight - 1) * scale - 2 * scale * i;
@@ -182,6 +184,8 @@ export class SceneRenderer extends EventEmitter {
                 });
                 context.fillStyle = 'gray';
                 subtitles.forEach((line, i) => {
+                    if (line.trim().length === 0) return;
+
                     const tx = margin + (8 + 1) * scale + screenWidth * scale * 0.5;
                     const ty = margin + (8 + 3) * scale + (screenHeight - 1) * scale - 2 * scale * i;
                     context.fillText(line, tx, ty);
