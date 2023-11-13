@@ -120,37 +120,6 @@ export class SceneRenderer extends EventEmitter {
             context.fillRect(0, 0, renderer.width, renderer.height);
             context.drawImage(image, inset, inset, 128 * scale, 128 * scale);
 
-            context.save();
-            context.translate(margin, margin);
-            context.scale(scale, scale);
-
-            const prepareAvatar = (user: UserState, ghost: boolean) => {
-                if (!user.position) return;
-
-                let [r, g, b] = [255, 255, 255];
-
-                if (user.emotes && user.emotes.includes('rbw')) {
-                    const h = Math.abs(Math.sin(performance.now() / 600 - user.position![0] / 8));
-                    [r, g, b] = hslToRgb(h, 1, 0.5);
-                    r = Math.round(r);
-                    g = Math.round(g);
-                    b = Math.round(b);
-                }
-
-                pairs.push({
-                    canvas: this.getTile(user.avatar).canvas,
-                    color: `rgb(${r} ${g} ${b})`,
-                    callback: (i) => drawAvatar(user, ghost, i),
-                });
-            }
-
-            const pairs: BatchRecolorItem[] = [];
-            this.zone.users.forEach((user) => prepareAvatar(user, false));
-            this.zone.echoes.forEach((echo) => prepareAvatar(echo, true));
-            batchRecolor(pairs);
-
-            context.restore();
-
             if (!this.mediaElement) {
                 animateLogo();
                 context.drawImage(
@@ -186,7 +155,7 @@ export class SceneRenderer extends EventEmitter {
 
                 context.save();
                 try {
-                    context.globalCompositeOperation = 'screen';
+                    context.globalCompositeOperation = 'source-over';
                     context.drawImage(this.mediaElement, inset + ox, inset + oy, rw, rh);
                 } catch (error) {
                     console.log("ERROR DRAWING VIDEO:", error);
@@ -219,6 +188,37 @@ export class SceneRenderer extends EventEmitter {
                 });
                 context.restore();
             }
+
+            context.save();
+            context.translate(margin, margin);
+            context.scale(scale, scale);
+
+            const prepareAvatar = (user: UserState, ghost: boolean) => {
+                if (!user.position) return;
+
+                let [r, g, b] = [255, 255, 255];
+
+                if (user.emotes && user.emotes.includes('rbw')) {
+                    const h = Math.abs(Math.sin(performance.now() / 600 - user.position![0] / 8));
+                    [r, g, b] = hslToRgb(h, 1, 0.5);
+                    r = Math.round(r);
+                    g = Math.round(g);
+                    b = Math.round(b);
+                }
+
+                pairs.push({
+                    canvas: this.getTile(user.avatar).canvas,
+                    color: `rgb(${r} ${g} ${b})`,
+                    callback: (i) => drawAvatar(user, ghost, i),
+                });
+            }
+
+            const pairs: BatchRecolorItem[] = [];
+            this.zone.users.forEach((user) => prepareAvatar(user, false));
+            this.zone.echoes.forEach((echo) => prepareAvatar(echo, true));
+            batchRecolor(pairs);
+
+            context.restore();
         };
 
         const drawAvatar = (user: UserState, echo: boolean, index: number) => {
