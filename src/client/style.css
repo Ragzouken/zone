@@ -240,6 +240,9 @@ button > img {
     width: 50vw;
     max-width: unset;
 
+    resize: horizontal;
+    overflow: hidden;
+
     bottom: unset;
     right: unset;
 
