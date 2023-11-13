@@ -67,6 +67,13 @@ export class Playback extends EventEmitter {
         }
     }
 
+    clear() {
+        while (this.queue.length > 0) {
+            this.unqueue(this.queue[0]);
+        }
+        this.clearMedia();
+    }
+
     get playing() {
         return this.remainingTime > 0;
     }

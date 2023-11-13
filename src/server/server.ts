@@ -594,6 +594,9 @@ export function host(
             }
         })
     );
+    authCommands.set('queue-clear', (admin) => {
+        playback.clear();
+    });
 
     return { save, sendAll, zone, playback };
 }
