@@ -586,7 +586,7 @@ export async function load() {
         else return client.queue(results[index].path!);
     }
 
-    document.getElementById('play-banger')?.addEventListener('click', () => client.banger());
+    document.getElementById('play-banger')?.addEventListener('click', () => client.banger().catch((error) => chat.status(`banger failed: ${error.message}`)));
 
     const menu = menusFromDataAttributes(document.documentElement);
     menu.on('show:avatar', openAvatarEditor);
