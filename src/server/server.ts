@@ -607,9 +607,7 @@ export function host(
         playback.clear();
     });
     authCommands.set('jump', (admin, time: string) => {
-        console.log("jump", time);
         const seconds = timeToSeconds(time);
-        console.log("jump", time, seconds);
         playback.jump(seconds * 1000);
     });
 
