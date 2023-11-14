@@ -60,6 +60,15 @@ interface Ban {
     date: string;
 }
 
+function timeToSeconds(time: string) {
+    let seconds = 0;
+    const parts = time.split(":").reverse();
+    seconds = parseInt(parts.shift() ?? "0", 10);
+    seconds += parseInt(parts.shift() ?? "0", 10) * 60;
+    seconds += parseInt(parts.shift() ?? "0", 10) * 60 * 60;
+    return seconds;
+}
+
 export function host(
     xws: expressWs.Instance,
     adapter: low.AdapterSync,
@@ -596,6 +605,12 @@ export function host(
     );
     authCommands.set('queue-clear', (admin) => {
         playback.clear();
+    });
+    authCommands.set('jump', (admin, time: string) => {
+        console.log("jump", time);
+        const seconds = timeToSeconds(time);
+        console.log("jump", time, seconds);
+        playback.jump(seconds);
     });
 
     return { save, sendAll, zone, playback };

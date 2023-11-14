@@ -74,6 +74,11 @@ export class Playback extends EventEmitter {
         this.clearMedia();
     }
 
+    jump(time: number) {
+        if (!this.currentItem) return;
+        this.playMedia(this.currentItem, time);
+    }
+
     get playing() {
         return this.remainingTime > 0;
     }
