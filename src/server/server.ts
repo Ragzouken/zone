@@ -215,6 +215,7 @@ export function host(
         res.json(names);
     });
 
+    xws.app.get('/playing', (request, response) => response.json({ item: playback.currentItem, time: playback.currentTime }));
     xws.app.get('/queue', (request, response) => response.json(playback.queue));
     xws.app.post('/queue', requireUserToken, async (request, response) => {
         try {
