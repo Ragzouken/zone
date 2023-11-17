@@ -280,6 +280,10 @@ button > img {
     margin: 1em;
 }
 
+#entry-playing {
+    margin: 1em;
+}
+
 .user-dj {
     text-decoration: underline 2px #00FFFF;
 }

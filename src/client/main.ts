@@ -928,6 +928,8 @@ function setupEntrySplash() {
     const entryButton = document.getElementById('entry-button') as HTMLInputElement;
     const entryForm = document.getElementById('entry') as HTMLFormElement;
 
+    const entryPlaying = document.getElementById("entry-playing") as HTMLElement;
+
     function refreshUsers(users: { name?: string; avatar?: string, userId: string }[]) {
         entryUsers.innerHTML = '';
         users.forEach((user) => {
@@ -956,6 +958,25 @@ function setupEntrySplash() {
     }
     updateEntryUsers();
     setInterval(updateEntryUsers, 5000);
+
+    function updateEntryPlaying() {
+        fetch('./playing')
+        .then((res) => res.json())
+        .then(({ item, time }) => {
+            const playing = document.createElement("div");
+            entryPlaying.replaceChildren(playing);
+
+            if (item) {
+                const stamp = secondsToTime(time / 1000);
+                const duration = secondsToTime(item.media.duration / 1000);
+                playing.replaceChildren(`${item.media.title} (${stamp} / ${duration})`);
+            } else {
+                playing.replaceChildren(`nothing playing`);
+            }
+        });
+    }
+    updateEntryPlaying();
+    setInterval(updateEntryPlaying, 5000);
 
     entryButton.disabled = !entryForm.checkValidity();
     nameInput.addEventListener('input', () => (entryButton.disabled = !entryForm.checkValidity()));
