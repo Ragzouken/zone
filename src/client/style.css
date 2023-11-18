@@ -282,6 +282,7 @@ button > img {
 
 #entry-playing {
     margin: 1em;
+    color: cyan;
 }
 
 .user-dj {
