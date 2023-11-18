@@ -969,7 +969,7 @@ function setupEntrySplash() {
             if (item) {
                 const stamp = secondsToTime(time / 1000);
                 const duration = secondsToTime(item.media.duration / 1000);
-                playing.replaceChildren(`${item.media.title} (${stamp} / ${duration})`);
+                playing.replaceChildren(`${item.media.title}`, document.createElement("br"), `${stamp} / ${duration}`);
             } else {
                 playing.replaceChildren(`nothing playing`);
             }
