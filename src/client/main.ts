@@ -959,32 +959,45 @@ function setupEntrySplash() {
     updateEntryUsers();
     setInterval(updateEntryUsers, 5000);
     
-    let lastItem: QueueItem;
-    let lastTime: number;
+    let lastItem: QueueItem | undefined;
+    let lastItemStartTime: number;
 
-    function refreshEntryPlaying() {
+    function updateEntryPlaying() {
         if (lastItem) {
-            const time = performance.now() - lastTime;
+            const time = (performance.now() - lastItemStartTime) / 1000;
+            const durr = lastItem.media.duration / 1000;
+        
+            if (time >= durr) {
+                lastItem = undefined;
+                fetchEntryPlaying();
+                updateEntryPlaying();
+            } else {
+                entryPlaying.replaceChildren(
+                    lastItem.media.title,
+                    document.createElement("br"),
+                    `${secondsToTime(time)} / ${secondsToTime(durr)}`,
+                );
+            }
 
-            const stamp = secondsToTime(time / 1000);
-            const duration = secondsToTime(lastItem.media.duration / 1000);
-            entryPlaying.replaceChildren(`${lastItem.media.title}`, document.createElement("br"), `${stamp} / ${duration}`);
+            entryPlaying.hidden = durr < 600;
         } else {
-            entryPlaying.replaceChildren(`nothing playing`);
+            entryPlaying.hidden = true;
         }
     }
 
-    function updateEntryPlaying() {
-        fetch('./playing')
+    function fetchEntryPlaying() {
+        if (entrySplash.hidden) return;
+
+        fetch("https://tinybird.zone/playing")
         .then((res) => res.json())
         .then(({ item, time }) => {
             lastItem = item;
-            lastTime = performance.now() - time;
+            lastItemStartTime = performance.now() - time;
         });
     }
-    updateEntryPlaying();
-    setInterval(updateEntryPlaying, 5000);
-    setInterval(refreshEntryPlaying, 500);
+    fetchEntryPlaying();
+    setInterval(fetchEntryPlaying, 5000);
+    setInterval(updateEntryPlaying, 500);
 
     entryButton.disabled = !entryForm.checkValidity();
     nameInput.addEventListener('input', () => (entryButton.disabled = !entryForm.checkValidity()));
