@@ -5,7 +5,7 @@ import { ChatPanel } from './chat';
 
 import ZoneClient from '../common/client';
 import { Player } from './player';
-import { Media, UserState } from '../common/zone';
+import { Media, QueueInfo, QueueItem, UserState } from '../common/zone';
 import { HTMLUI } from './html-ui';
 import { createContext2D } from 'blitsy';
 import { menusFromDataAttributes, indexByDataAttribute } from './menus';
@@ -959,24 +959,35 @@ function setupEntrySplash() {
     updateEntryUsers();
     setInterval(updateEntryUsers, 5000);
 
+    const playing = document.createElement("div");
+    entryPlaying.replaceChildren(playing);
+
+    let lastItem: QueueItem;
+    let lastTime: number;
+
+    function refreshEntryPlaying() {
+        if (lastItem) {
+            const time = performance.now() - lastTime;
+
+            const stamp = secondsToTime(time / 1000);
+            const duration = secondsToTime(lastItem.media.duration / 1000);
+            playing.replaceChildren(`${lastItem.media.title}`, document.createElement("br"), `${stamp} / ${duration}`);
+        } else {
+            playing.replaceChildren(`nothing playing`);
+        }
+    }
+
     function updateEntryPlaying() {
         fetch('./playing')
         .then((res) => res.json())
         .then(({ item, time }) => {
-            const playing = document.createElement("div");
-            entryPlaying.replaceChildren(playing);
-
-            if (item) {
-                const stamp = secondsToTime(time / 1000);
-                const duration = secondsToTime(item.media.duration / 1000);
-                playing.replaceChildren(`${item.media.title}`, document.createElement("br"), `${stamp} / ${duration}`);
-            } else {
-                playing.replaceChildren(`nothing playing`);
-            }
+            lastItem = item;
+            lastTime = performance.now() - time;
         });
     }
     updateEntryPlaying();
     setInterval(updateEntryPlaying, 5000);
+    setInterval(refreshEntryPlaying, 500);
 
     entryButton.disabled = !entryForm.checkValidity();
     nameInput.addEventListener('input', () => (entryButton.disabled = !entryForm.checkValidity()));
