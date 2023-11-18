@@ -958,10 +958,7 @@ function setupEntrySplash() {
     }
     updateEntryUsers();
     setInterval(updateEntryUsers, 5000);
-
-    const playing = document.createElement("div");
-    entryPlaying.replaceChildren(playing);
-
+    
     let lastItem: QueueItem;
     let lastTime: number;
 
@@ -971,9 +968,9 @@ function setupEntrySplash() {
 
             const stamp = secondsToTime(time / 1000);
             const duration = secondsToTime(lastItem.media.duration / 1000);
-            playing.replaceChildren(`${lastItem.media.title}`, document.createElement("br"), `${stamp} / ${duration}`);
+            entryPlaying.replaceChildren(`${lastItem.media.title}`, document.createElement("br"), `${stamp} / ${duration}`);
         } else {
-            playing.replaceChildren(`nothing playing`);
+            entryPlaying.replaceChildren(`nothing playing`);
         }
     }
 
