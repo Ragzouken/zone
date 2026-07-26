@@ -2,12 +2,16 @@ import { createContext2D, decodeFont, fonts, makeVector2, imageToContext } from 
 import { Page, scriptToPages, getPageHeight, PageRenderer } from './text';
 import { hex2rgb, rgb2num, hslToRgb } from './utility';
 import { randomInt } from '../common/utility';
+import bogFont, { decodeFontHack } from './bog-font';
 
-const font = decodeFont(fonts['ascii-small']);
+const font = decodeFontHack(bogFont);
+// const font = decodeFont(fonts['ascii-small']);
+
 const layout = { font, lineWidth: 240, lineCount: 9999 };
 
 export function filterDrawable(text: string) {
-    return [...text].map((char) => ((char.codePointAt(0) || 0) < 256 ? char : '?')).join('');
+    const check = (codepoint: number) => font.characters.has(codepoint) || codepoint < 256;
+    return [...text].map((char) => check(char.codePointAt(0) ?? 0) ? char : '?').join('');
 }
 
 export class ChatPanel {
